@@ -629,6 +629,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     story.append(Spacer(1, 12))
     story.append(Paragraph("COMPENSATION ANALYSIS", hs))
     pdf_text = report_text.replace('&#36;', '$')
+    pdf_text = pdf_text.replace('<br><br>', '\n\n').replace('<br>', '\n')
     for para in pdf_text.split('\n\n'):
         para = para.strip()
         if para: story.append(Paragraph(para, bs))
@@ -653,7 +654,7 @@ PLACEHOLDER = "-- Select your company --"
 
 # HEADER
 st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>REIT Executive Compensation Benchmarking \u2014 FY2024 Proxy Data</p></div>', unsafe_allow_html=True)
-st.markdown('<div class="intro-text">Explore executive compensation across 62 publicly traded REITs (test dataset). Customize your peer group in the sidebar, then navigate the tabs for benchmarking, AI-powered analysis, and downloadable reports.</div>', unsafe_allow_html=True)
+st.markdown('<div class="intro-text">Explore executive compensation across 62 publicly traded REITs. Customize your peer group in the sidebar, then navigate the tabs for benchmarking, AI-powered analysis, and downloadable reports.</div>', unsafe_allow_html=True)
 
 # AUTO-FILTER: If Tab 0 set a pending property type, apply it before sidebar renders
 if '_pending_pt' in st.session_state:
@@ -679,9 +680,9 @@ if 'selected_company' in st.session_state and st.session_state.get('selected_com
 with st.sidebar:
     st.markdown("## Peer Group Filters")
     if auto_pt:
-        st.markdown(f'<div class="filter-note">\U0001F3AF Filtered to <strong>{auto_pt}</strong> peers (from "How Do I Stack Up?" selection). Adjust below to customize.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="filter-note">\U0001F3AF Filtered to <strong>{auto_pt}</strong> peers. Adjust below to customize.</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="filter-note">\U0001F4A1 Select a company on "How Do I Stack Up?" to auto-set filters, or customize below.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-set filters, or customize below.</div>', unsafe_allow_html=True)
     st.markdown("### Property Type")
     if 'pt_all' not in st.session_state:
         st.session_state['pt_all'] = True
@@ -895,8 +896,10 @@ with tab2:
 # ---- TAB 3 ----
 with tab3:
     st.markdown("#### Company Compensation Overview")
-    st.markdown('<div class="tab-instruction">\U0001F4A1 Select a company to view executive compensation and generate AI-powered analysis.</div>', unsafe_allow_html=True)
     cv_opts = [PLACEHOLDER] + co_opts
+    cv_selected_val = st.session_state.get('cv_co', PLACEHOLDER)
+    if not cv_selected_val or cv_selected_val == PLACEHOLDER:
+        st.markdown('<div class="tab-instruction">\U0001F4A1 Select a company to view executive compensation and generate AI-powered analysis.</div>', unsafe_allow_html=True)
     sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
     if sel3 and sel3 != PLACEHOLDER:
         # If company changed, sync sidebar filters and rerun
@@ -940,8 +943,11 @@ with tab3:
             # PDF — available after either report
             if st.session_state.get(f"analysis_{stk3}") or st.session_state.get(f"fn_{stk3}"):
                 report_for_pdf = st.session_state.get(f"fn_{stk3}") or st.session_state.get(f"analysis_{stk3}")
-                pdf3 = make_pdf(cn3, stk3, report_for_pdf, cd3, ret_data, filt)
-                st.download_button("\U0001F4E5 Download PDF", data=pdf3, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key=f"pdf_{stk3}")
+                try:
+                    pdf3 = make_pdf(cn3, stk3, report_for_pdf, cd3, ret_data, filt)
+                    st.download_button("\U0001F4E5 Download PDF", data=pdf3, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key=f"pdf_{stk3}")
+                except Exception as e:
+                    st.warning(f"PDF generation encountered an issue. Please try generating the Full Report first.")
             st.markdown("---")
             for _, rw in sort_by_position(cd3).iterrows():
                 ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
