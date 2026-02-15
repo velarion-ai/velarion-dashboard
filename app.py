@@ -294,7 +294,7 @@ def lookup_proxy_url(company_name, fy_year):
     except Exception:
         return None
 
-def peer_context_str(filt, pt):
+def peer_context_str(filt, pt, excluded_tks=None):
     ps = get_peer_stats(filt)
     n = ps[ps['property_type']==pt]['ticker'].nunique()
     mc_valid = filt['market_cap'].dropna()
@@ -359,17 +359,135 @@ def get_client():
         import anthropic; return anthropic.Anthropic()
     except Exception: return None
 
-AI_TONE = """ROLE: You are a senior compensation consultant advising the management team — similar to Pearl Meyer or FW Cook. Your audience is the C-suite preparing for board meetings and comp committee negotiations.
+AI_TONE = """ROLE: You are a seasoned REIT compensation consultant preparing a confidential briefing for a comp committee member — similar to Pearl Meyer or FW Cook. Your audience is management preparing for board meetings and comp committee negotiations.
 
 APPROACH:
 1. STATE the positioning (data and percentiles)
 2. ANALYZE the compensation mix vs peer medians (salary/cash/equity split)
-3. CONNECT compensation to shareholder returns (pay-for-performance)
-4. RECOMMEND directional action grounded in data
+3. CONNECT compensation to shareholder returns and operating performance (pay-for-performance)
+4. FLAG what to watch — frame observations QUALITATIVELY, hedge quantitative comparisons
+5. RECOMMEND directional action grounded in data
 
 MANAGEMENT-FRIENDLY TONE: Always lean toward the management team's perspective. When comp is low and performance is strong, advocate clearly: "Performance strongly supports a move toward the upper quartile." When comp is high and performance is strong: "Compensation reflects market-appropriate recognition of strong results." When comp is high and performance is weak: "The board may want to ensure incentive structures are tied to specific forward-looking performance metrics." When comp is low and performance is weak: "Current positioning reflects the performance trajectory, with room to adjust as results improve."
 
+HEDGING: Use "may," "appears to," "suggests," "could create pressure" when making forward-looking observations. Do NOT cite specific dollar amounts from CD&A — the committee already knows what they paid. Frame CD&A observations qualitatively.
+
 CRITICAL RULES: No markdown (no asterisks, bold, headers, bullets). Plain flowing paragraphs only. No title. Weave peer group details (property type, count, market cap range, company names) naturally into the text. Always include the compensation mix comparison. Always include a pay-for-performance assessment."""
+
+@st.cache_data(ttl=86400)
+def fetch_cda_text(company_name, fy_year):
+    """Extract CD&A section text from the DEF 14A proxy filing."""
+    import requests as _req
+    from bs4 import BeautifulSoup
+    try:
+        proxy_url = lookup_proxy_url(company_name, fy_year)
+        if not proxy_url:
+            return None
+        resp = _req.get(proxy_url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=20)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        text = soup.get_text(separator='\n', strip=True)
+        # Find CD&A section
+        cda_start = None
+        cda_end = None
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            ll = line.lower().strip()
+            if cda_start is None and ('compensation discussion and analysis' in ll or 'compensation discussion & analysis' in ll):
+                cda_start = i
+            elif cda_start is not None and i > cda_start + 10:
+                # Look for end markers
+                if any(marker in ll for marker in ['compensation committee report', 'report of the compensation committee',
+                    'summary compensation table', 'executive compensation tables']):
+                    cda_end = i
+                    break
+        if cda_start is not None:
+            end = cda_end if cda_end else min(cda_start + 500, len(lines))
+            cda_text = '\n'.join(lines[cda_start:end])
+            # Truncate to ~50K chars to fit in context
+            return cda_text[:50000] if len(cda_text) > 50000 else cda_text
+        return None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=86400)
+def fetch_earnings_data(company_name, ticker):
+    """Fetch recent quarterly earnings press releases from 8-K filings."""
+    import requests as _req
+    try:
+        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
+        query = f'%22{clean_name.replace(" ", "+")}%22'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=8-K&dateRange=custom&startdt=2024-06-01&enddt=2025-12-31'
+        resp = _req.get(url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=10)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        hits = data.get('hits', {}).get('hits', [])
+        # Look for earnings-related 8-Ks (Item 2.02 = Results of Operations)
+        earnings_texts = []
+        for hit in hits[:15]:  # Check up to 15 most recent 8-Ks
+            try:
+                doc_id = hit['_id']
+                parts = doc_id.split(':')
+                accession = parts[0]
+                filename = parts[1]
+                cik = hit['_source']['ciks'][0].lstrip('0')
+                filing_url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace("-","")}/{filename}'
+                filing_resp = _req.get(filing_url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=15)
+                if filing_resp.status_code != 200:
+                    continue
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(filing_resp.text, 'html.parser')
+                text = soup.get_text(separator=' ', strip=True)[:3000]
+                tl = text.lower()
+                # Check if this is an earnings/results filing
+                if any(kw in tl for kw in ['results of operations', 'financial results', 'earnings', 'revenue', 'net income',
+                    'funds from operations', 'ffo', 'affo', 'net operating income', 'same-store']):
+                    date = hit['_source']['file_date']
+                    earnings_texts.append(f"[{date}] {text[:2000]}")
+                    if len(earnings_texts) >= 4:  # Get up to 4 quarters
+                        break
+            except Exception:
+                continue
+        return '\n\n'.join(earnings_texts) if earnings_texts else None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=3600)
+def fetch_current_stock(ticker):
+    """Fetch current stock price and YTD return."""
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period='1y')
+        if hist.empty:
+            return None
+        current_price = hist['Close'].iloc[-1]
+        # YTD: from Jan 1 of current year
+        ytd_start = hist[hist.index >= f'2025-01-01']
+        if not ytd_start.empty and len(hist) > 0:
+            jan1_price = ytd_start['Close'].iloc[0]
+            ytd_return = (current_price / jan1_price - 1) * 100
+        else:
+            ytd_return = None
+        # Also get VNQ for comparison
+        vnq = yf.Ticker('VNQ')
+        vnq_hist = vnq.history(period='1y')
+        vnq_ytd = None
+        if not vnq_hist.empty:
+            vnq_ytd_start = vnq_hist[vnq_hist.index >= f'2025-01-01']
+            if not vnq_ytd_start.empty:
+                vnq_ytd = (vnq_hist['Close'].iloc[-1] / vnq_ytd_start['Close'].iloc[0] - 1) * 100
+        return {
+            'current_price': current_price,
+            'ytd_return': ytd_return,
+            'vnq_ytd': vnq_ytd,
+            'as_of': hist.index[-1].strftime('%b %d, %Y')
+        }
+    except Exception:
+        return None
 
 def gen_exec(row, peers, all_df, ret_data, filt):
     cl = get_client()
@@ -515,7 +633,7 @@ PAY-FOR-PERFORMANCE: Compare the compensation quartile vs returns quartile. If c
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_full(co_d, filt, ret_data):
+def gen_full(co_d, filt, ret_data, excluded_tks=None):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
@@ -545,7 +663,32 @@ def gen_full(co_d, filt, ret_data):
     p3 = [ret_data.get(t,{}).get('return_3y') for t in tickers if ret_data.get(t,{}).get('return_3y') is not None]
     ret_pct = percentile_rank(r.get('return_1y'), pd.Series(p1)) if r.get('return_1y') is not None and p1 else None
     tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
-    prompt = f"""REIT compensation analysis (~500-600 words). You are advising this management team.
+    
+    # Excluded companies note
+    excl_note = ""
+    if excluded_tks:
+        excl_note = f"\nNOTE: The following companies were eligible but intentionally excluded from this peer group by the user: {', '.join(sorted(excluded_tks))}. Mention this in the peer group disclosure."
+    
+    # Fetch enrichment data
+    cda_text = fetch_cda_text(cn, FY_YEAR)
+    earnings_text = fetch_earnings_data(cn, tk)
+    current_stock = fetch_current_stock(tk)
+    
+    # Build enrichment sections for prompt
+    enrichment = ""
+    if cda_text:
+        # Truncate CD&A for prompt (keep under ~8K chars for the prompt)
+        cda_snippet = cda_text[:8000]
+        enrichment += f"\n\nCD&A EXCERPT (from FY{FY_YEAR} proxy — use to identify performance metrics, comp philosophy, say-on-pay results, and peer group rationale):\n{cda_snippet}"
+    if earnings_text:
+        earnings_snippet = earnings_text[:4000]
+        enrichment += f"\n\nRECENT QUARTERLY EARNINGS (use for operational context — FFO/AFFO, revenue, occupancy, same-store NOI):\n{earnings_snippet}"
+    if current_stock:
+        enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
+        enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD 2025: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
+        enrichment += f"\n  VNQ (REIT Index) YTD 2025: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
+    
+    prompt = f"""REIT compensation analysis (~600-800 words). You are advising this management team — preparing them for what their board and comp committee will ask.
 {cn} ({tk}) | {pt} | {co_d['reit_type'].iloc[0]} | HQ: {hq} | Mkt Cap ${mc/1e9:.2f}B
 EXECUTIVES:\n{chr(10).join(esecs)}
 {rl}
@@ -553,18 +696,20 @@ Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
 FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
 {pt} Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
+Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
+
 Sections (flowing paragraphs, blank line between):
-1. Company overview, peer group with company names (2-3 sent)
-2. Each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). IMPORTANT: If any executive is flagged as [Partial Yr], explicitly note that their compensation reflects a partial year of service and should not be compared at face value to full-year peers. Recommend the board evaluate their annualized run-rate when setting go-forward compensation.
+1. Opening assessment: Company context, peer group with company names, and overall compensation positioning (2-3 sent)
+2. Each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value.
 3. Overall comp mix philosophy (2-3 sent)
 4. CEO/CFO ratio (1-2 sent)
-5. PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile. Advocate for management where data supports it. Provide clear recommendations. (3-4 sent)
-6. Summary with peer group disclosure (2-3 sent, list all peer tickers)
-DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data and does not account for employment agreements, one-time awards, or unvested equity not yet reported."{en}
+5. PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using BOTH proxy-year returns AND current YTD stock performance. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
+6. AREAS TO WATCH: Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
+7. Summary with peer group disclosure including any excluded companies (2-3 sent, list all peer tickers)
+DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publicly available earnings releases, and market data. Verify all information against original filings before making decisions."{en}
 {AI_TONE}"""
     try:
-        resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=1400, messages=[{"role":"user","content":prompt}])
+        resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000, messages=[{"role":"user","content":prompt}])
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
@@ -737,6 +882,8 @@ with st.sidebar:
         st.markdown(f'<div class="filter-note">\U0001F3AF Filtered to <strong>{auto_pt}</strong> peers. Adjust below to customize.</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-set filters, or customize below.</div>', unsafe_allow_html=True)
+    
+    # 1. Property Type
     st.markdown("### Property Type")
     if 'pt_all' not in st.session_state:
         st.session_state['pt_all'] = True
@@ -744,12 +891,9 @@ with st.sidebar:
     if 'pt_sel' not in st.session_state:
         st.session_state['pt_sel'] = all_props if all_pt else []
     sel_prop = st.multiselect("Property type", all_props, label_visibility="collapsed", key="pt_sel")
-    st.markdown("### Position")
-    positions = FILTER_POSITIONS
-    all_pos_chk = st.checkbox("Select All", value=True, key="pos_all")
-    sel_pos = st.multiselect("Position", positions, default=positions if all_pos_chk else [], format_func=lambda x: POSITION_FILTER_LABEL.get(x,x), label_visibility="collapsed", key="pos_sel")
+    
+    # 2. Market Cap Range
     st.markdown("### Market Cap Range")
-    # Non-linear scale: fine-grained $0-25B, coarser $25-50B+
     mcap_breakpoints = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 25.0, 30.0, 40.0, 50.0]
     mcap_labels = {v: f"${v:.2f}B" if v < 50 else ">$50B" for v in mcap_breakpoints}
     mcap_min, mcap_max = st.select_slider("Mkt cap",
@@ -757,14 +901,52 @@ with st.sidebar:
         value=(0.0, 50.0),
         format_func=lambda x: ">$50B" if x >= 50.0 else f"${x:.1f}B" if x >= 1.0 else f"${x:.2f}B",
         label_visibility="collapsed")
+    
+    # 3. Company (filtered by Property Type + Market Cap)
+    # Build the eligible company list based on property type and market cap selections
+    eligible = df[df['property_type'].isin(sel_prop)].copy()
+    if mcap_max >= 50.0:
+        eligible = eligible[(eligible['market_cap'] >= mcap_min*1e9) | (eligible['market_cap'].isna())]
+    else:
+        eligible = eligible[((eligible['market_cap'] >= mcap_min*1e9) & (eligible['market_cap'] <= mcap_max*1e9)) | (eligible['market_cap'].isna())]
+    eligible_tickers = sorted(eligible['ticker'].unique())
+    eligible_labels = [clabel(t, df[df['ticker']==t]['company_name'].iloc[0]) for t in eligible_tickers if not df[df['ticker']==t].empty]
+    
+    st.markdown("### Peer Companies")
+    st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">All matching companies selected by default. Remove any to exclude from analysis.</div>', unsafe_allow_html=True)
+    # Default: all eligible companies selected. Track previous eligible set to auto-update.
+    prev_eligible_key = '_prev_eligible_labels'
+    if prev_eligible_key not in st.session_state:
+        st.session_state[prev_eligible_key] = eligible_labels
+        st.session_state['co_peer_sel'] = eligible_labels
+    elif st.session_state[prev_eligible_key] != eligible_labels:
+        # Filters changed — reset to all eligible
+        st.session_state[prev_eligible_key] = eligible_labels
+        st.session_state['co_peer_sel'] = eligible_labels
+    sel_companies = st.multiselect("Peer companies", eligible_labels, label_visibility="collapsed", key="co_peer_sel")
+    
+    # Compute excluded companies
+    excluded_labels = [c for c in eligible_labels if c not in sel_companies]
+    excluded_tickers = [co_labels.get(c, '') for c in excluded_labels if c in co_labels]
+    
+    # 4. Region
     st.markdown("### Region")
     regions = sorted(df['geographic_region'].dropna().unique())
     all_reg_chk = st.checkbox("Select All", value=True, key="reg_all")
     sel_reg = st.multiselect("Region", regions, default=regions if all_reg_chk else [], label_visibility="collapsed", key="reg_sel")
+    
+    # 5. Position
+    st.markdown("### Position")
+    positions = FILTER_POSITIONS
+    all_pos_chk = st.checkbox("Select All", value=True, key="pos_all")
+    sel_pos = st.multiselect("Position", positions, default=positions if all_pos_chk else [], format_func=lambda x: POSITION_FILTER_LABEL.get(x,x), label_visibility="collapsed", key="pos_sel")
 
 # FILTER
+# Get selected company tickers from sidebar multi-select
+sel_co_tickers = [co_labels.get(c, '') for c in sel_companies if c in co_labels]
 filt = df.copy()
 filt = filt[filt['property_type'].isin(sel_prop)]
+filt = filt[filt['ticker'].isin(sel_co_tickers)]  # Apply company selection (exclusions)
 filt_no_pos = filt.copy()  # Peer set without position filter — for company-specific views
 filt = filt[filt['position'].isin(sel_pos)]
 if mcap_max >= 50.0:
@@ -844,7 +1026,10 @@ with tab3:
             st.markdown("#### Peer Compensation Benchmarking")
             n_co, mcr, peer_tks = peer_context_str(filt_no_pos, pt3)
             auto_peers = get_peer_stats(filt_no_pos)
-            st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})</div>", unsafe_allow_html=True)
+            peer_line = f"Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})"
+            if excluded_tickers:
+                peer_line += f"<br><span style='color:#dc2626;font-size:0.85rem;'>Excluded: {', '.join(sorted(excluded_tickers))}</span>"
+            st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
             st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F3AF <strong>Tip:</strong> Adjust the <strong>Market Cap Range</strong> and other Peer Group Filters in the sidebar to refine your comparison set before generating analysis.</div>', unsafe_allow_html=True)
             cur_fp0 = filter_fingerprint(filt_no_pos)
             btn_a, btn_b, btn_c = st.columns(3)
@@ -856,8 +1041,8 @@ with tab3:
                         st.session_state['fp_lk_sum'] = cur_fp0
             with btn_b:
                 if st.button("\U0001F4CB Generate Full Compensation Analysis", key="cv_lookup_rpt"):
-                    with st.spinner("Generating..."):
-                        st.session_state['lk_rpt'] = gen_full(cd3, filt_no_pos, ret_data)
+                    with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
+                        st.session_state['lk_rpt'] = gen_full(cd3, filt_no_pos, ret_data, excluded_tks=excluded_tickers)
                         st.session_state['lk_tk'] = stk3
                         st.session_state['fp_lk_rpt'] = cur_fp0
             with btn_c:
