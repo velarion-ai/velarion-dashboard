@@ -1007,25 +1007,27 @@ if sel3 and sel3 != PLACEHOLDER:
         # ---- PEER BENCHMARKING (lead with this) ----
         st.markdown("---")
         st.markdown("#### Peer Compensation Benchmarking")
-        n_co, mcr, peer_tks = peer_context_str(filt_no_pos, pt3)
-        auto_peers = get_peer_stats(filt_no_pos)
+        # Exclude subject company from peer set — you don't compare yourself to yourself
+        peers_only = filt_no_pos[filt_no_pos['ticker'] != stk3]
+        n_co, mcr, peer_tks = peer_context_str(peers_only, pt3)
+        auto_peers = get_peer_stats(peers_only)
         peer_line = f"Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})"
         if excluded_tickers:
             peer_line += f"<br><span style='color:#dc2626;font-size:0.85rem;'>Excluded: {', '.join(sorted(excluded_tickers))}</span>"
         st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
         st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F3AF <strong>Tip:</strong> Adjust the <strong>Market Cap Range</strong> and other Peer Group Filters in the sidebar to refine your comparison set before generating analysis.</div>', unsafe_allow_html=True)
-        cur_fp0 = filter_fingerprint(filt_no_pos)
+        cur_fp0 = filter_fingerprint(peers_only)
         btn_r1a, btn_r1b = st.columns(2)
         with btn_r1a:
             if st.button("\U0001F4CA  Generate Summary Analysis", key="cv_lookup_sum", use_container_width=True):
                 with st.spinner("Analyzing..."):
-                    st.session_state['lk_sum'] = gen_analysis(cd3, filt_no_pos, ret_data)
+                    st.session_state['lk_sum'] = gen_analysis(cd3, peers_only, ret_data)
                     st.session_state['lk_sum_tk'] = stk3
                     st.session_state['fp_lk_sum'] = cur_fp0
         with btn_r1b:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
-                    st.session_state['lk_rpt'] = gen_full(cd3, filt_no_pos, ret_data, excluded_tks=excluded_tickers)
+                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers)
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
         btn_r2a, btn_r2b, btn_r2c = st.columns(3)
@@ -1062,7 +1064,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.rerun()
             with dl0:
                 try:
-                    pdf = make_pdf(cn3, stk3, rt, cd3, ret_data, filt_no_pos)
+                    pdf = make_pdf(cn3, stk3, rt, cd3, ret_data, peers_only)
                     st.download_button("\U0001F4E5 Download PDF", data=pdf, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key="cv_lk_pdf")
                 except Exception: pass
         
@@ -1193,7 +1195,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     v = er[f]
                     with cols[i]: st.markdown(render_pct_card(v, None, l, is_ext=True), unsafe_allow_html=True)
                 with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
-                    render_peer_table(er, filt_no_pos, pos)
+                    render_peer_table(er, peers_only, pos)
                 st.markdown("")
                 continue
             peers = auto_peers[auto_peers['position']==pos]
@@ -1210,7 +1212,7 @@ if sel3 and sel3 != PLACEHOLDER:
             pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
             if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}"):
                 with st.spinner("Generating..."):
-                    st.session_state[nk] = gen_exec(er, filt_no_pos, df, ret_data, filt_no_pos)
+                    st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only)
                     st.session_state[f"fp_{nk}"] = cur_fp0
             if st.session_state[nk]:
                 if st.session_state.get(f"fp_{nk}") != cur_fp0:
@@ -1220,7 +1222,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.session_state[nk] = None
                     st.rerun()
             with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
-                render_peer_table(er, filt_no_pos, pos)
+                render_peer_table(er, peers_only, pos)
             st.markdown("")
         
         st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
