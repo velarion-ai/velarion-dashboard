@@ -940,7 +940,7 @@ with tab3:
             
             # ---- COMPENSATION TABLE (collapsible reference) ----
             st.markdown("---")
-            with st.expander("\U0001F4CB View Compensation Detail"):
+            with st.expander("\U0001F4CB View Printable Summary Comp Table"):
                 components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;margin-bottom:8px;">\U0001F5A8 Print Compensation Summary</button>', height=35)
                 for idx, (_, rw) in enumerate(sort_by_position(cd3).iterrows()):
                     ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
