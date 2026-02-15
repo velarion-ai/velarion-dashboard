@@ -934,12 +934,6 @@ with st.sidebar:
     regions = sorted(df['geographic_region'].dropna().unique())
     all_reg_chk = st.checkbox("Select All", value=True, key="reg_all")
     sel_reg = st.multiselect("Region", regions, default=regions if all_reg_chk else [], label_visibility="collapsed", key="reg_sel")
-    
-    # 5. Position
-    st.markdown("### Position")
-    positions = FILTER_POSITIONS
-    all_pos_chk = st.checkbox("Select All", value=True, key="pos_all")
-    sel_pos = st.multiselect("Position", positions, default=positions if all_pos_chk else [], format_func=lambda x: POSITION_FILTER_LABEL.get(x,x), label_visibility="collapsed", key="pos_sel")
 
 # FILTER
 # Get selected company tickers from sidebar multi-select
@@ -947,8 +941,7 @@ sel_co_tickers = [co_labels.get(c, '') for c in sel_companies if c in co_labels]
 filt = df.copy()
 filt = filt[filt['property_type'].isin(sel_prop)]
 filt = filt[filt['ticker'].isin(sel_co_tickers)]  # Apply company selection (exclusions)
-filt_no_pos = filt.copy()  # Peer set without position filter — for company-specific views
-filt = filt[filt['position'].isin(sel_pos)]
+filt_no_pos = filt.copy()  # Keep for backward compat — now same as filt
 if mcap_max >= 50.0:
     filt = filt[(filt['market_cap'] >= mcap_min*1e9) | (filt['market_cap'].isna())]
     filt_no_pos = filt_no_pos[(filt_no_pos['market_cap'] >= mcap_min*1e9) | (filt_no_pos['market_cap'].isna())]
@@ -961,21 +954,20 @@ peer_stats_df = get_peer_stats(filt)
 
 # METRICS — context-aware: show full universe until a company is selected, then show peer group
 c1,c2,c3,c4,c5 = st.columns(5)
-pd_str = ', '.join([POSITION_FILTER_LABEL.get(p,p) for p in sel_pos if POSITION_FILTER_LABEL.get(p,p)])
 cv_selected = st.session_state.get('cv_co', PLACEHOLDER)
 if cv_selected and cv_selected != PLACEHOLDER and cv_selected in co_labels:
     # Company selected — show filtered peer group context
     cv_tk = co_labels[cv_selected]
     cv_pt = df[df['ticker']==cv_tk]['property_type'].iloc[0] if not df[df['ticker']==cv_tk].empty else ""
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Peer Companies</div><div class="value">{filt["ticker"].nunique()}</div><div class="sub">{cv_pt} REITs</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">{pd_str}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
     with c3: st.markdown(f'<div class="metric-card"><div class="label">Median Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="label">Median Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
     with c5: st.markdown(f'<div class="metric-card"><div class="label">Median Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
 else:
     # No company selected — show full universe
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Companies</div><div class="value">{filt["ticker"].nunique()}</div><div class="sub">in universe</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">{pd_str}</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">all positions</div></div>', unsafe_allow_html=True)
     with c3: st.markdown(f'<div class="metric-card"><div class="label">Median Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
     with c4: st.markdown(f'<div class="metric-card"><div class="label">Median Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
     with c5: st.markdown(f'<div class="metric-card"><div class="label">Median Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
