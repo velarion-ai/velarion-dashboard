@@ -94,6 +94,8 @@ st.markdown("""
     span[data-baseweb="tag"] span[role="presentation"] { color: white !important; }
     .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; }
     .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; }
+    .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; }
+    .stLinkButton > a:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; color: white !important; }
     .stDownloadButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; }
     div[data-baseweb="slider"] div[role="slider"] { background: #0f766e !important; border-color: #0f766e !important; }
     div[data-baseweb="slider"] [data-testid="stThumbValue"] { color: #0f766e !important; }
