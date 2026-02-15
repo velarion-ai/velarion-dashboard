@@ -811,28 +811,14 @@ with tab3:
             if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
             # Print button
             components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
-            st.markdown("---")
-            for idx, (_, rw) in enumerate(sort_by_position(cd3).iterrows()):
-                ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
-                sb = "\U0001F517" if ie else "\U0001F3E2"
-                badges = ""
-                if ie: badges += "<br><span class='ext-badge'>EXT. MANAGED</span>"
-                if detect_partial(rw, df): badges += "<br><span class='partial-year'>PARTIAL YEAR</span>"
-                pos_tag = f" \u2014 {pd4}" if pd4 else ""
-                cols = st.columns([2,1,1,1,1])
-                cols[0].markdown(f"**{sb} {rw['first_name']} {rw['last_name']}**{pos_tag}<br><span style='color:#64748b;font-size:0.78rem'>{rw['title']}</span>{badges}", unsafe_allow_html=True)
-                cols[1].metric("Base Salary", fmt_dollars(rw['base_salary'], ext_managed=ie))
-                cols[2].metric("Cash Bonus", fmt_dollars(rw['cash_bonus_incentive'], ext_managed=ie))
-                cols[3].metric("Non-Cash Equity \u00B9", fmt_dollars(rw['stock_based_comp'], ext_managed=ie))
-                cols[4].metric("Total Comp", fmt_dollars(rw['total_comp'], ext_managed=ie))
-            st.markdown(f'<div class="footnote">\u00B9 Grant date fair value per ASC Topic 718.</div>', unsafe_allow_html=True)
             
-            # ---- HOW DO I STACK UP? (embedded below comp table) ----
+            # ---- PEER BENCHMARKING (lead with this) ----
             st.markdown("---")
-            st.markdown("#### How Do I Stack Up?")
+            st.markdown("#### Peer Compensation Benchmarking")
             n_co, mcr, peer_tks = peer_context_str(filt_no_pos, pt3)
             auto_peers = get_peer_stats(filt_no_pos)
             st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})</div>", unsafe_allow_html=True)
+            st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F3AF <strong>Tip:</strong> Adjust the <strong>Market Cap Range</strong> and other Peer Group Filters in the sidebar to refine your comparison set before generating analysis.</div>', unsafe_allow_html=True)
             cur_fp0 = filter_fingerprint(filt_no_pos)
             btn_a, btn_b = st.columns(2)
             with btn_a:
@@ -871,6 +857,8 @@ with tab3:
                         pdf = make_pdf(cn3, stk3, rt, cd3, ret_data, filt_no_pos)
                         st.download_button("\U0001F4E5 Download PDF", data=pdf, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key="cv_lk_pdf")
                     except Exception: pass
+            
+            # ---- INDIVIDUAL EXEC BENCHMARKING ----
             st.markdown("---")
             for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
                 if 'former' in str(er.get('title', '')).lower():
@@ -916,6 +904,24 @@ with tab3:
                 with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
                     render_peer_table(er, filt_no_pos, pos)
                 st.markdown("")
+            
+            # ---- COMPENSATION TABLE (reference detail at bottom) ----
+            st.markdown("---")
+            st.markdown("#### Compensation Detail")
+            for idx, (_, rw) in enumerate(sort_by_position(cd3).iterrows()):
+                ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
+                sb = "\U0001F517" if ie else "\U0001F3E2"
+                badges = ""
+                if ie: badges += "<br><span class='ext-badge'>EXT. MANAGED</span>"
+                if detect_partial(rw, df): badges += "<br><span class='partial-year'>PARTIAL YEAR</span>"
+                pos_tag = f" \u2014 {pd4}" if pd4 else ""
+                cols = st.columns([2,1,1,1,1])
+                cols[0].markdown(f"**{sb} {rw['first_name']} {rw['last_name']}**{pos_tag}<br><span style='color:#64748b;font-size:0.78rem'>{rw['title']}</span>{badges}", unsafe_allow_html=True)
+                cols[1].metric("Base Salary", fmt_dollars(rw['base_salary'], ext_managed=ie))
+                cols[2].metric("Cash Bonus", fmt_dollars(rw['cash_bonus_incentive'], ext_managed=ie))
+                cols[3].metric("Non-Cash Equity \u00B9", fmt_dollars(rw['stock_based_comp'], ext_managed=ie))
+                cols[4].metric("Total Comp", fmt_dollars(rw['total_comp'], ext_managed=ie))
+            st.markdown(f'<div class="footnote">\u00B9 Grant date fair value per ASC Topic 718.</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
 with tab4:
     st.markdown("#### Property Type League Tables")
