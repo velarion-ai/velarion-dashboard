@@ -94,6 +94,7 @@ st.markdown("""
     span[data-baseweb="tag"] span[role="presentation"] { color: white !important; }
     .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; }
     .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; }
+    .small-btn .stButton > button { font-size: 0.75rem !important; padding: 0.35rem 0.8rem !important; border-radius: 6px !important; font-weight: 500 !important; }
     .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; }
     .stLinkButton > a:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; color: white !important; }
     .stDownloadButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; }
@@ -1480,6 +1481,7 @@ if sel3 and sel3 != PLACEHOLDER:
             if nk not in st.session_state: st.session_state[nk] = None
             pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
             peer_key = f"show_peers_{stk3}_{pos}_{idx}"
+            st.markdown('<div class="small-btn">', unsafe_allow_html=True)
             eb1, eb2, eb_spacer = st.columns([2, 2, 5])
             with eb1:
                 if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True):
@@ -1489,6 +1491,7 @@ if sel3 and sel3 != PLACEHOLDER:
             with eb2:
                 if st.button(f"\U0001F465 View {pos_btn_label} Peers", key=f"cv_peer_{pos}_{idx}", use_container_width=True):
                     st.session_state[peer_key] = not st.session_state.get(peer_key, False)
+            st.markdown('</div>', unsafe_allow_html=True)
             if st.session_state[nk]:
                 if st.session_state.get(f"fp_{nk}") != cur_fp0:
                     st.markdown(STALE_WARNING, unsafe_allow_html=True)
