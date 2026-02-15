@@ -720,9 +720,19 @@ CHART_COLORS = {
     'equity': '#8b5cf6',
 }
 
-def chart_comp_mix(co_d, peers, pt):
+def chart_comp_mix(co_d, peers, pt, all_df=None, mcap_min=0, mcap_max=50.0):
     """Stacked horizontal bar: company comp mix vs peer median."""
     ps = get_peer_stats(peers)
+    tk = co_d['ticker'].iloc[0]
+    MIN_PEERS = 5
+    wide_ps = None
+    if all_df is not None:
+        wide_base = all_df[all_df['ticker'] != tk].copy()
+        if mcap_max >= 50.0:
+            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
+        else:
+            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_ps = get_peer_stats(wide_base)
     fig = go.Figure()
     labels = []
     sal_pcts = []; cash_pcts = []; eq_pcts = []
@@ -736,16 +746,23 @@ def chart_comp_mix(co_d, peers, pt):
         pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
         labels.append(f"{rw['last_name']} ({pos_d})")
         sal_pcts.append(round(s, 1)); cash_pcts.append(round(c, 1)); eq_pcts.append(round(e, 1))
-    # Peer median
+    # Peer median — use widened if thin
     for pos in ['CEO','CFO','COO','CIO','GC','CAO']:
         pp = ps[ps['position']==pos]
-        if len(pp) < 2: continue
-        tc_med = pp['total_comp'].median()
+        use_pp = pp
+        suffix = ''
+        if len(pp) < MIN_PEERS and wide_ps is not None:
+            pp_wide = wide_ps[wide_ps['position']==pos]
+            if len(pp_wide) >= len(pp):
+                use_pp = pp_wide
+                suffix = ' *'
+        if len(use_pp) < 2: continue
+        tc_med = use_pp['total_comp'].median()
         if pd.isna(tc_med) or tc_med <= 0: continue
-        s_med = pp['base_salary'].median() / tc_med * 100
-        c_med = pp['cash_bonus_incentive'].median() / tc_med * 100
-        e_med = pp['stock_based_comp'].median() / tc_med * 100
-        labels.append(f"Peer {POSITION_DISPLAY.get(pos, pos)}")
+        s_med = use_pp['base_salary'].median() / tc_med * 100
+        c_med = use_pp['cash_bonus_incentive'].median() / tc_med * 100
+        e_med = use_pp['stock_based_comp'].median() / tc_med * 100
+        labels.append(f"Peer {POSITION_DISPLAY.get(pos, pos)}{suffix}")
         sal_pcts.append(round(s_med, 1)); cash_pcts.append(round(c_med, 1)); eq_pcts.append(round(e_med, 1))
     fig.add_trace(go.Bar(name='Base Salary', y=labels, x=sal_pcts, orientation='h', marker_color=CHART_COLORS['salary'], text=[f'{v:.0f}%' for v in sal_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.add_trace(go.Bar(name='Cash Bonus', y=labels, x=cash_pcts, orientation='h', marker_color=CHART_COLORS['cash'], text=[f'{v:.0f}%' for v in cash_pcts], textposition='inside', textfont=dict(color='white', size=11)))
@@ -835,31 +852,53 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
         font=dict(family='Inter, Helvetica, Arial, sans-serif'))
     return fig
 
-def chart_exec_positioning(co_d, peers):
-    """Horizontal bar: each exec's total comp percentile vs peers."""
+def chart_exec_positioning(co_d, peers, all_df=None, mcap_min=0, mcap_max=50.0):
+    """Horizontal bar: each exec's total comp percentile vs peers. Auto-widens thin positions."""
     ps = get_peer_stats(peers)
-    labels = []; pcts = []; colors = []
+    tk = co_d['ticker'].iloc[0]
+    MIN_PEERS = 5
+    wide_ps = None
+    if all_df is not None:
+        wide_base = all_df[all_df['ticker'] != tk].copy()
+        if mcap_max >= 50.0:
+            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
+        else:
+            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_ps = get_peer_stats(wide_base)
+    labels = []; pcts = []; colors = []; annotations = []
     for _, rw in sort_by_position(co_d).iterrows():
         if rw['comp_source'] == 'external_manager': continue
         pp = ps[ps['position']==rw['position']]
+        n_pos = len(pp[pp['total_comp'].notna()])
+        widened = False
+        if n_pos < MIN_PEERS and wide_ps is not None:
+            pp_wide = wide_ps[wide_ps['position']==rw['position']]
+            if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
+                pp = pp_wide
+                widened = True
         pct = percentile_rank(rw['total_comp'], pp['total_comp'])
         if pct is None: continue
         pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
-        labels.append(f"{rw['last_name']} ({pos_d})")
+        suffix = ' *' if widened else ''
+        labels.append(f"{rw['last_name']} ({pos_d}){suffix}")
         pcts.append(pct)
         colors.append(CHART_COLORS['accent'] if pct >= 50 else CHART_COLORS['primary'])
+        annotations.append(widened)
     fig = go.Figure()
     fig.add_trace(go.Bar(y=labels, x=pcts, orientation='h', marker_color=colors,
         text=[f'{p}th' for p in pcts], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
     fig.add_vline(x=50, line_dash='dot', line_color='#dc2626', line_width=1, annotation_text='50th pctl', annotation_position='top')
     fig.add_vline(x=25, line_dash='dot', line_color='#cbd5e1', line_width=1)
     fig.add_vline(x=75, line_dash='dot', line_color='#cbd5e1', line_width=1)
-    fig.update_layout(height=max(200, len(labels)*50), margin=dict(l=10, r=40, t=40, b=10),
+    footnote = '  * = widened to all REITs in market cap range' if any(annotations) else ''
+    fig.update_layout(height=max(200, len(labels)*50), margin=dict(l=10, r=40, t=40, b=30),
         title=dict(text='Executive Compensation Positioning (Total Comp Percentile)', font=dict(size=14, color=CHART_COLORS['text'])),
         xaxis=dict(title='Percentile vs Peers', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
         yaxis=dict(autorange='reversed'),
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+    if footnote:
+        fig.add_annotation(text=footnote, xref='paper', yref='paper', x=0, y=-0.15, showarrow=False, font=dict(size=10, color='#94a3b8'))
     return fig
 
 # ============================================================
@@ -1236,7 +1275,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
                         i += 1
                     try:
-                        fig_pos = chart_exec_positioning(cd3, peers_only)
+                        fig_pos = chart_exec_positioning(cd3, peers_only, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
                         st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
                     except Exception: pass
                 elif text == 'MIX':
@@ -1244,7 +1283,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
                         i += 1
                     try:
-                        fig_mix = chart_comp_mix(cd3, peers_only, pt3)
+                        fig_mix = chart_comp_mix(cd3, peers_only, pt3, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
                         st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
                     except Exception: pass
                 elif text == 'RETURNS':
