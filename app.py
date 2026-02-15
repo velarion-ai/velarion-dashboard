@@ -485,10 +485,17 @@ def fetch_current_stock(ticker):
     except Exception:
         return None
 
-def gen_exec(row, peers, all_df, ret_data, filt):
+def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=None):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
-    pos = row['position']; pt = row['property_type']; ps = get_peer_stats(peers); pp = ps[ps['position'] == pos]
+    pos = row['position']; pt = row['property_type']
+    # If widened, use the wide peer set for percentiles; otherwise use property-type peers
+    if widened and wide_peers_df is not None:
+        ps = wide_peers_df
+        pp = ps[ps['position'] == pos]
+    else:
+        ps = get_peer_stats(peers)
+        pp = ps[ps['position'] == pos]
     n_co, mcr, tickers = peer_context_str(peers, pt)
     st_d = {}
     for f in ['base_salary','cash_bonus_incentive','stock_based_comp','total_comp']:
@@ -497,36 +504,25 @@ def gen_exec(row, peers, all_df, ret_data, filt):
     is_ext = row['comp_source'] == 'external_manager'; is_part = detect_partial(row, peers)
     tk = row['ticker']; r = ret_data.get(tk, {}); vnq = ret_data.get(REIT_INDEX_TICKER, {})
     mix = comp_mix_str(row); peer_mix = peer_mix_median(ps, pos)
-    # Returns quartile
     co_r1 = r.get('return_1y')
     peer_r1s = [ret_data.get(t,{}).get('return_1y') for t in tickers if ret_data.get(t,{}).get('return_1y') is not None]
     ret_pct = percentile_rank(co_r1, pd.Series(peer_r1s)) if co_r1 is not None and peer_r1s else None
     notes = ""
     if is_part: notes += "\nNOTE: Partial-year hire — comp reflects less than full year. Explicitly note this in the analysis and state that compensation should not be compared at face value to full-year peers."
     if is_ext: notes += "\nNOTE: Externally managed."
-    # Broader context for small peer groups
-    broader = ""
-    if st_d['total_comp']['n'] < 5:
-        notes += f"\nNOTE: Small {pt} peer group ({st_d['total_comp']['n']} {pos}s)."
-        all_ps = get_peer_stats(all_df)
-        mc_min = peers['market_cap'].min() if not peers.empty else 0.5e9
-        mc_max = peers['market_cap'].max() if not peers.empty else 5e9
-        all_pos = all_ps[(all_ps['position']==pos) & (all_ps['market_cap']>=mc_min) & (all_ps['market_cap']<=mc_max)]
-        if len(all_pos) >= 3:
-            all_tc = all_pos['total_comp'].dropna(); all_pct = percentile_rank(row['total_comp'], all_tc)
-            all_n = len(all_tc); all_med = all_tc.median()
-            all_mix = peer_mix_median(all_ps[(all_ps['market_cap']>=mc_min)&(all_ps['market_cap']<=mc_max)], pos)
-            broader = f"""
-BROADER CONTEXT (use because {pt} peer group is too small):
-Across ALL {all_n} {pos}s in the ${mc_min/1e9:.2f}B-${mc_max/1e9:.2f}B range (all property types):
-Total comp ${st_d['total_comp']['val']:,.0f} = {ordinal(all_pct)} percentile | Median ${all_med:,.0f} | Peer mix: {all_mix}
-INSTRUCTION: Note the {pt} peer group is too small, then use the all-REIT data as the primary benchmark for your analysis and recommendations."""
+    wider_note = ""
+    if widened:
+        n_wide = st_d['total_comp']['n']
+        n_wide_cos = pp['ticker'].nunique()
+        wider_note = f"""
+NOTE: The {pt} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} REITs (all property types) in the same market cap range as the benchmark.
+INSTRUCTION: Explicitly note that the peer group was widened beyond {pt} to all REITs in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
     prompt = f"""REIT compensation analysis. 4-6 sentences.
 {row['first_name']} {row['last_name']}, {pos}, {row['company_name']} ({tk}) | {pt} | Mkt Cap ${row['market_cap']/1e9:.2f}B
 Total ${st_d['total_comp']['val']:,.0f} ({ordinal(st_d['total_comp']['pct'])} pctl, {quartile_label(st_d['total_comp']['pct'])}) | Salary ${st_d['base_salary']['val']:,.0f} ({ordinal(st_d['base_salary']['pct'])} pctl) | Bonus ${st_d['cash_bonus_incentive']['val']:,.0f} ({ordinal(st_d['cash_bonus_incentive']['pct'])} pctl) | Stock ${st_d['stock_based_comp']['val']:,.0f} ({ordinal(st_d['stock_based_comp']['pct'])} pctl)
 Comp mix: {mix} | Peer median mix: {peer_mix}
-Peer group: {st_d['total_comp']['n']} {pt} {pos}s from {n_co} cos in {mcr} | Tickers: {', '.join(tickers)}
-FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | {pt} avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))}{broader}{notes}
+Peer group: {st_d['total_comp']['n']} {pos}s | Tickers: {', '.join(pp['ticker'].unique())}
+FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | {pt} avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))}{wider_note}{notes}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=500, messages=[{"role":"user","content":prompt}])
@@ -629,7 +625,7 @@ PAY-FOR-PERFORMANCE: Compare the compensation quartile vs returns quartile. If c
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_full(co_d, filt, ret_data, excluded_tks=None):
+def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, mcap_max=50.0):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
@@ -637,14 +633,39 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None):
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
     n_co, mcr, tickers = peer_context_str(filt, pt)
     en = "\nCRITICAL: Externally advised." if ea else ""
+    # Build widened peer set for thin positions
+    MIN_PEERS = 5
+    wide_ps = None
+    if all_df is not None:
+        wide_base = all_df[all_df['ticker'] != tk].copy()
+        if mcap_max >= 50.0:
+            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
+        else:
+            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_ps = get_peer_stats(wide_base)
     esecs = []
+    widened_positions = []
     for _, rw in sort_by_position(co_d).iterrows():
         ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
-        pp = ps[ps['position']==rw['position']]; t = rw['total_comp'] if pd.notna(rw['total_comp']) else 0
-        tp = percentile_rank(rw['total_comp'], pp['total_comp']); mix = comp_mix_str(rw); pm = peer_mix_median(ps, rw['position'])
+        pp = ps[ps['position']==rw['position']]
+        n_pos = len(pp[pp['total_comp'].notna()])
+        # Auto-widen if thin
+        if n_pos < MIN_PEERS and wide_ps is not None:
+            pp_wide = wide_ps[wide_ps['position']==rw['position']]
+            if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
+                pp = pp_wide
+                widened_positions.append(rw['position'])
+                use_ps = wide_ps
+            else:
+                use_ps = ps
+        else:
+            use_ps = ps
+        t = rw['total_comp'] if pd.notna(rw['total_comp']) else 0
+        tp = percentile_rank(rw['total_comp'], pp['total_comp']); mix = comp_mix_str(rw); pm = peer_mix_median(use_ps, rw['position'])
         fl = []
         if ie: fl.append('EXT')
         if ip: fl.append('PARTIAL YR')
+        if rw['position'] in widened_positions: fl.append(f'WIDENED TO {len(pp)} ALL-REIT PEERS')
         fs = f" [{','.join(fl)}]" if fl else ""
         esecs.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}{fs}: Total ${t:,.0f} ({ordinal(tp)} pctl, {quartile_label(tp)}) | Mix: {mix} | Peer mix: {pm}")
     rl = ""
@@ -1027,7 +1048,7 @@ if sel3 and sel3 != PLACEHOLDER:
         with btn_r1b:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
-                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers)
+                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
         btn_r2a, btn_r2b, btn_r2c = st.columns(3)
@@ -1180,6 +1201,14 @@ if sel3 and sel3 != PLACEHOLDER:
         
         # ---- INDIVIDUAL EXEC BENCHMARKING ----
         st.markdown("---")
+        # Build widened peer set: all REITs in market cap range (not just property type), excluding subject
+        wide_peers_base = df[df['ticker'] != stk3].copy()
+        if mcap_max >= 50.0:
+            wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
+        else:
+            wide_peers_base = wide_peers_base[((wide_peers_base['market_cap'] >= mcap_min*1e9) & (wide_peers_base['market_cap'] <= mcap_max*1e9)) | (wide_peers_base['market_cap'].isna())]
+        wide_peers = get_peer_stats(wide_peers_base)
+        MIN_PEERS = 5
         for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
             if 'former' in str(er.get('title', '')).lower():
                 continue
@@ -1198,21 +1227,29 @@ if sel3 and sel3 != PLACEHOLDER:
                     render_peer_table(er, peers_only, pos)
                 st.markdown("")
                 continue
-            peers = auto_peers[auto_peers['position']==pos]
+            # Check if enough peers in property-type set; if not, widen to all REITs
+            narrow_peers = auto_peers[auto_peers['position']==pos]
+            n_narrow = len(narrow_peers[narrow_peers['total_comp'].notna()])
+            if n_narrow >= MIN_PEERS:
+                peers = narrow_peers
+                widened = False
+            else:
+                peers = wide_peers[wide_peers['position']==pos]
+                widened = True
             n_pos = len(peers[peers['total_comp'].notna()])
+            if widened:
+                n_wide_cos = peers['ticker'].nunique()
+                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 Widened to <strong>{n_pos} {pd2 if pd2 else "NEO"}s across {n_wide_cos} REITs</strong> in the market cap range (only {n_narrow} {pt3} peers available).</div>', unsafe_allow_html=True)
             cols = st.columns(4)
             for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
                 v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
                 with cols[i]: st.markdown(render_pct_card(v, p, l, med=med, n=n, is_ext=ie, is_partial=ip), unsafe_allow_html=True)
-            if n_pos < 5:
-                pos_label_warn = pd2 if pd2 else 'NEO'
-                render_widen_warning(n_pos, pos_label_warn, pt3, f"cv_{stk3}_{pos}")
             nk = f"cv_n_{stk3}_{er['position']}_{er['last_name']}_{idx}"
             if nk not in st.session_state: st.session_state[nk] = None
             pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
             if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}"):
                 with st.spinner("Generating..."):
-                    st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only)
+                    st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=wide_peers if widened else None)
                     st.session_state[f"fp_{nk}"] = cur_fp0
             if st.session_state[nk]:
                 if st.session_state.get(f"fp_{nk}") != cur_fp0:
@@ -1222,7 +1259,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.session_state[nk] = None
                     st.rerun()
             with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
-                render_peer_table(er, peers_only, pos)
+                render_peer_table(er, wide_peers if widened else peers_only, pos)
             st.markdown("")
         
         st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
