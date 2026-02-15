@@ -905,23 +905,24 @@ with tab3:
                     render_peer_table(er, filt_no_pos, pos)
                 st.markdown("")
             
-            # ---- COMPENSATION TABLE (reference detail at bottom) ----
+            # ---- COMPENSATION TABLE (collapsible reference) ----
             st.markdown("---")
-            st.markdown("#### Compensation Detail")
-            for idx, (_, rw) in enumerate(sort_by_position(cd3).iterrows()):
-                ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
-                sb = "\U0001F517" if ie else "\U0001F3E2"
-                badges = ""
-                if ie: badges += "<br><span class='ext-badge'>EXT. MANAGED</span>"
-                if detect_partial(rw, df): badges += "<br><span class='partial-year'>PARTIAL YEAR</span>"
-                pos_tag = f" \u2014 {pd4}" if pd4 else ""
-                cols = st.columns([2,1,1,1,1])
-                cols[0].markdown(f"**{sb} {rw['first_name']} {rw['last_name']}**{pos_tag}<br><span style='color:#64748b;font-size:0.78rem'>{rw['title']}</span>{badges}", unsafe_allow_html=True)
-                cols[1].metric("Base Salary", fmt_dollars(rw['base_salary'], ext_managed=ie))
-                cols[2].metric("Cash Bonus", fmt_dollars(rw['cash_bonus_incentive'], ext_managed=ie))
-                cols[3].metric("Non-Cash Equity \u00B9", fmt_dollars(rw['stock_based_comp'], ext_managed=ie))
-                cols[4].metric("Total Comp", fmt_dollars(rw['total_comp'], ext_managed=ie))
-            st.markdown(f'<div class="footnote">\u00B9 Grant date fair value per ASC Topic 718.</div>', unsafe_allow_html=True)
+            with st.expander("\U0001F4CB View Compensation Detail"):
+                components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;margin-bottom:8px;">\U0001F5A8 Print Compensation Summary</button>', height=35)
+                for idx, (_, rw) in enumerate(sort_by_position(cd3).iterrows()):
+                    ie = rw['comp_source']=='external_manager'; pd4 = POSITION_DISPLAY.get(rw['position'], rw['position'])
+                    sb = "\U0001F517" if ie else "\U0001F3E2"
+                    badges = ""
+                    if ie: badges += "<br><span class='ext-badge'>EXT. MANAGED</span>"
+                    if detect_partial(rw, df): badges += "<br><span class='partial-year'>PARTIAL YEAR</span>"
+                    pos_tag = f" \u2014 {pd4}" if pd4 else ""
+                    cols = st.columns([2,1,1,1,1])
+                    cols[0].markdown(f"**{sb} {rw['first_name']} {rw['last_name']}**{pos_tag}<br><span style='color:#64748b;font-size:0.78rem'>{rw['title']}</span>{badges}", unsafe_allow_html=True)
+                    cols[1].metric("Base Salary", fmt_dollars(rw['base_salary'], ext_managed=ie))
+                    cols[2].metric("Cash Bonus", fmt_dollars(rw['cash_bonus_incentive'], ext_managed=ie))
+                    cols[3].metric("Non-Cash Equity \u00B9", fmt_dollars(rw['stock_based_comp'], ext_managed=ie))
+                    cols[4].metric("Total Comp", fmt_dollars(rw['total_comp'], ext_managed=ie))
+                st.markdown(f'<div class="footnote">\u00B9 Grant date fair value per ASC Topic 718.</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
 with tab4:
     st.markdown("#### Property Type League Tables")
