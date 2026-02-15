@@ -693,6 +693,169 @@ DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publ
 # ============================================================
 # PDF (enhanced with percentile cards and peer tables)
 # ============================================================
+# ============================================================
+# CHARTS — Plotly visuals for Full Analysis report
+# ============================================================
+import plotly.graph_objects as go
+
+CHART_COLORS = {
+    'primary': '#0d9488',    # teal
+    'secondary': '#0f766e',  # dark teal
+    'accent': '#f59e0b',     # amber
+    'danger': '#dc2626',     # red
+    'muted': '#94a3b8',      # slate
+    'bg': '#f8fafc',         # light bg
+    'text': '#0f172a',       # dark text
+    'salary': '#0d9488',
+    'cash': '#0ea5e9',
+    'equity': '#8b5cf6',
+}
+
+def chart_comp_mix(co_d, peers, pt):
+    """Stacked horizontal bar: company comp mix vs peer median."""
+    ps = get_peer_stats(peers)
+    fig = go.Figure()
+    labels = []
+    sal_pcts = []; cash_pcts = []; eq_pcts = []
+    # Company execs
+    for _, rw in sort_by_position(co_d).iterrows():
+        if rw['comp_source'] == 'external_manager': continue
+        tc = rw['total_comp'] if pd.notna(rw['total_comp']) and rw['total_comp'] > 0 else 1
+        s = (rw['base_salary'] or 0) / tc * 100
+        c = (rw['cash_bonus_incentive'] or 0) / tc * 100
+        e = (rw['stock_based_comp'] or 0) / tc * 100
+        pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
+        labels.append(f"{rw['last_name']} ({pos_d})")
+        sal_pcts.append(round(s, 1)); cash_pcts.append(round(c, 1)); eq_pcts.append(round(e, 1))
+    # Peer median
+    for pos in ['CEO','CFO','COO','CIO','GC','CAO']:
+        pp = ps[ps['position']==pos]
+        if len(pp) < 2: continue
+        tc_med = pp['total_comp'].median()
+        if pd.isna(tc_med) or tc_med <= 0: continue
+        s_med = pp['base_salary'].median() / tc_med * 100
+        c_med = pp['cash_bonus_incentive'].median() / tc_med * 100
+        e_med = pp['stock_based_comp'].median() / tc_med * 100
+        labels.append(f"Peer {POSITION_DISPLAY.get(pos, pos)}")
+        sal_pcts.append(round(s_med, 1)); cash_pcts.append(round(c_med, 1)); eq_pcts.append(round(e_med, 1))
+    fig.add_trace(go.Bar(name='Base Salary', y=labels, x=sal_pcts, orientation='h', marker_color=CHART_COLORS['salary'], text=[f'{v:.0f}%' for v in sal_pcts], textposition='inside', textfont=dict(color='white', size=11)))
+    fig.add_trace(go.Bar(name='Cash Bonus', y=labels, x=cash_pcts, orientation='h', marker_color=CHART_COLORS['cash'], text=[f'{v:.0f}%' for v in cash_pcts], textposition='inside', textfont=dict(color='white', size=11)))
+    fig.add_trace(go.Bar(name='Non-Cash Equity', y=labels, x=eq_pcts, orientation='h', marker_color=CHART_COLORS['equity'], text=[f'{v:.0f}%' for v in eq_pcts], textposition='inside', textfont=dict(color='white', size=11)))
+    fig.update_layout(barmode='stack', height=max(220, len(labels)*42), margin=dict(l=10, r=10, t=30, b=10),
+        title=dict(text='Compensation Mix: Company vs Peer Median', font=dict(size=14, color=CHART_COLORS['text'])),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5, font=dict(size=11)),
+        xaxis=dict(title='% of Total Compensation', range=[0, 100], showgrid=False),
+        yaxis=dict(autorange='reversed'), plot_bgcolor='white', paper_bgcolor='white',
+        font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+    return fig
+
+def chart_pay_performance(co_d, peers, ret_data, pt):
+    """Scatter: comp percentile vs returns percentile for each company."""
+    ps = get_peer_stats(peers)
+    tickers = sorted(ps['ticker'].unique())
+    tk = co_d['ticker'].iloc[0]
+    # Get total comp percentile and return percentile for each company
+    all_tc = ps.groupby('ticker')['total_comp'].sum()
+    ret_1y = {t: ret_data.get(t, {}).get('return_1y') for t in tickers}
+    ret_series = pd.Series({t: v for t, v in ret_1y.items() if v is not None})
+    x_vals = []; y_vals = []; texts = []; colors = []; sizes = []
+    for t in tickers:
+        if t not in all_tc or t not in ret_series: continue
+        comp_pct = percentile_rank(all_tc[t], all_tc)
+        ret_pct = percentile_rank(ret_series[t], ret_series)
+        if comp_pct is None or ret_pct is None: continue
+        x_vals.append(comp_pct); y_vals.append(ret_pct)
+        cn = ps[ps['ticker']==t]['company_name'].iloc[0] if not ps[ps['ticker']==t].empty else t
+        texts.append(f"{t}<br>{cn[:25]}")
+        colors.append(CHART_COLORS['accent'] if t == tk else CHART_COLORS['muted'])
+        sizes.append(14 if t == tk else 9)
+    # Add subject company from co_d if not in peers
+    if tk not in [t for t in tickers if t in all_tc.index]:
+        co_tc = co_d['total_comp'].sum()
+        co_ret = ret_data.get(tk, {}).get('return_1y')
+        if co_ret is not None:
+            comp_pct = percentile_rank(co_tc, all_tc)
+            ret_pct = percentile_rank(co_ret, ret_series)
+            if comp_pct is not None and ret_pct is not None:
+                x_vals.append(comp_pct); y_vals.append(ret_pct)
+                texts.append(f"{tk}<br>{co_d['company_name'].iloc[0][:25]}")
+                colors.append(CHART_COLORS['accent']); sizes.append(14)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='markers+text', text=[t.split('<br>')[0] for t in texts],
+        textposition='top center', textfont=dict(size=10), hovertext=texts,
+        marker=dict(color=colors, size=sizes, line=dict(width=1, color='white'))))
+    # Quadrant lines at 50th percentile
+    fig.add_hline(y=50, line_dash='dot', line_color='#cbd5e1', line_width=1)
+    fig.add_vline(x=50, line_dash='dot', line_color='#cbd5e1', line_width=1)
+    # Quadrant labels
+    fig.add_annotation(x=25, y=90, text='Low Comp / High Returns', showarrow=False, font=dict(size=9, color='#16a34a'), opacity=0.6)
+    fig.add_annotation(x=75, y=90, text='High Comp / High Returns', showarrow=False, font=dict(size=9, color='#64748b'), opacity=0.6)
+    fig.add_annotation(x=25, y=10, text='Low Comp / Low Returns', showarrow=False, font=dict(size=9, color='#64748b'), opacity=0.6)
+    fig.add_annotation(x=75, y=10, text='High Comp / Low Returns', showarrow=False, font=dict(size=9, color='#dc2626'), opacity=0.6)
+    fig.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10),
+        title=dict(text='Pay-for-Performance: Compensation vs Returns Percentile', font=dict(size=14, color=CHART_COLORS['text'])),
+        xaxis=dict(title='Total Comp Percentile', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
+        yaxis=dict(title='1-Year Return Percentile', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
+        plot_bgcolor='white', paper_bgcolor='white', showlegend=False,
+        font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+    return fig
+
+def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
+    """Grouped bar: company vs peer avg vs FTSE Nareit returns."""
+    r = ret_data.get(tk, {}); vnq = ret_data.get(REIT_INDEX_TICKER, {})
+    p1 = [ret_data.get(t,{}).get('return_1y') for t in peer_tickers if ret_data.get(t,{}).get('return_1y') is not None]
+    p3 = [ret_data.get(t,{}).get('return_3y') for t in peer_tickers if ret_data.get(t,{}).get('return_3y') is not None]
+    categories = ['1-Year Return', '3-Year Return']
+    co_vals = [r.get('return_1y'), r.get('return_3y')]
+    peer_vals = [np.mean(p1) if p1 else None, np.mean(p3) if p3 else None]
+    vnq_vals = [vnq.get('return_1y'), vnq.get('return_3y')]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name=tk, x=categories, y=co_vals, marker_color=CHART_COLORS['accent'],
+        text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in co_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
+    fig.add_trace(go.Bar(name=f'{pt} Avg', x=categories, y=peer_vals, marker_color=CHART_COLORS['primary'],
+        text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in peer_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
+    fig.add_trace(go.Bar(name='FTSE Nareit', x=categories, y=vnq_vals, marker_color=CHART_COLORS['muted'],
+        text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in vnq_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
+    y_min = min([v for v in co_vals + peer_vals + vnq_vals if v is not None] or [0]) - 5
+    y_max = max([v for v in co_vals + peer_vals + vnq_vals if v is not None] or [0]) + 8
+    fig.update_layout(barmode='group', height=350, margin=dict(l=10, r=10, t=40, b=10),
+        title=dict(text=f'Shareholder Returns: {tk} vs Peers vs FTSE Nareit', font=dict(size=14, color=CHART_COLORS['text'])),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5, font=dict(size=11)),
+        yaxis=dict(title='Return (%)', range=[y_min, y_max], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#cbd5e1'),
+        plot_bgcolor='white', paper_bgcolor='white',
+        font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+    return fig
+
+def chart_exec_positioning(co_d, peers):
+    """Horizontal bar: each exec's total comp percentile vs peers."""
+    ps = get_peer_stats(peers)
+    labels = []; pcts = []; colors = []
+    for _, rw in sort_by_position(co_d).iterrows():
+        if rw['comp_source'] == 'external_manager': continue
+        pp = ps[ps['position']==rw['position']]
+        pct = percentile_rank(rw['total_comp'], pp['total_comp'])
+        if pct is None: continue
+        pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
+        labels.append(f"{rw['last_name']} ({pos_d})")
+        pcts.append(pct)
+        colors.append(CHART_COLORS['accent'] if pct >= 50 else CHART_COLORS['primary'])
+    fig = go.Figure()
+    fig.add_trace(go.Bar(y=labels, x=pcts, orientation='h', marker_color=colors,
+        text=[f'{p}th' for p in pcts], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
+    fig.add_vline(x=50, line_dash='dot', line_color='#dc2626', line_width=1, annotation_text='50th pctl', annotation_position='top')
+    fig.add_vline(x=25, line_dash='dot', line_color='#cbd5e1', line_width=1)
+    fig.add_vline(x=75, line_dash='dot', line_color='#cbd5e1', line_width=1)
+    fig.update_layout(height=max(200, len(labels)*50), margin=dict(l=10, r=40, t=40, b=10),
+        title=dict(text='Executive Compensation Positioning (Total Comp Percentile)', font=dict(size=14, color=CHART_COLORS['text'])),
+        xaxis=dict(title='Percentile vs Peers', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
+        yaxis=dict(autorange='reversed'),
+        plot_bgcolor='white', paper_bgcolor='white',
+        font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+    return fig
+
+# ============================================================
+# PDF
+# ============================================================
 def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -1038,6 +1201,23 @@ if sel3 and sel3 != PLACEHOLDER:
                 st.markdown(STALE_WARNING, unsafe_allow_html=True)
             rt = st.session_state['lk_rpt']
             st.markdown(f'<div class="ai-report"><div class="ai-label">\U0001F4CB Compensation Analysis \u2014 {cn3}</div>{rt}</div>', unsafe_allow_html=True)
+            # ---- CHARTS ----
+            try:
+                n_co_ctx, _, peer_tks_ctx = peer_context_str(peers_only, pt3)
+                chart_col1, chart_col2 = st.columns(2)
+                with chart_col1:
+                    fig_pos = chart_exec_positioning(cd3, peers_only)
+                    st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
+                with chart_col2:
+                    fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks_ctx, pt3)
+                    st.plotly_chart(fig_ret, use_container_width=True, key="rpt_ret_chart")
+                fig_mix = chart_comp_mix(cd3, peers_only, pt3)
+                st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
+                fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
+                st.plotly_chart(fig_pfp, use_container_width=True, key="rpt_pfp_chart")
+            except Exception:
+                pass  # Charts are enhancement, don't break the report
+            # ---- END CHARTS ----
             cl0, dl0 = st.columns([1,4])
             with cl0:
                 if st.button("\u2715 Close Report", key="cv_close_lk_rpt"):
