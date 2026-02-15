@@ -1452,7 +1452,10 @@ if sel3 and sel3 != PLACEHOLDER:
                 for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
                     v = er[f]
                     with cols[i]: st.markdown(render_pct_card(v, None, l, is_ext=True), unsafe_allow_html=True)
-                with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
+                peer_key = f"show_peers_{stk3}_{pos}_{idx}"
+                if st.button(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison", key=f"cv_peer_{pos}_{idx}", use_container_width=False):
+                    st.session_state[peer_key] = not st.session_state.get(peer_key, False)
+                if st.session_state.get(peer_key, False):
                     render_peer_table(er, peers_only, pos)
                 st.markdown("")
                 continue
@@ -1476,10 +1479,16 @@ if sel3 and sel3 != PLACEHOLDER:
             nk = f"cv_n_{stk3}_{er['position']}_{er['last_name']}_{idx}"
             if nk not in st.session_state: st.session_state[nk] = None
             pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
-            if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}"):
-                with st.spinner("Generating..."):
-                    st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=wide_peers if widened else None)
-                    st.session_state[f"fp_{nk}"] = cur_fp0
+            peer_key = f"show_peers_{stk3}_{pos}_{idx}"
+            eb1, eb2 = st.columns(2)
+            with eb1:
+                if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True):
+                    with st.spinner("Generating..."):
+                        st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=wide_peers if widened else None)
+                        st.session_state[f"fp_{nk}"] = cur_fp0
+            with eb2:
+                if st.button(f"\U0001F465 View {pos_btn_label} Peer Comparison", key=f"cv_peer_{pos}_{idx}", use_container_width=True):
+                    st.session_state[peer_key] = not st.session_state.get(peer_key, False)
             if st.session_state[nk]:
                 if st.session_state.get(f"fp_{nk}") != cur_fp0:
                     st.markdown(STALE_WARNING, unsafe_allow_html=True)
@@ -1487,7 +1496,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 if st.button(f"\u2715 Close {pos_btn_label} Analysis", key=f"cv_close_{nk}"):
                     st.session_state[nk] = None
                     st.rerun()
-            with st.expander(f"\U0001F465 View {pd2 if pd2 else 'Peer'} Comparison"):
+            if st.session_state.get(peer_key, False):
                 render_peer_table(er, wide_peers if widened else peers_only, pos)
             st.markdown("")
         
