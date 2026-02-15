@@ -1480,14 +1480,14 @@ if sel3 and sel3 != PLACEHOLDER:
             if nk not in st.session_state: st.session_state[nk] = None
             pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
             peer_key = f"show_peers_{stk3}_{pos}_{idx}"
-            eb1, eb2 = st.columns(2)
+            eb1, eb2, eb_spacer = st.columns([2, 2, 5])
             with eb1:
-                if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True):
+                if st.button(f"\U0001F4CA Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}"):
                     with st.spinner("Generating..."):
                         st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=wide_peers if widened else None)
                         st.session_state[f"fp_{nk}"] = cur_fp0
             with eb2:
-                if st.button(f"\U0001F465 View {pos_btn_label} Peer Comparison", key=f"cv_peer_{pos}_{idx}", use_container_width=True):
+                if st.button(f"\U0001F465 View {pos_btn_label} Peers", key=f"cv_peer_{pos}_{idx}"):
                     st.session_state[peer_key] = not st.session_state.get(peer_key, False)
             if st.session_state[nk]:
                 if st.session_state.get(f"fp_{nk}") != cur_fp0:
