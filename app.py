@@ -551,7 +551,7 @@ Connect returns to compensation positioning. If returns outperform peers but com
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_analysis(co_d, filt, ret_data):
+def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
     """Combined company + returns analysis for Company View tab."""
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
@@ -559,15 +559,36 @@ def gen_analysis(co_d, filt, ret_data):
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
     n_co, mcr, tickers = peer_context_str(filt, pt)
     en = "\nNOTE: Externally advised." if ea else ""
+    # Build widened peer set for thin positions
+    MIN_PEERS = 5
+    wide_ps = None
+    if all_df is not None:
+        wide_base = all_df[all_df['ticker'] != tk].copy()
+        if mcap_max >= 50.0:
+            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
+        else:
+            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_ps = get_peer_stats(wide_base)
     elines = []
     for _, rw in sort_by_position(co_d).iterrows():
         ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
-        pp = ps[ps['position']==rw['position']]; pct = percentile_rank(rw['total_comp'], pp['total_comp'])
+        pp = ps[ps['position']==rw['position']]
+        n_pos = len(pp[pp['total_comp'].notna()])
+        widened = False
+        use_ps = ps
+        if n_pos < MIN_PEERS and wide_ps is not None:
+            pp_wide = wide_ps[wide_ps['position']==rw['position']]
+            if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
+                pp = pp_wide
+                use_ps = wide_ps
+                widened = True
+        pct = percentile_rank(rw['total_comp'], pp['total_comp'])
         t = rw['total_comp'] if pd.notna(rw['total_comp']) else 0
-        mix = comp_mix_str(rw); pm = peer_mix_median(ps, rw['position'])
+        mix = comp_mix_str(rw); pm = peer_mix_median(use_ps, rw['position'])
         fl = []
         if ie: fl.append('Ext')
         if ip: fl.append('Partial Yr')
+        if widened: fl.append(f'Widened to {len(pp)} all-REIT peers')
         fs = f" [{', '.join(fl)}]" if fl else ""
         elines.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}: ${t:,.0f} ({ordinal(pct)} pctl, {quartile_label(pct)}) | Mix: {mix} | Peer mix: {pm}{fs}")
     tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
@@ -583,7 +604,7 @@ FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pc
 {pt} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
 Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
-INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers.{en}
+INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
@@ -1042,7 +1063,7 @@ if sel3 and sel3 != PLACEHOLDER:
         with btn_r1a:
             if st.button("\U0001F4CA  Generate Summary Analysis", key="cv_lookup_sum", use_container_width=True):
                 with st.spinner("Analyzing..."):
-                    st.session_state['lk_sum'] = gen_analysis(cd3, peers_only, ret_data)
+                    st.session_state['lk_sum'] = gen_analysis(cd3, peers_only, ret_data, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
                     st.session_state['lk_sum_tk'] = stk3
                     st.session_state['fp_lk_sum'] = cur_fp0
         with btn_r1b:
