@@ -343,10 +343,6 @@ def render_peer_table(exec_row, peers_df, position):
     <tbody>{''.join(rows)}</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
 
-def render_widen_warning(n_pos, pos_label, pt, key_suffix):
-    """Render small peer group warning with guidance."""
-    st.markdown(f'<div class="widen-warn">\u26A0\uFE0F Small peer group ({n_pos} {pos_label}{"s" if n_pos != 1 else ""} in {pt}). The AI analysis will incorporate a broader group of {pos_label}s across all REITs in the selected market cap range. For manual comparison, use the League Tables tab or adjust the sidebar filters. Note: if sidebar filters are adjusted, all executives will be compared against the selected filtered group.</div>', unsafe_allow_html=True)
-
 # ============================================================
 # AI — COMPENSATION CONSULTANT TONE
 # ============================================================
@@ -529,28 +525,6 @@ FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartil
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_returns(co_d, filt, ret_data):
-    cl = get_client()
-    if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
-    tk = co_d['ticker'].iloc[0]; cn = co_d['company_name'].iloc[0]; pt = co_d['property_type'].iloc[0]
-    r = ret_data.get(tk, {}); vnq = ret_data.get(REIT_INDEX_TICKER, {})
-    n_co, mcr, tickers = peer_context_str(filt, pt)
-    p1 = [ret_data.get(t,{}).get('return_1y') for t in tickers if ret_data.get(t,{}).get('return_1y') is not None]
-    p3 = [ret_data.get(t,{}).get('return_3y') for t in tickers if ret_data.get(t,{}).get('return_3y') is not None]
-    ret_pct = percentile_rank(r.get('return_1y'), pd.Series(p1)) if r.get('return_1y') is not None and p1 else None
-    prompt = f"""REIT returns and pay-for-performance analysis. 4-5 sentences. Calendar year {FY_YEAR}.
-{cn} ({tk}) | {pt} | Mkt Cap ${co_d['market_cap'].iloc[0]/1e9:.2f}B
-{tk}: 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
-{pt} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
-FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {', '.join(tickers)} | Mkt cap: {mcr}
-Connect returns to compensation positioning. If returns outperform peers but comp is below median, advocate for management. If returns lag but comp is high, suggest tying incentives to forward metrics.
-{AI_TONE}"""
-    try:
-        resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=400, messages=[{"role":"user","content":prompt}])
-        return clean_ai(resp.content[0].text)
-    except Exception as e: return f"Error: {e}"
-
 def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
     """Combined company + returns analysis for Company View tab."""
     cl = get_client()
@@ -608,41 +582,6 @@ INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs pee
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
-        return clean_ai(resp.content[0].text)
-    except Exception as e: return f"Error: {e}"
-
-def gen_company(co_d, filt, ret_data):
-    cl = get_client()
-    if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
-    cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
-    ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
-    n_co, mcr, tickers = peer_context_str(filt, pt)
-    en = "\nNOTE: Externally advised." if ea else ""
-    elines = []
-    for _, rw in sort_by_position(co_d).iterrows():
-        ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
-        pp = ps[ps['position']==rw['position']]; pct = percentile_rank(rw['total_comp'], pp['total_comp'])
-        t = rw['total_comp'] if pd.notna(rw['total_comp']) else 0
-        mix = comp_mix_str(rw); pm = peer_mix_median(ps, rw['position'])
-        fl = []
-        if ie: fl.append('Ext')
-        if ip: fl.append('Partial Yr')
-        fs = f" [{', '.join(fl)}]" if fl else ""
-        elines.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}: ${t:,.0f} ({ordinal(pct)} pctl, {quartile_label(pct)}) | Mix: {mix} | Peer mix: {pm}{fs}")
-    tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
-    r = ret_data.get(tk, {}); vnq = ret_data.get(REIT_INDEX_TICKER, {})
-    peer_r1s = [ret_data.get(t,{}).get('return_1y') for t in tickers if ret_data.get(t,{}).get('return_1y') is not None]
-    ret_pct = percentile_rank(r.get('return_1y'), pd.Series(peer_r1s)) if r.get('return_1y') is not None and peer_r1s else None
-    prompt = f"""REIT compensation analysis. 5-7 sentences with pay-for-performance assessment.
-{cn} ({tk}) | {pt} | Mkt Cap ${mc/1e9:.2f}B
-TEAM:\n{chr(10).join(elines)}
-Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
-FY{FY_YEAR} Returns: {tk} {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl returns, {quartile_label(ret_pct)}) | FTSE Nareit {fmt_return(vnq.get('return_1y'))}
-Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
-PAY-FOR-PERFORMANCE: Compare the compensation quartile vs returns quartile. If comp quartile is below returns quartile, advocate for the management team. Provide a clear directional recommendation.{en}
-{AI_TONE}"""
-    try:
-        resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=500, messages=[{"role":"user","content":prompt}])
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
