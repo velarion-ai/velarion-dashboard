@@ -1154,23 +1154,14 @@ with tab4:
     else:
         lt_options = active_props
         combined_label = None
-    lp1, lp2, lp3 = st.columns([2,1,2])
+    lp1, lp2 = st.columns([2,1])
     with lp1: lprop = st.selectbox("Property Type", lt_options, key="lt_prop")
     with lp2: lpos = st.selectbox("Position", FILTER_POSITIONS, format_func=lambda x: POSITION_FILTER_LABEL.get(x,x), key="lt_pos")
-    # Auto-select highlighted company from active selection
+    # Auto-highlight from Company View selection
     league_cos = sorted(filt[filt['comp_source']!='external_manager']['ticker'].unique())
     league_labels = {clabel(t, df[df['ticker']==t]['company_name'].iloc[0]): t for t in league_cos}
-    hl_opts = ["None"] + list(league_labels.keys())
-    # Auto-sync highlight from selected company
     current_sel = st.session_state.get('selected_company', '')
-    prev_synced = st.session_state.get('_lt_last_synced', '')
-    if current_sel and current_sel != prev_synced and current_sel in hl_opts:
-        st.session_state['lt_hl_sel'] = current_sel
-        st.session_state['_lt_last_synced'] = current_sel
-    if 'lt_hl_sel' not in st.session_state or st.session_state['lt_hl_sel'] not in hl_opts:
-        st.session_state['lt_hl_sel'] = "None"
-    with lp3: highlight_co = st.selectbox("Highlight Company", hl_opts, key="lt_hl_sel")
-    hl_tk = league_labels.get(highlight_co) if highlight_co != "None" else None
+    hl_tk = co_labels.get(current_sel) if current_sel and current_sel != PLACEHOLDER and current_sel in co_labels else None
     ldf = filt[(filt['position']==lpos) & (filt['comp_source']!='external_manager')].copy()
     if not ldf.empty:
         ldf = ldf.sort_values('total_comp', ascending=False).reset_index(drop=True)
