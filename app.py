@@ -267,6 +267,30 @@ def filter_fingerprint(filt_df):
 
 STALE_WARNING = '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F Peer group filters have changed since this analysis was generated. Click the generate button again to refresh with the updated peer group.</div>'
 
+def lookup_proxy_url(company_name, fy_year):
+    """Look up the most recent DEF 14A proxy filing URL on SEC EDGAR."""
+    import requests as _req
+    try:
+        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
+        query = f'%22{clean_name.replace(" ", "+")}%22'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=DEF+14A&dateRange=custom&startdt={fy_year}-01-01&enddt={fy_year+1}-12-31'
+        resp = _req.get(url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=10)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        hits = data.get('hits', {}).get('hits', [])
+        if not hits:
+            return None
+        hit = hits[0]
+        parts = hit['_id'].split(':')
+        accession = parts[0]
+        filename = parts[1]
+        cik = hit['_source']['ciks'][0].lstrip('0')
+        return f'https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace("-","")}/{filename}'
+    except Exception:
+        return None
+
 def peer_context_str(filt, pt):
     ps = get_peer_stats(filt)
     n = ps[ps['property_type']==pt]['ticker'].nunique()
@@ -820,7 +844,7 @@ with tab3:
             st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})</div>", unsafe_allow_html=True)
             st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F3AF <strong>Tip:</strong> Adjust the <strong>Market Cap Range</strong> and other Peer Group Filters in the sidebar to refine your comparison set before generating analysis.</div>', unsafe_allow_html=True)
             cur_fp0 = filter_fingerprint(filt_no_pos)
-            btn_a, btn_b = st.columns(2)
+            btn_a, btn_b, btn_c = st.columns(3)
             with btn_a:
                 if st.button("\U0001F4CA Generate Summary Analysis", key="cv_lookup_sum"):
                     with st.spinner("Analyzing..."):
@@ -833,6 +857,20 @@ with tab3:
                         st.session_state['lk_rpt'] = gen_full(cd3, filt_no_pos, ret_data)
                         st.session_state['lk_tk'] = stk3
                         st.session_state['fp_lk_rpt'] = cur_fp0
+            with btn_c:
+                proxy_search_url = f"https://efts.sec.gov/LATEST/search-index?q=%22{cn3.replace(' ', '+').replace(',', '')}%22&forms=DEF+14A&dateRange=custom&startdt={FY_YEAR}-01-01&enddt={FY_YEAR+1}-12-31"
+                if st.button("\U0001F4C4 View Proxy Filing (SEC)", key="cv_proxy_btn"):
+                    st.session_state['_show_proxy'] = stk3
+            # Proxy filing lookup
+            if st.session_state.get('_show_proxy') == stk3:
+                with st.spinner("Looking up proxy filing on SEC EDGAR..."):
+                    proxy_url = lookup_proxy_url(cn3, FY_YEAR)
+                if proxy_url:
+                    components.html(f'<script>window.open("{proxy_url}", "_blank");</script>', height=0)
+                    st.session_state['_show_proxy'] = None
+                else:
+                    st.warning(f"Could not find DEF 14A proxy filing for {cn3}. Try searching SEC EDGAR directly.")
+                    st.session_state['_show_proxy'] = None
             # Display Summary
             if st.session_state.get('lk_sum_tk') == stk3 and st.session_state.get('lk_sum'):
                 if st.session_state.get('fp_lk_sum') != cur_fp0:
