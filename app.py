@@ -1015,28 +1015,29 @@ if sel3 and sel3 != PLACEHOLDER:
         st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
         st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F3AF <strong>Tip:</strong> Adjust the <strong>Market Cap Range</strong> and other Peer Group Filters in the sidebar to refine your comparison set before generating analysis.</div>', unsafe_allow_html=True)
         cur_fp0 = filter_fingerprint(filt_no_pos)
-        btn_a, btn_b, btn_lt, btn_c = st.columns(4)
-        with btn_a:
-            if st.button("\U0001F4CA Generate Summary Analysis", key="cv_lookup_sum"):
+        btn_r1a, btn_r1b = st.columns(2)
+        with btn_r1a:
+            if st.button("\U0001F4CA  Generate Summary Analysis", key="cv_lookup_sum", use_container_width=True):
                 with st.spinner("Analyzing..."):
                     st.session_state['lk_sum'] = gen_analysis(cd3, filt_no_pos, ret_data)
                     st.session_state['lk_sum_tk'] = stk3
                     st.session_state['fp_lk_sum'] = cur_fp0
-        with btn_b:
-            if st.button("\U0001F4CB Generate Full Compensation Analysis", key="cv_lookup_rpt"):
+        with btn_r1b:
+            if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
                     st.session_state['lk_rpt'] = gen_full(cd3, filt_no_pos, ret_data, excluded_tks=excluded_tickers)
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
-        with btn_lt:
-            if st.button("\U0001F3C6 League Tables", key="cv_league_toggle"):
+        btn_r2a, btn_r2b = st.columns(2)
+        with btn_r2a:
+            if st.button("\U0001F3C6  League Tables", key="cv_league_toggle", use_container_width=True):
                 st.session_state['show_league'] = not st.session_state.get('show_league', False)
-        with btn_c:
+        with btn_r2b:
             proxy_url = lookup_proxy_url(cn3, FY_YEAR)
             if proxy_url:
-                st.link_button("\U0001F4C4 View Proxy Filing (SEC)", proxy_url)
+                st.link_button("\U0001F4C4  View Proxy Filing (SEC)", proxy_url, use_container_width=True)
             else:
-                st.button("\U0001F4C4 View Proxy Filing (SEC)", key="cv_proxy_btn", disabled=True, help="Proxy filing not found on SEC EDGAR")
+                st.button("\U0001F4C4  View Proxy Filing (SEC)", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
         # Display Summary
         if st.session_state.get('lk_sum_tk') == stk3 and st.session_state.get('lk_sum'):
             if st.session_state.get('fp_lk_sum') != cur_fp0:
