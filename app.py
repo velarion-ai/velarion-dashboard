@@ -217,6 +217,8 @@ def clean_ai(text):
     text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
     text = re.sub(r'^\s*[-*]\s+', '', text, flags=re.MULTILINE)
     text = text.replace('$', '&#36;')
+    # Preserve section markers on their own line before converting newlines
+    text = re.sub(r'\n\s*(\[SECTION:\w+\])\s*\n', r'\n\1\n', text)
     text = re.sub(r'\n\s*\n', '<br><br>', text)
     return text
 
@@ -675,14 +677,21 @@ FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pc
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
 Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
 
-Sections (flowing paragraphs, blank line between):
-1. Opening assessment: Company context, peer group with company names, and overall compensation positioning (2-3 sent)
-2. Each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value.
-3. Overall comp mix philosophy (2-3 sent)
-4. CEO/CFO ratio (1-2 sent)
-5. PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using BOTH proxy-year returns AND current YTD stock performance. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
-6. AREAS TO WATCH: Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
-7. Summary with peer group disclosure including any excluded companies (2-3 sent, list all peer tickers)
+CRITICAL FORMAT INSTRUCTIONS: You MUST include the exact section markers shown below on their own line before each section. These markers control chart placement. Do not skip any markers.
+
+[SECTION:POSITIONING]
+Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt} to all REITs in the market cap range.
+
+[SECTION:MIX]
+Overall comp mix philosophy and how the company's approach to salary/cash/equity split compares to peers. CEO/CFO ratio analysis. (3-4 sent)
+
+[SECTION:RETURNS]
+PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using BOTH proxy-year returns AND current YTD stock performance. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
+
+[SECTION:WATCH]
+AREAS TO WATCH: Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
+
+Summary with peer group disclosure including any excluded companies (2-3 sent, list all peer tickers)
 DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publicly available earnings releases, and market data. Verify all information against original filings before making decisions."{en}
 {AI_TONE}"""
     try:
@@ -1200,24 +1209,65 @@ if sel3 and sel3 != PLACEHOLDER:
             if st.session_state.get('fp_lk_rpt') != cur_fp0:
                 st.markdown(STALE_WARNING, unsafe_allow_html=True)
             rt = st.session_state['lk_rpt']
-            st.markdown(f'<div class="ai-report"><div class="ai-label">\U0001F4CB Compensation Analysis \u2014 {cn3}</div>{rt}</div>', unsafe_allow_html=True)
-            # ---- CHARTS ----
+            
+            # Parse sections and interleave charts
+            st.markdown(f'<div class="ai-report"><div class="ai-label">\U0001F4CB Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
+            
+            # Split on section markers
+            import re
+            section_pattern = r'\[SECTION:(POSITIONING|MIX|RETURNS|WATCH)\]'
+            parts = re.split(section_pattern, rt)
+            # parts alternates: [text_before, marker_name, text_after, marker_name, text_after, ...]
+            
             try:
                 n_co_ctx, _, peer_tks_ctx = peer_context_str(peers_only, pt3)
-                chart_col1, chart_col2 = st.columns(2)
-                with chart_col1:
-                    fig_pos = chart_exec_positioning(cd3, peers_only)
-                    st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
-                with chart_col2:
-                    fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks_ctx, pt3)
-                    st.plotly_chart(fig_ret, use_container_width=True, key="rpt_ret_chart")
-                fig_mix = chart_comp_mix(cd3, peers_only, pt3)
-                st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
-                fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
-                st.plotly_chart(fig_pfp, use_container_width=True, key="rpt_pfp_chart")
             except Exception:
-                pass  # Charts are enhancement, don't break the report
-            # ---- END CHARTS ----
+                peer_tks_ctx = []
+            
+            i = 0
+            while i < len(parts):
+                text = parts[i].strip()
+                if text and text not in ('POSITIONING', 'MIX', 'RETURNS', 'WATCH'):
+                    # Regular text block
+                    st.markdown(text, unsafe_allow_html=True)
+                elif text == 'POSITIONING':
+                    # Next part is the positioning text
+                    if i + 1 < len(parts):
+                        st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
+                        i += 1
+                    try:
+                        fig_pos = chart_exec_positioning(cd3, peers_only)
+                        st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
+                    except Exception: pass
+                elif text == 'MIX':
+                    if i + 1 < len(parts):
+                        st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
+                        i += 1
+                    try:
+                        fig_mix = chart_comp_mix(cd3, peers_only, pt3)
+                        st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
+                    except Exception: pass
+                elif text == 'RETURNS':
+                    if i + 1 < len(parts):
+                        st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
+                        i += 1
+                    try:
+                        ch1, ch2 = st.columns(2)
+                        with ch1:
+                            fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks_ctx, pt3)
+                            st.plotly_chart(fig_ret, use_container_width=True, key="rpt_ret_chart")
+                        with ch2:
+                            fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
+                            st.plotly_chart(fig_pfp, use_container_width=True, key="rpt_pfp_chart")
+                    except Exception: pass
+                elif text == 'WATCH':
+                    if i + 1 < len(parts):
+                        st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
+                        i += 1
+                i += 1
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
             cl0, dl0 = st.columns([1,4])
             with cl0:
                 if st.button("\u2715 Close Report", key="cv_close_lk_rpt"):
