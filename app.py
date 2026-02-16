@@ -24,65 +24,56 @@ def _log_login(email):
             "logged_in_at": datetime.utcnow().isoformat()
         }).execute()
     except Exception:
-        pass  # Don't block login if logging fails
+        pass
 
 def check_password():
     if st.session_state.get('authenticated'):
         return True
 
-    # Hide Streamlit default elements on login page
     st.markdown("""
     <style>
-        /* Hide sidebar, header, footer on login */
         [data-testid="stSidebar"], header, footer,
         [data-testid="stToolbar"], [data-testid="stDecoration"],
-        #MainMenu, .stDeployButton { display: none !important; }
+        #MainMenu, .stDeployButton,
+        [data-testid="stStatusWidget"],
+        .viewerBadge_container__r5tak { display: none !important; }
 
-        /* Full-page dark background */
         .stApp, [data-testid="stAppViewContainer"],
-        .main .block-container {
-            background-color: #0a1628 !important;
-            padding-top: 0 !important;
-        }
-        .main { background-color: #0a1628 !important; }
-        section.main > div { background-color: #0a1628 !important; }
+        .main .block-container, .main,
+        section.main > div { background-color: #0a1628 !important; padding-top: 0 !important; }
 
-        /* Style ALL text inputs on the page */
         .stTextInput > div > div > input {
-            background-color: rgba(255,255,255,0.06) !important;
-            border: 1px solid rgba(212,168,75,0.25) !important;
+            background-color: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(212,168,75,0.2) !important;
             color: #ffffff !important;
-            border-radius: 6px !important;
-            padding: 12px 16px !important;
+            border-radius: 4px !important;
+            padding: 14px 16px !important;
             font-size: 15px !important;
-            font-family: Georgia, serif !important;
+            font-family: 'DM Sans', sans-serif !important;
         }
         .stTextInput > div > div > input:focus {
             border-color: #d4a84b !important;
-            box-shadow: 0 0 0 2px rgba(212,168,75,0.15) !important;
+            box-shadow: 0 0 0 2px rgba(212,168,75,0.12) !important;
         }
-        .stTextInput > div > div > input::placeholder {
-            color: rgba(255,255,255,0.3) !important;
-        }
-        /* Input labels */
+        .stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.25) !important; }
         .stTextInput > label {
-            color: rgba(255,255,255,0.5) !important;
-            font-family: Georgia, serif !important;
-            font-size: 13px !important;
-            letter-spacing: 0.5px !important;
+            color: rgba(255,255,255,0.4) !important;
+            font-size: 12px !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+            font-weight: 600 !important;
         }
 
-        /* Style the login button */
         .stButton > button {
             background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
             color: #0a1628 !important;
             border: none !important;
-            border-radius: 6px !important;
-            padding: 12px 32px !important;
-            font-family: Georgia, serif !important;
-            font-size: 15px !important;
-            font-weight: 600 !important;
-            letter-spacing: 0.5px !important;
+            border-radius: 4px !important;
+            padding: 14px 32px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
             width: 100% !important;
             cursor: pointer !important;
             transition: all 0.3s ease !important;
@@ -96,37 +87,81 @@ def check_password():
             color: #0a1628 !important;
         }
 
-        /* Error message styling */
-        .stAlert {
-            background-color: rgba(220,38,38,0.1) !important;
-            border: 1px solid rgba(220,38,38,0.3) !important;
-            border-radius: 6px !important;
-        }
+        .stAlert { background-color: rgba(220,38,38,0.08) !important; border: 1px solid rgba(220,38,38,0.2) !important; border-radius: 4px !important; }
         .stAlert p { color: #fca5a5 !important; }
-
-        /* Hide the streamlitApp badge */
-        [data-testid="stStatusWidget"] { display: none !important; }
-        .viewerBadge_container__r5tak { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # Centered login card
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
+    left, spacer_col, right = st.columns([1.3, 0.15, 0.85])
+
+    with left:
         st.markdown("""
-        <div class="login-container" style="margin-top:12vh;">
-            <div style="text-align:center;margin-bottom:45px;">
-                <div style="margin-bottom:8px;">
-                    <span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#d4a84b;">.</span>
-                </div>
-                <div style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);">Company Intelligence</div>
+        <div style="padding:6vh 0 4vh 2vw;">
+
+            <div style="margin-bottom:5vh;">
+                <span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#d4a84b;">.</span>
+                <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-left:12px;vertical-align:middle;">Company Intelligence</span>
             </div>
-            <div style="width:60px;height:2px;background:#d4a84b;margin:0 auto 40px;"></div>
+
+            <div style="margin-bottom:4vh;">
+                <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,3.2vw,42px);font-weight:bold;color:#ffffff;line-height:1.12;margin:0 0 20px 0;">
+                    Know what every executive<br>in your industry <em style="color:#22b89a;font-style:italic;">actually</em> earns.
+                </h1>
+                <p style="font-size:16px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:520px;margin:0;">
+                    Structured compensation data from SEC proxy filings. AI-powered peer analysis. Updated quarterly.
+                </p>
+            </div>
+
+            <div style="display:flex;gap:28px;margin-bottom:5vh;">
+                <div>
+                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">190+</div>
+                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Companies</div>
+                </div>
+                <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+                <div>
+                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">600+</div>
+                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Executives</div>
+                </div>
+                <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+                <div>
+                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">7</div>
+                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">C-Suite Roles</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:4vh;">
+                <div style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:16px;">Industry Coverage</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <span style="padding:7px 16px;font-size:13px;font-weight:600;background:#1a8c7a;color:#ffffff;border:1px solid #1a8c7a;">Real Estate <span style="font-size:10px;font-weight:700;letter-spacing:0.5px;margin-left:6px;opacity:0.7;">LIVE</span></span>
+                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Banks &amp; Financial <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q2</span></span>
+                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Biotech &amp; Pharma <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
+                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Energy <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
+                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Technology <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q4</span></span>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:20px;align-items:flex-start;">
+                <div style="border-left:2px solid #d4a84b;padding-left:16px;">
+                    <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">
+                        "I built this because I knew exactly what data I needed walking into a board meeting."
+                    </p>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:0;font-weight:600;">Andy Richardson &mdash; Founder, Former Real Estate Executive</p>
+                </div>
+            </div>
+
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        email = st.text_input("Email address", key="auth_email", placeholder="you@company.com")
+    with right:
+        st.markdown("""
+        <div style="margin-top:14vh;margin-bottom:20px;">
+            <div style="width:40px;height:2px;background:#d4a84b;margin-bottom:20px;"></div>
+            <div style="font-size:20px;font-weight:bold;color:#ffffff;font-family:Georgia,serif;margin-bottom:6px;">Sign in</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.35);">Access your company intelligence dashboard</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        email = st.text_input("Email", key="auth_email", placeholder="you@company.com")
         pw = st.text_input("Password", type="password", key="auth_pw", placeholder="Enter your password")
 
         if st.button("Sign In", use_container_width=True):
@@ -142,11 +177,11 @@ def check_password():
                 st.error("Invalid credentials. Please try again.")
 
         st.markdown("""
-            <div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);">
-                <p style="font-family:Georgia,serif;font-size:12px;color:rgba(255,255,255,0.2);margin:0;">SEC data. Structured. Intelligent. Verified.</p>
-            </div>
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+            <p style="font-size:11px;color:rgba(255,255,255,0.2);margin:0 0 4px 0;">Early beta access through March 31, 2026</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.15);margin:0;">Questions? <a href="mailto:andy@velarion.ai" style="color:#d4a84b;text-decoration:none;">andy@velarion.ai</a></p>
+        </div>
         """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
     return False
 
