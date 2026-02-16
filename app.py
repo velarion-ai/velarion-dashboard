@@ -30,19 +30,6 @@ def check_password():
     if st.session_state.get('authenticated'):
         return True
 
-    # Check if credentials came in via query params from HTML form
-    qp = st.query_params
-    if qp.get("_auth_email") and qp.get("_auth_pw"):
-        email_clean = qp["_auth_email"].strip().lower()
-        if qp["_auth_pw"] == "demo2026" and "@" in email_clean:
-            st.session_state['authenticated'] = True
-            st.session_state['user_email'] = email_clean
-            _log_login(email_clean)
-            st.query_params.clear()
-            st.rerun()
-        else:
-            st.query_params.clear()
-
     # Hide everything Streamlit
     st.markdown("""
     <style>
@@ -59,6 +46,52 @@ def check_password():
         .stApp, [data-testid="stAppViewContainer"],
         .main .block-container, .main,
         section.main > div { background-color: #0a1628 !important; padding-top: 0 !important; }
+
+        /* Input styling - works with light theme inputs on dark background */
+        .stTextInput > label {
+            color: rgba(255,255,255,0.4) !important;
+            font-size: 12px !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+            font-weight: 600 !important;
+        }
+        .stTextInput > div > div > input {
+            border: 1px solid rgba(212,168,75,0.3) !important;
+            border-radius: 4px !important;
+            padding: 14px 16px !important;
+            font-size: 15px !important;
+        }
+        .stTextInput > div > div > input:focus {
+            border-color: #d4a84b !important;
+            box-shadow: 0 0 0 2px rgba(212,168,75,0.15) !important;
+        }
+
+        /* Gold button */
+        .stButton > button {
+            background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
+            color: #0a1628 !important;
+            border: none !important;
+            border-radius: 4px !important;
+            padding: 14px 32px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+            width: 100% !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+        }
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #e0b855 0%, #c49d45 100%) !important;
+            box-shadow: 0 4px 20px rgba(212,168,75,0.3) !important;
+        }
+        .stButton > button:active, .stButton > button:focus {
+            background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
+            color: #0a1628 !important;
+        }
+
+        .stAlert { background-color: rgba(220,38,38,0.08) !important; border: 1px solid rgba(220,38,38,0.2) !important; border-radius: 4px !important; }
+        .stAlert p { color: #fca5a5 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -74,91 +107,35 @@ def check_password():
         st.markdown('<div style="padding:0 0 0 2vw;"><div style="border-left:2px solid #d4a84b;padding-left:16px;"><p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">"I built this because leadership compensation is one of the most important decisions a company makes &mdash; but gathering, analyzing, and presenting the data behind those decisions is still painfully inefficient. Velarion solves this by applying the power of AI to deliver real-time data and analysis to the executives, boards, and advisors who need it most."</p><p style="font-size:12px;color:rgba(255,255,255,0.3);margin:0;font-weight:600;">Andy Richardson &mdash; Founder, Former Real Estate Executive</p></div></div>', unsafe_allow_html=True)
 
     with right:
-        # Pure HTML login form rendered via components.html — bypasses Streamlit widget styling entirely
-        components.html("""
-        <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { background: #0a1628; font-family: Georgia, 'Times New Roman', serif; }
-            .login-wrap { padding-top: 12vh; }
-            .gold-line { width: 40px; height: 2px; background: #d4a84b; margin-bottom: 20px; }
-            h2 { font-size: 20px; font-weight: bold; color: #ffffff; margin-bottom: 6px; }
-            .sub { font-size: 13px; color: rgba(255,255,255,0.35); margin-bottom: 28px; }
-            label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
-            input {
-                width: 100%; padding: 14px 16px; font-size: 15px; font-family: Georgia, serif;
-                background: rgba(255,255,255,0.05); border: 1px solid rgba(212,168,75,0.2);
-                color: #ffffff; border-radius: 4px; outline: none; margin-bottom: 18px;
-            }
-            input::placeholder { color: rgba(255,255,255,0.25); }
-            input:focus { border-color: #d4a84b; box-shadow: 0 0 0 2px rgba(212,168,75,0.12); }
-            .btn {
-                width: 100%; padding: 14px; font-size: 14px; font-weight: 700; font-family: Georgia, serif;
-                letter-spacing: 1px; text-transform: uppercase; border: none; border-radius: 4px;
-                background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%); color: #0a1628;
-                cursor: pointer; transition: all 0.3s ease;
-            }
-            .btn:hover { background: linear-gradient(135deg, #e0b855 0%, #c49d45 100%); box-shadow: 0 4px 20px rgba(212,168,75,0.3); }
-            .error { display: none; background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.2); border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #fca5a5; }
-            .footer { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-            .footer p { font-size: 11px; margin: 0 0 4px 0; }
-            .footer .dim { color: rgba(255,255,255,0.5); }
-            .footer .dimmer { color: rgba(255,255,255,0.4); }
-            .footer a { color: #d4a84b; text-decoration: none; }
-        </style>
-        <div class="login-wrap">
-            <div class="gold-line"></div>
-            <h2>Sign in</h2>
-            <p class="sub">Access your company intelligence dashboard</p>
-            <div id="err" class="error"></div>
-            <label>Email</label>
-            <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
-            <label>Password</label>
-            <input type="password" id="pw" placeholder="Enter your password">
-            <button class="btn" onclick="doLogin()">Sign In</button>
-            <div class="footer">
-                <p class="dim">Early beta access through March 31, 2026</p>
-                <p class="dimmer">Questions? <a href="mailto:andy@velarion.ai">andy@velarion.ai</a></p>
-            </div>
+        st.markdown("""
+        <div style="margin-top:14vh;margin-bottom:20px;">
+            <div style="width:40px;height:2px;background:#d4a84b;margin-bottom:20px;"></div>
+            <div style="font-size:20px;font-weight:bold;color:#ffffff;font-family:Georgia,serif;margin-bottom:6px;">Sign in</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.35);">Access your company intelligence dashboard</div>
         </div>
-        <script>
-        function doLogin() {
-            var email = document.getElementById('email').value.trim().toLowerCase();
-            var pw = document.getElementById('pw').value;
-            var err = document.getElementById('err');
-            if (!email || !email.includes('@')) {
-                err.style.display = 'block';
-                err.textContent = 'Please enter a valid email address.';
-                return;
-            }
-            if (pw !== 'demo2026') {
-                err.style.display = 'block';
-                err.textContent = 'Invalid credentials. Please try again.';
-                return;
-            }
-            err.style.display = 'none';
-            var base = window.location.ancestorOrigins ? window.location.ancestorOrigins[0] : '';
-            if (!base) {
-                try { base = window.parent.location.href.split('?')[0]; } catch(e) { base = ''; }
-            }
-            if (!base) {
-                // Fallback: use the known Streamlit URL
-                base = 'https://velarion-dashboard-7ar6vbxfamfk6w3wqql37o.streamlit.app';
-            }
-            var url = base + '?_auth_email=' + encodeURIComponent(email) + '&_auth_pw=' + encodeURIComponent(pw);
-            try {
-                window.parent.location.href = url;
-            } catch(e) {
-                window.top.location.href = url;
-            }
-        }
-        document.getElementById('pw').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') doLogin();
-        });
-        document.getElementById('email').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') document.getElementById('pw').focus();
-        });
-        </script>
-        """, height=520)
+        """, unsafe_allow_html=True)
+
+        email = st.text_input("EMAIL", key="auth_email", placeholder="you@company.com")
+        pw = st.text_input("PASSWORD", type="password", key="auth_pw", placeholder="Enter your password")
+
+        if st.button("Sign In", use_container_width=True):
+            email_clean = email.strip().lower()
+            if email_clean and "@" in email_clean and pw == "demo2026":
+                st.session_state['authenticated'] = True
+                st.session_state['user_email'] = email_clean
+                _log_login(email_clean)
+                st.rerun()
+            elif not email_clean or "@" not in email_clean:
+                st.error("Please enter a valid email address.")
+            else:
+                st.error("Invalid credentials. Please try again.")
+
+        st.markdown("""
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+            <p style="font-size:11px;color:rgba(255,255,255,0.5);margin:0 0 4px 0;">Early beta access through March 31, 2026</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.4);margin:0;">Questions? <a href="mailto:andy@velarion.ai" style="color:#d4a84b;text-decoration:none;">andy@velarion.ai</a></p>
+        </div>
+        """, unsafe_allow_html=True)
 
     return False
 
