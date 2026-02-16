@@ -161,8 +161,8 @@ def check_password():
 
         st.markdown("""
         <div style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
-            <p style="font-size:11px;color:rgba(255,255,255,0.2);margin:0 0 4px 0;">Early beta access through March 31, 2026</p>
-            <p style="font-size:11px;color:rgba(255,255,255,0.15);margin:0;">Questions? <a href="mailto:andy@velarion.ai" style="color:#d4a84b;text-decoration:none;">andy@velarion.ai</a></p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.5);margin:0 0 4px 0;">Early beta access through March 31, 2026</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.4);margin:0;">Questions? <a href="mailto:andy@velarion.ai" style="color:#d4a84b;text-decoration:none;">andy@velarion.ai</a></p>
         </div>
         """, unsafe_allow_html=True)
 
