@@ -472,11 +472,14 @@ def lookup_proxy_url(company_name, fy_year):
 
 def peer_context_str(filt, pt, excluded_tks=None):
     ps = get_peer_stats(filt)
-    n = ps[ps['property_type']==pt]['ticker'].nunique()
+    # Use all peers in the filtered set, not just the company's own property type
+    all_pts = sorted(ps['property_type'].dropna().unique())
+    n = ps['ticker'].nunique()
     mc_valid = filt['market_cap'].dropna()
     mcr = f"${mc_valid.min()/1e9:.2f}B\u2013${mc_valid.max()/1e9:.2f}B" if not mc_valid.empty else "$0B\u2013$0B"
-    tickers = sorted(ps[ps['property_type']==pt]['ticker'].unique())
-    return n, mcr, tickers
+    tickers = sorted(ps['ticker'].unique())
+    pt_label = ' & '.join(all_pts) if len(all_pts) <= 3 else f"{len(all_pts)} property types"
+    return n, mcr, tickers, pt_label
 
 def comp_mix_str(row):
     t = row['total_comp'] if pd.notna(row['total_comp']) and row['total_comp'] > 0 else 1
@@ -672,7 +675,7 @@ def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=No
     else:
         ps = get_peer_stats(peers)
         pp = ps[ps['position'] == pos]
-    n_co, mcr, tickers = peer_context_str(peers, pt)
+    n_co, mcr, tickers, pt_label = peer_context_str(peers, pt)
     st_d = {}
     for f in ['base_salary','cash_bonus_incentive','stock_based_comp','total_comp']:
         s = pp[f].dropna(); v = row[f]; p = percentile_rank(v, s) if pd.notna(v) else None
@@ -691,14 +694,14 @@ def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=No
         n_wide = st_d['total_comp']['n']
         n_wide_cos = pp['ticker'].nunique()
         wider_note = f"""
-NOTE: The {pt} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} REITs (all property types) in the same market cap range as the benchmark.
-INSTRUCTION: Explicitly note that the peer group was widened beyond {pt} to all REITs in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
+NOTE: The {pt_label} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} REITs (all property types) in the same market cap range as the benchmark.
+INSTRUCTION: Explicitly note that the peer group was widened beyond {pt_label} to all REITs in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
     prompt = f"""REIT compensation analysis. 4-6 sentences.
 {row['first_name']} {row['last_name']}, {pos}, {row['company_name']} ({tk}) | {pt} | Mkt Cap ${row['market_cap']/1e9:.2f}B
 Total ${st_d['total_comp']['val']:,.0f} ({ordinal(st_d['total_comp']['pct'])} pctl, {quartile_label(st_d['total_comp']['pct'])}) | Salary ${st_d['base_salary']['val']:,.0f} ({ordinal(st_d['base_salary']['pct'])} pctl) | Bonus ${st_d['cash_bonus_incentive']['val']:,.0f} ({ordinal(st_d['cash_bonus_incentive']['pct'])} pctl) | Stock ${st_d['stock_based_comp']['val']:,.0f} ({ordinal(st_d['stock_based_comp']['pct'])} pctl)
 Comp mix: {mix} | Peer median mix: {peer_mix}
 Peer group: {st_d['total_comp']['n']} {pos}s | Tickers: {', '.join(pp['ticker'].unique())}
-FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | {pt} avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))}{wider_note}{notes}
+FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | {pt_label} avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))}{wider_note}{notes}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=500, messages=[{"role":"user","content":prompt}])
@@ -711,7 +714,7 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
-    n_co, mcr, tickers = peer_context_str(filt, pt)
+    n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     en = "\nNOTE: Externally advised." if ea else ""
     # Build widened peer set for thin positions
     MIN_PEERS = 5
@@ -755,10 +758,10 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
 TEAM:\n{chr(10).join(elines)}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
 FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl returns, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
-{pt} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
+{pt_label} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
-INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
+Peers: {n_co} {pt_label} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
+INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt_label} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
@@ -771,7 +774,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, m
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
     hq = f"{co_d['hq_city'].iloc[0]}, {co_d['hq_state'].iloc[0]}"
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
-    n_co, mcr, tickers = peer_context_str(filt, pt)
+    n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     en = "\nCRITICAL: Externally advised." if ea else ""
     # Build widened peer set for thin positions
     MIN_PEERS = 5
@@ -851,14 +854,14 @@ EXECUTIVES:\n{chr(10).join(esecs)}
 {rl}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
 FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
-{pt} Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
+{pt_label} Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
+Peers: {n_co} {pt_label} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
 
 CRITICAL FORMAT INSTRUCTIONS: You MUST include the exact section markers shown below on their own line before each section. These markers control chart placement. Do not skip any markers.
 
 [SECTION:POSITIONING]
-Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt} to all REITs in the market cap range.
+Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt_label} to all REITs in the market cap range.
 
 [SECTION:MIX]
 Overall comp mix philosophy and how the company's approach to salary/cash/equity split compares to peers. CEO/CFO ratio analysis. (3-4 sent)
