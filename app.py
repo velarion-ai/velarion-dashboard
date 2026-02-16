@@ -44,13 +44,63 @@ PROPERTY_TYPE_MAP = {
     'Mortgage/mREIT': 'Mortgage',
 }
 TICKER_RECLASSIFY = {
-    'CTO': 'Retail', 'CURB': 'Retail', 'UE': 'Retail', 'WSR': 'Retail',
-    'FCPT': 'Net Lease', 'GTY': 'Net Lease', 'PKST': 'Net Lease',
-    'ESRT': 'Office', 'HPP': 'Office', 'JBGS': 'Office', 'PDM': 'Office',
-    'LTC': 'Healthcare', 'STRW': 'Healthcare',
-    'UMH': 'Multifamily',
-    'PSTL': 'Specialty', 'HOUS': 'Specialty',
-    'FBRT': 'Mortgage',
+    # Net Lease
+    'ADC': 'Net Lease', 'BNL': 'Net Lease', 'EPRT': 'Net Lease', 'FCPT': 'Net Lease',
+    'FVR': 'Net Lease', 'GNL': 'Net Lease', 'GTY': 'Net Lease', 'NNN': 'Net Lease',
+    'NTST': 'Net Lease', 'O': 'Net Lease', 'OLP': 'Net Lease', 'ONL': 'Net Lease',
+    'GIPR': 'Net Lease', 'WPC': 'Net Lease', 'PKST': 'Net Lease', 'MDV': 'Net Lease',
+    'EPR': 'Net Lease', 'SAFE': 'Net Lease', 'SILA': 'Net Lease',
+    # Retail
+    'AKR': 'Retail', 'BFS': 'Retail', 'BRX': 'Retail', 'CBL': 'Retail', 'CTO': 'Retail',
+    'FRT': 'Retail', 'IVT': 'Retail', 'KIM': 'Retail', 'KRG': 'Retail', 'MAC': 'Retail',
+    'PECO': 'Retail', 'REG': 'Retail', 'SITC': 'Retail', 'SKT': 'Retail', 'SPG': 'Retail',
+    'WSR': 'Retail', 'WHLR': 'Retail', 'RPT': 'Retail',
+    # Office
+    'AAT': 'Office', 'BDN': 'Office', 'BXP': 'Office', 'CDP': 'Office', 'CUZ': 'Office',
+    'DEA': 'Office', 'DEI': 'Office', 'ESRT': 'Office', 'FSP': 'Office', 'HIW': 'Office',
+    'HPP': 'Office', 'JBGS': 'Office', 'KRC': 'Office', 'NYC': 'Office', 'PDM': 'Office',
+    'SLG': 'Office', 'VNO': 'Office', 'CLPR': 'Office',
+    # Industrial
+    'EGP': 'Industrial', 'FR': 'Industrial', 'ILPT': 'Industrial', 'LXP': 'Industrial',
+    'PLD': 'Industrial', 'PLYM': 'Industrial', 'REXR': 'Industrial', 'STAG': 'Industrial',
+    'COLD': 'Industrial', 'LINE': 'Industrial',
+    # Residential / Multifamily
+    'AIV': 'Residential', 'ALX': 'Residential', 'AMH': 'Residential', 'AVB': 'Residential',
+    'BRT': 'Residential', 'CPT': 'Residential', 'CSR': 'Residential', 'ELME': 'Residential',
+    'EQR': 'Residential', 'ESS': 'Residential', 'IRT': 'Residential', 'MAA': 'Residential',
+    'NXRT': 'Residential', 'UDR': 'Residential', 'UMH': 'Residential', 'VRE': 'Residential',
+    # Healthcare
+    'AHR': 'Healthcare', 'CHCT': 'Healthcare', 'CTRE': 'Healthcare', 'DHC': 'Healthcare',
+    'DOC': 'Healthcare', 'GMRE': 'Healthcare', 'HR': 'Healthcare', 'LTC': 'Healthcare',
+    'MPW': 'Healthcare', 'NHI': 'Healthcare', 'NHPAP': 'Healthcare', 'OHI': 'Healthcare',
+    'SBRA': 'Healthcare', 'STRW': 'Healthcare', 'UHT': 'Healthcare', 'VTR': 'Healthcare',
+    'WELL': 'Healthcare',
+    # Lodging
+    'AHT': 'Lodging', 'APLE': 'Lodging', 'BHR': 'Lodging', 'CLDT': 'Lodging',
+    'DRH': 'Lodging', 'HST': 'Lodging', 'IHT': 'Lodging', 'INN': 'Lodging',
+    'PEB': 'Lodging', 'RHP': 'Lodging', 'RLJ': 'Lodging', 'SOHO': 'Lodging',
+    'SVC': 'Lodging',
+    # Self-Storage
+    'EXR': 'Self-Storage', 'NSA': 'Self-Storage', 'PSA': 'Self-Storage',
+    'SELF': 'Self-Storage', 'SMA': 'Self-Storage',
+    # Data Center / Tower / Infrastructure
+    'AMT': 'Infrastructure', 'CCI': 'Infrastructure', 'DLR': 'Infrastructure',
+    'EQIX': 'Infrastructure', 'IRM': 'Infrastructure', 'SBAC': 'Infrastructure',
+    # Mortgage
+    'ABR': 'Mortgage', 'ACR': 'Mortgage', 'ACRE': 'Mortgage', 'AGNC': 'Mortgage',
+    'ARI': 'Mortgage', 'BRSP': 'Mortgage', 'BXMT': 'Mortgage', 'CHMI': 'Mortgage',
+    'CIM': 'Mortgage', 'DX': 'Mortgage', 'FBRT': 'Mortgage', 'GPMT': 'Mortgage',
+    'KREF': 'Mortgage', 'LADR': 'Mortgage', 'LFT': 'Mortgage', 'LOAN': 'Mortgage',
+    'MFA': 'Mortgage', 'MITT': 'Mortgage', 'NLY': 'Mortgage', 'PMT': 'Mortgage',
+    'RC': 'Mortgage', 'RITM': 'Mortgage', 'RWT': 'Mortgage', 'SACH': 'Mortgage',
+    'SEVN': 'Mortgage', 'STWD': 'Mortgage', 'SUNS': 'Mortgage', 'TRTX': 'Mortgage',
+    'TWO': 'Mortgage',
+    # Specialty / Other
+    'ARE': 'Life Science', 'CXW': 'Specialty', 'ELS': 'Manufactured Housing',
+    'FPI': 'Specialty', 'GLPI': 'Gaming', 'HHH': 'Diversified', 'LAMR': 'Specialty',
+    'MDRR': 'Diversified', 'OUT': 'Specialty', 'PCH': 'Timber', 'PSTL': 'Specialty',
+    'PW': 'Specialty', 'RYN': 'Timber', 'SQFT': 'Specialty', 'SUI': 'Manufactured Housing',
+    'VICI': 'Gaming', 'WY': 'Timber', 'ADAM': 'Specialty',
 }
 POSITION_DISPLAY = {'CEO': 'CEO', 'PRESIDENT': 'Pres', 'COO': 'COO', 'CFO': 'CFO', 'CIO': 'CIO', 'GC': 'GC', 'CAO': 'CAO'}
 POSITION_FILTER_LABEL = {**POSITION_DISPLAY}
