@@ -225,8 +225,8 @@ st.markdown("""
     .intro-text { color: #475569; font-size: 0.9rem; line-height: 1.55; padding: 0.4rem 0 0.8rem 0; }
     .tab-instruction { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #0c4a6e; }
     .tab-cta { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: white; font-weight: 600; text-align: center; }
-    .metric-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
-    .metric-card .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; font-weight: 600; }
+    .metric-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; }
+    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; font-weight: 600; white-space: nowrap; }
     .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
     .metric-card .sub { font-size: 0.78rem; color: #94a3b8; margin-top: 0.1rem; }
     .ai-narrative { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border: 1px solid #bae6fd; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; }
@@ -246,13 +246,13 @@ st.markdown("""
     .hl-row { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
     .filter-note { font-size: 0.75rem; color: #64748b; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #e2e8f0; margin-top: 0.5rem; }
     .widen-warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #9a3412; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    section[data-testid="stSidebar"] { background: #f5f3ee; }
+    section[data-testid="stSidebar"] { background: #f0f1f3; }
     section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.07em; color: inherit; margin-top: 0.8rem; }
     span[data-baseweb="tag"] { background-color: #0f766e !important; color: white !important; }
     span[data-baseweb="tag"] span[role="presentation"] { color: white !important; }
-    .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; }
+    .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.5rem 1.2rem !important; font-size: 0.85rem !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
     .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; }
-    .stButton > button[kind="secondary"] { font-size: 0.75rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; font-weight: 500 !important; }
+    .stButton > button[kind="secondary"] { font-size: 0.75rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; font-weight: 500 !important; height: 38px !important; }
     .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; }
     .stLinkButton > a:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; color: white !important; }
     .stDownloadButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; }
@@ -1323,16 +1323,16 @@ if cv_selected and cv_selected != PLACEHOLDER and cv_selected in co_labels:
     cv_pt = df[df['ticker']==cv_tk]['property_type'].iloc[0] if not df[df['ticker']==cv_tk].empty else ""
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Peer Companies</div><div class="value">{filt["ticker"].nunique()}</div><div class="sub">{cv_pt} REITs</div></div>', unsafe_allow_html=True)
     with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="label">Median Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="label">Median Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="metric-card"><div class="label">Median Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">peer group</div></div>', unsafe_allow_html=True)
 else:
     # No company selected — show full universe
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Companies</div><div class="value">{filt["ticker"].nunique()}</div><div class="sub">in universe</div></div>', unsafe_allow_html=True)
     with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(filt)}</div><div class="sub">all positions</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="label">Median Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="label">Median Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="metric-card"><div class="label">Median Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(peer_stats_df["base_salary"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(peer_stats_df["total_comp"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(filt["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
 st.markdown("")
 
 # COMPANY VIEW
