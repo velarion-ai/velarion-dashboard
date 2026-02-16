@@ -2000,7 +2000,22 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
             if ie: badges += ' <span class="ext-badge">EXT. MANAGED</span>'
             if ip: badges += ' <span class="partial-year">PARTIAL YEAR</span>'
             pos_tag = f" \u2014 {pd2}" if pd2 else ""
-            st.markdown(f"**{er['first_name']} {er['last_name']}**{pos_tag}{badges} | {er['title']}", unsafe_allow_html=True)
+            # Show title unless it's just the position name repeated
+            title_str = er['title'] if er.get('title') else ""
+            title_lower = title_str.lower().strip()
+            # Hide title if it's just "President", "Chief Executive Officer", "CFO", etc. with no additional info
+            simple_titles = {
+                'CEO': ['chief executive officer', 'ceo'],
+                'PRESIDENT': ['president'],
+                'CFO': ['chief financial officer', 'cfo'],
+                'COO': ['chief operating officer', 'coo'],
+                'CIO': ['chief investment officer', 'cio'],
+                'GC': ['general counsel', 'chief legal officer'],
+                'CAO': ['chief accounting officer', 'cao'],
+            }
+            skip_title = title_lower in simple_titles.get(pos, [])
+            title_display = f" | {title_str}" if title_str and not skip_title else ""
+            st.markdown(f"**{er['first_name']} {er['last_name']}**{pos_tag}{badges}{title_display}", unsafe_allow_html=True)
             if ie:
                 cols = st.columns(4)
                 for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
