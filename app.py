@@ -144,7 +144,7 @@ def check_password():
         st.markdown("""
         <div style="padding:0 0 0 2vw;">
             <div style="border-left:2px solid #d4a84b;padding-left:16px;">
-                <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">"I built this because I knew exactly what data I needed walking into a board meeting."</p>
+                <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">"I built this because leadership compensation is one of the most important decisions a company makes &mdash; but gathering, analyzing, and presenting the data behind those decisions is still painfully inefficient. Velarion solves this by applying the power of AI to deliver real-time data and analysis to the executives, boards, and advisors who need it most."</p>
                 <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:0;font-weight:600;">Andy Richardson &mdash; Founder, Former Real Estate Executive</p>
             </div>
         </div>
