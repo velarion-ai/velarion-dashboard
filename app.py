@@ -314,6 +314,18 @@ def load_data():
         df['partial_year_8k'] = False
     return df
 
+@st.cache_data(ttl=300)
+def load_peer_groups():
+    """Load proxy-disclosed peer groups from Supabase."""
+    try:
+        sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+        result = sb.table('proxy_peer_groups').select('*').execute()
+        if result.data:
+            return pd.DataFrame(result.data)
+    except Exception:
+        pass
+    return pd.DataFrame()
+
 @st.cache_data(ttl=3600)
 def load_total_returns(tickers):
     try:
@@ -1217,6 +1229,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
 # ============================================================
 df = load_data()
 if df.empty: st.error("No data."); st.stop()
+peer_groups_df = load_peer_groups()
 all_tickers = list(df['ticker'].unique())
 ret_data = load_total_returns(all_tickers)
 co_labels = {clabel(t, df[df['ticker']==t]['company_name'].iloc[0]): t for t in sorted(df['ticker'].unique())}
@@ -1378,6 +1391,52 @@ if sel3 and sel3 != PLACEHOLDER:
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
         # Print button
         components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
+        
+        # ---- PROXY-DISCLOSED PEER GROUP ----
+        if not peer_groups_df.empty:
+            co_peers = peer_groups_df[peer_groups_df['ticker'] == stk3].copy()
+            if not co_peers.empty:
+                st.markdown("---")
+                st.markdown("#### Proxy-Disclosed Compensation Peer Group")
+                st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers["fiscal_year"].iloc[0]} DEF 14A proxy filing — the companies their compensation committee benchmarks against.</div>', unsafe_allow_html=True)
+                
+                # Build peer display
+                in_univ = co_peers[co_peers['in_universe'] == True]
+                out_univ = co_peers[co_peers['in_universe'] == False]
+                
+                peer_html_rows = []
+                for _, pr in co_peers.sort_values('peer_name_as_disclosed').iterrows():
+                    tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
+                    if pr.get('in_universe'):
+                        badge = '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
+                    else:
+                        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
+                    peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;font-size:0.75rem;color:#64748b;">{pr.get("source","")}</td></tr>')
+                
+                peer_html = f'''<div style="max-height:280px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
+                <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Source</th></tr></thead>
+                <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
+                st.markdown(peer_html, unsafe_allow_html=True)
+                
+                st.markdown(f'<div style="font-size:0.78rem;color:#64748b;">{len(in_univ)} of {len(co_peers)} peers are in the Velarion database. {len(out_univ)} are outside our current REIT universe.</div>', unsafe_allow_html=True)
+                
+                # "Use Proxy Peer Group" button — filters sidebar to only disclosed peers in universe
+                in_univ_tickers = sorted(in_univ['peer_ticker'].dropna().unique())
+                if len(in_univ_tickers) >= 3:
+                    if st.button(f"\U0001F3AF  Use Proxy Peer Group ({len(in_univ_tickers)} companies)", key="cv_use_proxy_peers", use_container_width=False):
+                        # Get the property types of the proxy peers so we can set the sidebar
+                        proxy_pts = sorted(df[df['ticker'].isin(in_univ_tickers)]['property_type'].dropna().unique())
+                        st.session_state['pt_all'] = False
+                        st.session_state['pt_sel'] = proxy_pts
+                        # Build the labels for the peer company multi-select
+                        proxy_labels = [clabel(t, df[df['ticker']==t]['company_name'].iloc[0]) for t in in_univ_tickers if not df[df['ticker']==t].empty]
+                        # Also include the subject company itself
+                        subj_label = clabel(stk3, cn3)
+                        all_proxy_labels = sorted(set(proxy_labels + [subj_label]))
+                        st.session_state['co_peer_sel'] = all_proxy_labels
+                        st.session_state['_prev_eligible_labels'] = all_proxy_labels
+                        st.rerun()
         
         # ---- PEER BENCHMARKING (lead with this) ----
         st.markdown("---")
