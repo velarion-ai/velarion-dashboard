@@ -276,8 +276,9 @@ st.markdown("""
     .hl-row { background: #fef9ee; border: 1px solid #d4a017; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
     .filter-note { font-size: 0.75rem; color: #57534e; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #d6d3d1; margin-top: 0.5rem; }
     .widen-warn { background: #fffbeb; border: 1px solid #d4a017; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #92400e; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    /* SIDEBAR — warm light gray */
+    /* SIDEBAR — warm light gray, push content down to align with main content */
     section[data-testid="stSidebar"] { background: #f5f3f0; }
+    section[data-testid="stSidebar"] > div:first-child { padding-top: 2.5rem; }
     section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.07em; color: #1a365d; margin-top: 0.8rem; }
     /* TAGS — navy */
     span[data-baseweb="tag"] { background-color: #1a365d !important; color: white !important; }
