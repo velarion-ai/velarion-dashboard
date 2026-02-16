@@ -45,40 +45,41 @@ def check_password():
             padding-top: 0 !important;
         }
         .main { background-color: #0a1628 !important; }
+        section.main > div { background-color: #0a1628 !important; }
 
-        /* Style text inputs */
-        .login-container input {
+        /* Style ALL text inputs on the page */
+        .stTextInput > div > div > input {
             background-color: rgba(255,255,255,0.06) !important;
             border: 1px solid rgba(212,168,75,0.25) !important;
             color: #ffffff !important;
             border-radius: 6px !important;
             padding: 12px 16px !important;
             font-size: 15px !important;
-            font-family: 'Georgia', serif !important;
-            transition: border-color 0.3s ease !important;
+            font-family: Georgia, serif !important;
         }
-        .login-container input:focus {
+        .stTextInput > div > div > input:focus {
             border-color: #d4a84b !important;
             box-shadow: 0 0 0 2px rgba(212,168,75,0.15) !important;
         }
-        .login-container input::placeholder {
+        .stTextInput > div > div > input::placeholder {
             color: rgba(255,255,255,0.3) !important;
         }
-        .login-container label {
+        /* Input labels */
+        .stTextInput > label {
             color: rgba(255,255,255,0.5) !important;
-            font-family: 'Georgia', serif !important;
+            font-family: Georgia, serif !important;
             font-size: 13px !important;
             letter-spacing: 0.5px !important;
         }
 
         /* Style the login button */
-        .login-container .stButton > button {
+        .stButton > button {
             background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
             color: #0a1628 !important;
             border: none !important;
             border-radius: 6px !important;
             padding: 12px 32px !important;
-            font-family: 'Georgia', serif !important;
+            font-family: Georgia, serif !important;
             font-size: 15px !important;
             font-weight: 600 !important;
             letter-spacing: 0.5px !important;
@@ -86,18 +87,26 @@ def check_password():
             cursor: pointer !important;
             transition: all 0.3s ease !important;
         }
-        .login-container .stButton > button:hover {
+        .stButton > button:hover {
             background: linear-gradient(135deg, #e0b855 0%, #c49d45 100%) !important;
             box-shadow: 0 4px 20px rgba(212,168,75,0.3) !important;
         }
+        .stButton > button:active, .stButton > button:focus {
+            background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
+            color: #0a1628 !important;
+        }
 
         /* Error message styling */
-        .login-container .stAlert {
+        .stAlert {
             background-color: rgba(220,38,38,0.1) !important;
             border: 1px solid rgba(220,38,38,0.3) !important;
-            color: #fca5a5 !important;
             border-radius: 6px !important;
         }
+        .stAlert p { color: #fca5a5 !important; }
+
+        /* Hide the streamlitApp badge */
+        [data-testid="stStatusWidget"] { display: none !important; }
+        .viewerBadge_container__r5tak { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -106,15 +115,12 @@ def check_password():
     with col2:
         st.markdown("""
         <div class="login-container" style="margin-top:12vh;">
-            <!-- Logo -->
             <div style="text-align:center;margin-bottom:45px;">
                 <div style="margin-bottom:8px;">
                     <span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#d4a84b;">.</span>
                 </div>
                 <div style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);">Company Intelligence</div>
             </div>
-
-            <!-- Decorative gold line -->
             <div style="width:60px;height:2px;background:#d4a84b;margin:0 auto 40px;"></div>
         </div>
         """, unsafe_allow_html=True)
