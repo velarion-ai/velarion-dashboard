@@ -286,6 +286,15 @@ st.markdown("""
     .source-note { font-size: 0.68rem; color: #94a3b8; margin-top: 0.2rem; }
     [data-testid="stMetricValue"] { font-size: 1.3rem !important; }
     [data-testid="stMetricLabel"] { font-size: 0.9rem !important; }
+    /* Context refinement textarea - high contrast */
+    [data-testid="stTextArea"] textarea { background-color: #fefefe !important; border: 1px solid #d1d5db !important; }
+    /* Gold sample report button */
+    [data-testid="stDownloadButton"][data-testid-key="sample_report_btn"] button {
+        background: linear-gradient(135deg, #b8860b, #daa520) !important;
+        color: white !important;
+        font-weight: 700 !important;
+        border: none !important;
+    }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
     @media print {
         section[data-testid="stSidebar"] { display: none !important; }
@@ -827,7 +836,7 @@ INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs pee
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, mcap_max=50.0, peer_mode='proxy'):
+def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=None, mcap_min=0, mcap_max=50.0, peer_mode='proxy'):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
@@ -888,10 +897,16 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, m
     ret_pct = percentile_rank(r.get('return_1y'), pd.Series(p1)) if r.get('return_1y') is not None and p1 else None
     tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
     
-    # Excluded companies note
+    # Custom peer group modification notes
     excl_note = ""
-    if excluded_tks:
-        excl_note = f"\nNOTE: The following companies were eligible but intentionally excluded from this peer group by the user: {', '.join(sorted(excluded_tks))}. Mention this in the peer group disclosure."
+    if peer_mode == 'custom':
+        mod_notes = []
+        if excluded_tks:
+            mod_notes.append(f"Removed from proxy peer group: {', '.join(sorted(excluded_tks))}")
+        if added_tks:
+            mod_notes.append(f"Added beyond proxy peer group: {', '.join(sorted(added_tks))}")
+        if mod_notes:
+            excl_note = f"\nCUSTOM PEER GROUP MODIFICATIONS (vs. company's proxy-disclosed peers): {'. '.join(mod_notes)}. Note these modifications in the peer group description."
     
     # Fetch enrichment data
     cda_text = fetch_cda_text(cn, FY_YEAR)
@@ -1323,6 +1338,16 @@ def _build_proxy_peer_data(ticker, peer_groups_df, df):
     in_univ_df = df[df['ticker'].isin(in_univ_tickers)].copy()
     return co_peers, in_univ_tickers, in_univ_df
 
+# GOLD SAMPLE REPORT BUTTON
+_btn_col, _spacer = st.columns([1, 4])
+with _btn_col:
+    try:
+        with open("reit_exec_changes_20260215.pdf", "rb") as _pdf_f:
+            st.download_button("\U0001F4C4 Download Sample Report", data=_pdf_f.read(), file_name="Velarion_REIT_Exec_Changes_Sep2025.pdf", mime="application/pdf",
+                key="sample_report_btn")
+    except Exception:
+        pass
+
 # HEADER
 st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>REIT Executive Compensation Benchmarking \u2014 FY2024 Proxy Data</p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="intro-text">Explore executive compensation across {len(reit_tickers)} publicly traded REITs. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
@@ -1561,6 +1586,20 @@ else:
     with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
 st.markdown("")
 
+# Monthly Intelligence showcase (only on landing page, no company selected)
+cv_check = st.session_state.get('cv_co', PLACEHOLDER)
+if not cv_check or cv_check == PLACEHOLDER:
+    st.markdown("---")
+    st.markdown("#### Monthly Executive Intelligence Report")
+    st.markdown('<div style="background:linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);border:1px solid #bae6fd;border-left:4px solid #0284c7;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;">'
+        '<div style="font-size:0.9rem;color:#1e293b;line-height:1.7;">'
+        '\U0001F4E8 <strong>Track C-suite movements across the REIT universe.</strong> Each month, Velarion monitors SEC 8-K filings (Item 5.02) for executive appointments, departures, and employment agreement terms.'
+        '<br><br>'
+        'The September 2025 report covers <strong>4 executive changes across 3 companies</strong> including Crown Castle\'s new CEO appointment with detailed compensation package analysis, two CFO promotions at CareTrust REIT and RLJ Lodging Trust, and a departure.'
+        '<br><br>'
+        '<span style="color:#64748b;font-size:0.82rem;">Monthly reports are included with all Velarion subscriptions. Download the sample above to preview.</span>'
+        '</div></div>', unsafe_allow_html=True)
+
 # COMPANY VIEW
 st.markdown("#### Company Compensation Overview")
 cv_opts = [PLACEHOLDER] + co_opts
@@ -1606,32 +1645,29 @@ if sel3 and sel3 != PLACEHOLDER:
         if not co_peers_display.empty:
             st.markdown("---")
             is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
-            header_suffix = ' <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:600;">ACTIVE</span>' if is_proxy_mode else ''
-            st.markdown(f"#### Proxy-Disclosed Compensation Peer Group{header_suffix}", unsafe_allow_html=True)
-            st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing \u2014 the companies their compensation committee benchmarks against.</div>', unsafe_allow_html=True)
-            
             in_univ = co_peers_display[co_peers_display['in_universe'] == True]
             out_univ = co_peers_display[co_peers_display['in_universe'] == False]
-            
-            peer_html_rows = []
-            for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
-                tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
-                if pr.get('in_universe'):
-                    badge = '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
-                    reason_col = ""
-                else:
-                    badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
-                    reason = _get_not_in_db_reason(pr['peer_name_as_disclosed'])
-                    reason_col = f'<span style="font-size:0.72rem;color:#991b1b;font-style:italic;">{reason}</span>'
-                peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;">{reason_col}</td></tr>')
-            
-            peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
-            <table style="width:100%;border-collapse:collapse;">
-            <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
-            <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
-            st.markdown(peer_html, unsafe_allow_html=True)
-            
-            st.markdown(f'<div style="font-size:0.78rem;color:#64748b;">{len(in_univ)} of {len(co_peers_display)} peers are in the Velarion database with compensation data available.</div>', unsafe_allow_html=True)
+            active_tag = " \u2705 ACTIVE" if is_proxy_mode else ""
+            with st.expander(f"Proxy-Disclosed Compensation Peer Group ({len(in_univ)} of {len(co_peers_display)} in database){active_tag}", expanded=False):
+                st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing \u2014 the companies their compensation committee benchmarks against.</div>', unsafe_allow_html=True)
+                
+                peer_html_rows = []
+                for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
+                    tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
+                    if pr.get('in_universe'):
+                        badge = '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
+                        reason_col = ""
+                    else:
+                        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
+                        reason = _get_not_in_db_reason(pr['peer_name_as_disclosed'])
+                        reason_col = f'<span style="font-size:0.72rem;color:#991b1b;font-style:italic;">{reason}</span>'
+                    peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;">{reason_col}</td></tr>')
+                
+                peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
+                <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
+                <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
+                st.markdown(peer_html, unsafe_allow_html=True)
         
         # ---- PEER BENCHMARKING (lead with this) ----
         st.markdown("---")
@@ -1661,12 +1697,15 @@ if sel3 and sel3 != PLACEHOLDER:
         if st.session_state.get('peer_mode') == 'custom':
             st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
         cur_fp0 = filter_fingerprint(peers_only)
+        # Compute custom changes vs proxy for AI context
+        custom_removed = sorted(set(proxy_tickers) - set(peer_tks)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
+        custom_added = sorted(set(peer_tks) - set(proxy_tickers)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
         # Button layout: 2x2 grid
         btn_r1a, btn_r1b = st.columns(2)
         with btn_r1a:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
-                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max, peer_mode=st.session_state.get('peer_mode', 'proxy'))
+                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max, peer_mode=st.session_state.get('peer_mode', 'proxy'))
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
                     # Clear any previous addendum
@@ -1927,17 +1966,20 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
         # ---- INDIVIDUAL EXEC BENCHMARKING ----
         st.markdown("---")
         is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
-        # Build widened peer set only for custom mode
+        # Build widened peer sets for cascade
+        # Step 2: Same property type peers (excluding subject company)
+        pt_peers_base = reit_df[reit_df['ticker'] != stk3]
+        pt_peers_base = pt_peers_base[pt_peers_base['property_type'] == pt3]
+        pt_peers = get_peer_stats(pt_peers_base)
+        # Step 3: All REITs (for both proxy and custom mode)
+        wide_peers_base = df[df['ticker'] != stk3].copy()
         if not is_proxy_mode:
-            wide_peers_base = df[df['ticker'] != stk3].copy()
             if mcap_max >= 50.0:
                 wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
             else:
                 wide_peers_base = wide_peers_base[((wide_peers_base['market_cap'] >= mcap_min*1e9) & (wide_peers_base['market_cap'] <= mcap_max*1e9)) | (wide_peers_base['market_cap'].isna())]
-            wide_peers = get_peer_stats(wide_peers_base)
-        else:
-            wide_peers = None
-        MIN_PEERS = 5
+        wide_peers = get_peer_stats(wide_peers_base)
+        MIN_PEERS = 4
         for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
             if 'former' in str(er.get('title', '')).lower():
                 continue
@@ -1959,28 +2001,46 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                     render_peer_table(er, peers_only, pos)
                 st.markdown("")
                 continue
-            # Proxy mode: always use proxy peers, no widening
-            # Custom mode: widen if thin
+            # Widening cascade
             narrow_peers = auto_peers[auto_peers['position']==pos]
             n_narrow = len(narrow_peers[narrow_peers['total_comp'].notna()])
-            if is_proxy_mode:
-                # Proxy mode — use proxy peers only, show limited data note if thin
+            widened = False
+            widen_desc = ""
+            if n_narrow >= MIN_PEERS:
                 peers = narrow_peers
-                widened = False
-                if n_narrow < MIN_PEERS and n_narrow > 0:
-                    st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#0c4a6e;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s in proxy peer group.</div>', unsafe_allow_html=True)
-            else:
-                # Custom mode — widen if thin
-                if n_narrow >= MIN_PEERS:
-                    peers = narrow_peers
-                    widened = False
-                else:
-                    peers = wide_peers[wide_peers['position']==pos] if wide_peers is not None else narrow_peers
+            elif is_proxy_mode:
+                # Proxy cascade: Step 2 — same property type
+                pt_pos_peers = pt_peers[pt_peers['position']==pos]
+                n_pt = len(pt_pos_peers[pt_pos_peers['total_comp'].notna()])
+                if n_pt >= MIN_PEERS:
+                    peers = pt_pos_peers
                     widened = True
+                    widen_desc = f"Widened to <strong>{n_pt} {pd2 if pd2 else 'NEO'}s across {pt_pos_peers['ticker'].nunique()} {pt3} REITs</strong> (only {n_narrow} in proxy peer group)."
+                else:
+                    # Step 3 — all REITs
+                    all_pos_peers = wide_peers[wide_peers['position']==pos]
+                    n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
+                    if n_all >= MIN_PEERS:
+                        peers = all_pos_peers
+                        widened = True
+                        widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} REITs</strong> (only {n_narrow} in proxy peers, {n_pt} in {pt3})."
+                    else:
+                        peers = narrow_peers  # Use what we have
+                        if n_narrow > 0:
+                            st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#0c4a6e;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s available.</div>', unsafe_allow_html=True)
+            else:
+                # Custom mode — widen to all REITs in market cap range
+                all_pos_peers = wide_peers[wide_peers['position']==pos]
+                n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
+                if n_all >= MIN_PEERS:
+                    peers = all_pos_peers
+                    widened = True
+                    widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} companies</strong> (only {n_narrow} in custom peer group)."
+                else:
+                    peers = narrow_peers
             n_pos = len(peers[peers['total_comp'].notna()])
-            if widened:
-                n_wide_cos = peers['ticker'].nunique()
-                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 Widened to <strong>{n_pos} {pd2 if pd2 else "NEO"}s across {n_wide_cos} companies</strong> (only {n_narrow} in custom peer group).</div>', unsafe_allow_html=True)
+            if widened and widen_desc:
+                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 {widen_desc}</div>', unsafe_allow_html=True)
             cols = st.columns(4)
             for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
                 v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
