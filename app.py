@@ -241,59 +241,72 @@ FILTER_POSITIONS = ['CEO', 'PRESIDENT', 'COO', 'CFO', 'CIO', 'GC', 'CAO']
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-    .stApp { font-family: 'DM Sans', sans-serif; }
-    .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 50%, #1e3a5f 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: white; box-shadow: 0 4px 20px rgba(15,23,42,0.25); }
+    .stApp { font-family: 'DM Sans', sans-serif; background: #f7f8fa; }
+    /* HEADER — deep navy */
+    .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 60%, #234578 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: white; box-shadow: 0 4px 20px rgba(10,22,40,0.3); }
     .main-header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
     .main-header p { margin: 0.3rem 0 0 0; opacity: 0.8; font-size: 0.92rem; }
     .intro-text { color: #334155; font-size: 0.9rem; line-height: 1.55; padding: 0.4rem 0 0.8rem 0; }
-    .tab-instruction { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #1e40af; font-weight: 500; }
-    .tab-cta { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: white; font-weight: 600; text-align: center; }
-    .metric-card { background: white; border: 1px solid #cbd5e1; border-top: 3px solid #1e3a5f; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 8px rgba(15,23,42,0.06); }
-    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #475569; font-weight: 700; white-space: nowrap; }
+    /* INSTRUCTION BOXES — warm cream/gold tint */
+    .tab-instruction { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #d4a017; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #78350f; font-weight: 500; }
+    .tab-cta { background: linear-gradient(135deg, #b8860b 0%, #d4a017 100%); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: white; font-weight: 600; text-align: center; }
+    /* KPI CARDS — white with gold top accent */
+    .metric-card { background: white; border: 1px solid #d6d3d1; border-top: 3px solid #b8860b; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 8px rgba(10,22,40,0.06); }
+    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #57534e; font-weight: 700; white-space: nowrap; }
     .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
-    .metric-card .sub { font-size: 0.78rem; color: #64748b; margin-top: 0.1rem; font-weight: 500; }
-    .ai-narrative { background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); border: 1px solid #93c5fd; border-left: 5px solid #2563eb; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
-    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #2563eb; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
-    .ai-report { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #6ee7b7; border-left: 5px solid #059669; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(5,150,105,0.08); }
-    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #059669; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
-    .lookup-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
+    .metric-card .sub { font-size: 0.78rem; color: #78716c; margin-top: 0.1rem; font-weight: 500; }
+    /* AI NARRATIVE — navy accent */
+    .ai-narrative { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #94a3b8; border-left: 5px solid #1a365d; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(26,54,93,0.06); }
+    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #1a365d; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
+    /* AI REPORT — gold accent */
+    .ai-report { background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%); border: 1px solid #d4a017; border-left: 5px solid #b8860b; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(184,134,11,0.08); }
+    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #92400e; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
+    /* UTILITY BOXES */
+    .lookup-box { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
     .lookup-box h2 { margin: 0 0 0.3rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; }
-    .lookup-box p { margin: 0 0 0.5rem 0; color: #475569; font-size: 0.83rem; }
-    .stats-bar { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem 1.5rem; margin-top: 1rem; display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; }
+    .lookup-box p { margin: 0 0 0.5rem 0; color: #57534e; font-size: 0.83rem; }
+    .stats-bar { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 10px; padding: 1rem 1.5rem; margin-top: 1rem; display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; }
     .stats-bar .stat { text-align: center; }
-    .stats-bar .stat-label { font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
+    .stats-bar .stat-label { font-size: 0.72rem; text-transform: uppercase; color: #57534e; font-weight: 600; }
     .stats-bar .stat-value { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
-    .analysis-picker { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem 1.5rem; margin: 0.5rem 0; }
+    .analysis-picker { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 10px; padding: 1rem 1.5rem; margin: 0.5rem 0; }
+    /* BADGES */
     .partial-year { background: #fbbf24; color: #78350f; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .ext-badge { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .hl-row { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
-    .filter-note { font-size: 0.75rem; color: #64748b; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #e2e8f0; margin-top: 0.5rem; }
-    .widen-warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #9a3412; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    section[data-testid="stSidebar"] { background: #eef2f7; }
-    section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.07em; color: inherit; margin-top: 0.8rem; }
-    span[data-baseweb="tag"] { background-color: #0f766e !important; color: white !important; }
+    .hl-row { background: #fef9ee; border: 1px solid #d4a017; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
+    .filter-note { font-size: 0.75rem; color: #57534e; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #d6d3d1; margin-top: 0.5rem; }
+    .widen-warn { background: #fffbeb; border: 1px solid #d4a017; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #92400e; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    /* SIDEBAR — warm light gray */
+    section[data-testid="stSidebar"] { background: #f5f3f0; }
+    section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.07em; color: #1a365d; margin-top: 0.8rem; }
+    /* TAGS — navy */
+    span[data-baseweb="tag"] { background-color: #1a365d !important; color: white !important; }
     span[data-baseweb="tag"] span[role="presentation"] { color: white !important; }
-    .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.5rem 1.2rem !important; font-size: 0.85rem !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 2px 6px rgba(15,118,110,0.2) !important; }
-    .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; box-shadow: 0 3px 10px rgba(15,118,110,0.3) !important; }
+    /* BUTTONS — navy primary */
+    .stButton > button { background: linear-gradient(135deg, #1a365d 0%, #234578 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.5rem 1.2rem !important; font-size: 0.85rem !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 2px 6px rgba(26,54,93,0.25) !important; }
+    .stButton > button:hover { background: linear-gradient(135deg, #0f2440 0%, #1a365d 100%) !important; box-shadow: 0 3px 10px rgba(26,54,93,0.35) !important; }
     .stButton > button[kind="secondary"] { font-size: 0.75rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; font-weight: 500 !important; height: 38px !important; }
-    .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; box-shadow: 0 2px 6px rgba(15,118,110,0.2) !important; }
-    .stLinkButton > a:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; color: white !important; }
-    .stDownloadButton > button { background: linear-gradient(135deg, #b8860b 0%, #daa520 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 2px 6px rgba(184,134,11,0.25) !important; }
-    div[data-baseweb="slider"] div[role="slider"] { background: #0f766e !important; border-color: #0f766e !important; }
-    div[data-baseweb="slider"] [data-testid="stThumbValue"] { color: #0f766e !important; }
+    /* LINK BUTTONS — navy */
+    .stLinkButton > a { background: linear-gradient(135deg, #1a365d 0%, #234578 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; box-shadow: 0 2px 6px rgba(26,54,93,0.25) !important; }
+    .stLinkButton > a:hover { background: linear-gradient(135deg, #0f2440 0%, #1a365d 100%) !important; color: white !important; }
+    /* DOWNLOAD BUTTON — gold */
+    .stDownloadButton > button { background: linear-gradient(135deg, #b8860b 0%, #d4a017 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 2px 6px rgba(184,134,11,0.25) !important; }
+    /* SLIDER — navy */
+    div[data-baseweb="slider"] div[role="slider"] { background: #1a365d !important; border-color: #1a365d !important; }
+    div[data-baseweb="slider"] [data-testid="stThumbValue"] { color: #1a365d !important; }
     .stCheckbox label span { font-weight: 600 !important; font-size: 0.95rem !important; }
-    .footnote { font-size: 0.73rem; color: #94a3b8; font-style: italic; margin-top: 0.3rem; }
-    .source-note { font-size: 0.68rem; color: #94a3b8; margin-top: 0.2rem; }
-    [data-testid="stMetricValue"] { font-size: 1.3rem !important; }
-    [data-testid="stMetricLabel"] { font-size: 0.9rem !important; }
-    /* Context refinement textarea - high contrast */
-    [data-testid="stTextArea"] textarea { background-color: #fefefe !important; border: 1px solid #d1d5db !important; }
-    /* Download button smaller font (gold applied above) */
+    .footnote { font-size: 0.73rem; color: #78716c; font-style: italic; margin-top: 0.3rem; }
+    .source-note { font-size: 0.68rem; color: #78716c; margin-top: 0.2rem; }
+    [data-testid="stMetricValue"] { font-size: 1.3rem !important; color: #0f172a !important; }
+    [data-testid="stMetricLabel"] { font-size: 0.9rem !important; color: #1a365d !important; }
+    /* Context refinement textarea */
+    [data-testid="stTextArea"] textarea { background-color: #fefefe !important; border: 1px solid #d6d3d1 !important; }
+    /* Download button font */
     div[data-testid="stDownloadButton"] button { font-size: 0.78rem !important; padding: 0.4rem 0.8rem !important; }
-    /* Proxy peer expander styling */
+    /* Proxy peer expander — navy/gold */
     div[data-testid="stExpander"] { max-width: 70%; }
-    div[data-testid="stExpander"] details { border: 2px solid #3b82f6 !important; border-radius: 10px !important; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; }
-    div[data-testid="stExpander"] summary { font-weight: 600 !important; color: #1e3a5f !important; }
+    div[data-testid="stExpander"] details { border: 2px solid #1a365d !important; border-radius: 10px !important; background: linear-gradient(135deg, #f8f6f3 0%, #faf9f7 100%) !important; }
+    div[data-testid="stExpander"] summary { font-weight: 600 !important; color: #1a365d !important; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
     @media print {
         section[data-testid="stSidebar"] { display: none !important; }
@@ -566,7 +579,7 @@ def render_pct_card(val, pct, label, med=None, n=None, is_ext=False, is_partial=
     if is_ext and (pd.isna(val) or val == 0):
         return f'<div style="padding:0.7rem;background:#fffbeb;border-radius:8px;border-left:3px solid #ca8a04;"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#92400e;">EX-MGD</div></div>'
     pct_d = ordinal(pct) if pct is not None else "\u2014"
-    color = "#16a34a" if pct and pct >= 50 else "#0284c7" if pct and pct >= 25 else "#475569" if pct is not None else "#94a3b8"
+    color = "#b8860b" if pct and pct >= 50 else "#1a365d" if pct and pct >= 25 else "#475569" if pct is not None else "#94a3b8"
     partial_tag = '<div style="margin-top:3px;"><span class="partial-year">PARTIAL YEAR</span></div>' if is_partial else ''
     med_line = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:3px;">Median: {fmt_dollars(med)} | n={n}</div>' if med is not None and n is not None else ''
     return f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {color};"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(val)}</div><div style="font-size:0.82rem;color:{color};font-weight:600;">{pct_d} percentile</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;"><div style="width:{pct or 0}%;height:100%;background:{color};border-radius:4px;"></div></div>{med_line}{partial_tag}</div>'
@@ -585,7 +598,7 @@ def render_peer_table(exec_row, peers_df, position):
         rows.append(f"<tr style='{bg}{fw}'><td>{i+1}</td><td>{r['ticker']}</td><td>{r['company_name'][:30]}</td><td>{r['first_name']} {r['last_name']}</td><td style='text-align:right'>{fmt_dollars(r['base_salary'])}</td><td style='text-align:right'>{fmt_dollars(r['cash_bonus_incentive'])}</td><td style='text-align:right'>{fmt_dollars(r['stock_based_comp'])}</td><td style='text-align:right'>{fmt_dollars(r['total_comp'])}</td><td style='text-align:right'>{mc}</td></tr>")
     html = f"""<div style="max-height:300px;overflow-y:auto;margin:0.5rem 0;border:1px solid #e2e8f0;border-radius:8px;">
     <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-    <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px;text-align:left;">Rank</th><th style="padding:6px;text-align:left;">Ticker</th><th style="padding:6px;text-align:left;">Company</th><th style="padding:6px;text-align:left;">Executive</th><th style="padding:6px;text-align:right;">Salary</th><th style="padding:6px;text-align:right;">Cash Bonus</th><th style="padding:6px;text-align:right;">Stock</th><th style="padding:6px;text-align:right;">Total Comp</th><th style="padding:6px;text-align:right;">Mkt Cap</th></tr></thead>
+    <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px;text-align:left;">Rank</th><th style="padding:6px;text-align:left;">Ticker</th><th style="padding:6px;text-align:left;">Company</th><th style="padding:6px;text-align:left;">Executive</th><th style="padding:6px;text-align:right;">Salary</th><th style="padding:6px;text-align:right;">Cash Bonus</th><th style="padding:6px;text-align:right;">Stock</th><th style="padding:6px;text-align:right;">Total Comp</th><th style="padding:6px;text-align:right;">Mkt Cap</th></tr></thead>
     <tbody>{''.join(rows)}</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
 
@@ -974,14 +987,14 @@ DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publ
 import plotly.graph_objects as go
 
 CHART_COLORS = {
-    'primary': '#0d9488',    # teal
-    'secondary': '#0f766e',  # dark teal
+    'primary': '#1a365d',    # navy
+    'secondary': '#234578',  # lighter navy
     'accent': '#f59e0b',     # amber
     'danger': '#dc2626',     # red
     'muted': '#94a3b8',      # slate
     'bg': '#f8fafc',         # light bg
     'text': '#0f172a',       # dark text
-    'salary': '#0d9488',
+    'salary': '#1a365d',
     'cash': '#0ea5e9',
     'equity': '#8b5cf6',
 }
@@ -1080,7 +1093,7 @@ def chart_pay_performance(co_d, peers, ret_data, pt):
     fig.add_hline(y=50, line_dash='dot', line_color='#cbd5e1', line_width=1)
     fig.add_vline(x=50, line_dash='dot', line_color='#cbd5e1', line_width=1)
     # Quadrant labels
-    fig.add_annotation(x=25, y=90, text='Low Comp / High Returns', showarrow=False, font=dict(size=9, color='#16a34a'), opacity=0.6)
+    fig.add_annotation(x=25, y=90, text='Low Comp / High Returns', showarrow=False, font=dict(size=9, color='#b8860b'), opacity=0.6)
     fig.add_annotation(x=75, y=90, text='High Comp / High Returns', showarrow=False, font=dict(size=9, color='#64748b'), opacity=0.6)
     fig.add_annotation(x=25, y=10, text='Low Comp / Low Returns', showarrow=False, font=dict(size=9, color='#64748b'), opacity=0.6)
     fig.add_annotation(x=75, y=10, text='High Comp / Low Returns', showarrow=False, font=dict(size=9, color='#dc2626'), opacity=0.6)
@@ -1183,7 +1196,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     ss = ParagraphStyle('S', fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#475569'), spaceAfter=16)
     bs = ParagraphStyle('B', fontName='Helvetica', fontSize=9.5, leading=14, textColor=colors.HexColor('#1e293b'), spaceAfter=10)
     ds = ParagraphStyle('D', fontName='Helvetica', fontSize=7, textColor=colors.HexColor('#94a3b8'), spaceAfter=3)
-    hs = ParagraphStyle('H', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#0d9488'), spaceAfter=4, spaceBefore=10)
+    hs = ParagraphStyle('H', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#1a365d'), spaceAfter=4, spaceBefore=10)
     prs_h = ParagraphStyle('PRH', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#0f172a'), spaceAfter=4, spaceBefore=8)
     story.append(Paragraph("Velarion Company Intelligence", ts))
     story.append(Paragraph(f"REIT Compensation Analysis: {cn} ({tk})", ss))
@@ -1225,7 +1238,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
             fmt_dollars(rw['stock_based_comp'], ext_managed=ie), fmt_dollars(rw['total_comp'], ext_managed=ie)])
     ct = Table(td, colWidths=[1.6*inch, 0.6*inch, 0.95*inch, 0.95*inch, 0.95*inch, 0.95*inch])
     ct.setStyle(TableStyle([('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),8.5),
-        ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f0f9ff')),('TEXTCOLOR',(0,0),(-1,0),colors.HexColor('#475569')),
+        ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f8f6f3')),('TEXTCOLOR',(0,0),(-1,0),colors.HexColor('#475569')),
         ('ALIGN',(2,0),(-1,-1),'RIGHT'),('BOTTOMPADDING',(0,0),(-1,-1),4),('TOPPADDING',(0,0),(-1,-1),4),
         ('LINEBELOW',(0,0),(-1,0),0.5,colors.HexColor('#cbd5e1')),('LINEBELOW',(0,-1),(-1,-1),0.5,colors.HexColor('#e2e8f0')),
         ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white, colors.HexColor('#f8fafc')])]))
@@ -1256,7 +1269,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
         pt_table = [['Component', 'Amount', 'Percentile', 'Peer Median', 'n']] + pct_row
         pt_t = Table(pt_table, colWidths=[1*inch, 1*inch, 1*inch, 1*inch, 0.5*inch])
         pt_t.setStyle(TableStyle([('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),7.5),
-            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f0f9ff')),
+            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f8f6f3')),
             ('ALIGN',(1,0),(-1,-1),'RIGHT'),('BOTTOMPADDING',(0,0),(-1,-1),2),('TOPPADDING',(0,0),(-1,-1),2),
             ('LINEBELOW',(0,0),(-1,0),0.5,colors.HexColor('#cbd5e1'))]))
         story.append(pt_t)
@@ -1274,7 +1287,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
                 fmt_dollars(pr['stock_based_comp']), fmt_dollars(pr['total_comp']), fmt_mcap(pr['market_cap'])])
         peer_t = Table(peer_rows, colWidths=[0.35*inch, 0.45*inch, 1.2*inch, 0.65*inch, 0.65*inch, 0.65*inch, 0.7*inch, 0.65*inch])
         style_cmds = [('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),7),
-            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f0f9ff')),
+            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f8f6f3')),
             ('ALIGN',(3,0),(-1,-1),'RIGHT'),('BOTTOMPADDING',(0,0),(-1,-1),2),('TOPPADDING',(0,0),(-1,-1),2),
             ('LINEBELOW',(0,0),(-1,0),0.5,colors.HexColor('#cbd5e1')),
             ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white, colors.HexColor('#f8fafc')])]
@@ -1535,7 +1548,7 @@ with st.sidebar:
                 if new_labels:
                     # Add to sel_companies for this render pass (downstream will pick them up)
                     sel_companies = sorted(set(sel_companies + new_labels))
-                    st.markdown(f'<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#166534;margin:0.3rem 0;">\u2705 Added {len(new_labels)} companies from {", ".join(pt_add)} to analysis</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:#fef9ee;border:1px solid #d4a017;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u2705 Added {len(new_labels)} companies from {", ".join(pt_add)} to analysis</div>', unsafe_allow_html=True)
         
         # Track changes vs proxy peer baseline
         sel_tickers = set(_label_to_ticker(c) for c in sel_companies if _label_to_ticker(c))
@@ -1653,7 +1666,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
                     tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
                     if pr.get('in_universe'):
-                        badge = '<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
+                        badge = '<span style="background:#e8edf5;color:#1a365d;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
                         reason_col = ""
                     else:
                         badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
@@ -1663,7 +1676,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
                 <table style="width:100%;border-collapse:collapse;">
-                <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
+                <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
                 <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
                 st.markdown(peer_html, unsafe_allow_html=True)
         
@@ -1687,13 +1700,13 @@ if sel3 and sel3 != PLACEHOLDER:
                 if r_from_p:
                     changes.append(f'<span style="color:#dc2626;font-size:0.85rem;">Removed from proxy peers: {", ".join(sorted(r_from_p))}</span>')
                 if a_beyond_p:
-                    changes.append(f'<span style="color:#166534;font-size:0.85rem;">Added beyond proxy peers: {", ".join(sorted(a_beyond_p))}</span>')
+                    changes.append(f'<span style="color:#1a365d;font-size:0.85rem;">Added beyond proxy peers: {", ".join(sorted(a_beyond_p))}</span>')
             if changes:
                 peer_line += "<br>" + "<br>".join(changes)
         st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
         
         if st.session_state.get('peer_mode') == 'custom':
-            st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
         cur_fp0 = filter_fingerprint(peers_only)
         # Compute custom changes vs proxy for AI context
         custom_removed = sorted(set(proxy_tickers) - set(peer_tks)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
@@ -1788,8 +1801,8 @@ if sel3 and sel3 != PLACEHOLDER:
                 st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.5rem 0;">\U0001F504 This analysis was regenerated with additional user-provided context.</div>', unsafe_allow_html=True)
             
             # Context refinement input
-            st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #16a34a;border-radius:8px;">'
-                '<div style="font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
+            st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#fffbeb;border:1px solid #d4a017;border-left:4px solid #b8860b;border-radius:8px;">'
+                '<div style="font-size:0.9rem;font-weight:700;color:#92400e;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
                 '<div style="font-size:0.8rem;color:#475569;margin-bottom:0.5rem;">Add information the AI should consider \u2014 pending transactions, employment agreements, recruiting context, strategic plans. The analysis will be regenerated incorporating your context, with a footnote disclosing what was provided.</div>'
                 '</div>', unsafe_allow_html=True)
             user_context = st.text_area("Additional context", placeholder="e.g., 'The company is in active negotiations for a $2B portfolio acquisition' or 'The CEO has a verbal agreement for a 3-year extension with a $1.5M base'", 
@@ -2040,7 +2053,7 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                     else:
                         peers = narrow_peers  # Use what we have
                         if n_narrow > 0:
-                            st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#0c4a6e;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s available.</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#78350f;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s available.</div>', unsafe_allow_html=True)
             else:
                 # Custom mode — widen to all REITs in market cap range
                 all_pos_peers = wide_peers[wide_peers['position']==pos]
