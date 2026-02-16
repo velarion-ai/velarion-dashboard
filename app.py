@@ -1306,9 +1306,9 @@ st.markdown(f'<div class="intro-text">Explore executive compensation across {len
 if 'peer_mode' not in st.session_state:
     st.session_state['peer_mode'] = 'proxy'
 
-# All available REIT labels for peer selection (used in custom mode)
-all_reit_labels = {clabel(t, reit_df[reit_df['ticker']==t]['company_name'].iloc[0]): t for t in sorted(reit_df['ticker'].unique()) if not reit_df[reit_df['ticker']==t].empty}
-all_reit_label_list = sorted(all_reit_labels.keys())
+# All available company labels for peer selection (ALL companies in db, including non-REIT peers)
+all_db_labels = {clabel(t, df[df['ticker']==t]['company_name'].iloc[0]): t for t in sorted(df['ticker'].unique()) if not df[df['ticker']==t].empty}
+all_db_label_list = sorted(all_db_labels.keys())
 
 # Market cap presets
 MCAP_PRESETS = {
@@ -1337,7 +1337,7 @@ def _ticker_in_mcap_range(ticker, mcap_min_b, mcap_max_b):
 
 def _label_to_ticker(label):
     """Convert a company label back to ticker."""
-    return co_labels.get(label) or all_reit_labels.get(label)
+    return co_labels.get(label) or all_db_labels.get(label)
 
 # SIDEBAR
 with st.sidebar:
@@ -1415,9 +1415,9 @@ with st.sidebar:
             if has_company and has_proxy_peers:
                 st.session_state['custom_peer_sel'] = proxy_peer_labels
             else:
-                st.session_state['custom_peer_sel'] = all_reit_label_list
+                st.session_state['custom_peer_sel'] = all_db_label_list
         
-        sel_companies = st.multiselect("Peer companies", all_reit_label_list, 
+        sel_companies = st.multiselect("Peer companies", all_db_label_list, 
                                         label_visibility="collapsed", key="custom_peer_sel")
         
         # === 2. MARKET CAP RANGE ===
@@ -1482,7 +1482,7 @@ with st.sidebar:
                     sel_companies = updated
         
         # Build excluded list
-        excluded_labels = [c for c in all_reit_label_list if c not in sel_companies]
+        excluded_labels = [c for c in all_db_label_list if c not in sel_companies]
         excluded_tickers = [_label_to_ticker(c) for c in excluded_labels if _label_to_ticker(c)]
         
         # Set sel_prop to all (property type no longer used as filter)
