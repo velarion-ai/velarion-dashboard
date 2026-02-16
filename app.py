@@ -78,7 +78,7 @@ def check_password():
         components.html("""
         <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { background: transparent; font-family: Georgia, 'Times New Roman', serif; }
+            body { background: #0a1628; font-family: Georgia, 'Times New Roman', serif; }
             .login-wrap { padding-top: 12vh; }
             .gold-line { width: 40px; height: 2px; background: #d4a84b; margin-bottom: 20px; }
             h2 { font-size: 20px; font-weight: bold; color: #ffffff; margin-bottom: 6px; }

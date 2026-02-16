@@ -6,12 +6,6 @@ secondaryBackgroundColor = "#0f1d30"
 textColor = "#ffffff"
 font = "serif"
 
-[theme.light]
-primaryColor = "#d4a84b"
-backgroundColor = "#0a1628"
-secondaryBackgroundColor = "#0f1d30"
-textColor = "#ffffff"
-
 [server]
 headless = true
 
