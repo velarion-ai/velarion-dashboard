@@ -1399,12 +1399,15 @@ with st.sidebar:
         st.session_state['peer_mode'] = 'custom'
         st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found for this company. Use custom filters below.</div>', unsafe_allow_html=True)
     else:
-        st.markdown("## Custom Peer Group Filters")
-        st.session_state['peer_mode'] = 'custom'
-        st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-load its proxy peer group, or customize below.</div>', unsafe_allow_html=True)
+        st.markdown("## Peer Group")
+        st.session_state['peer_mode'] = 'proxy'  # No mode selection when no company
+        st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-load its proxy peer group.</div>', unsafe_allow_html=True)
+        # Clear any stale custom state
+        for k in ['custom_peer_sel', '_custom_mcap_preset', '_mcap_removed', '_add_by_pt', '_pt_add_sel']:
+            st.session_state.pop(k, None)
 
     # ---- CUSTOM MODE FILTERS ----
-    if st.session_state['peer_mode'] == 'custom' or not has_company:
+    if st.session_state['peer_mode'] == 'custom' and has_company:
         
         # === 1. PEER COMPANIES (primary control) ===
         st.markdown("### Peer Companies")
