@@ -105,7 +105,7 @@ def check_password():
 
             <div style="margin-bottom:4vh;">
                 <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,3.2vw,42px);font-weight:bold;color:#ffffff;line-height:1.12;margin:0 0 20px 0;">
-                    Know what every executive<br>in your industry <em style="color:#22b89a;font-style:italic;">actually</em> earns.
+                    AI-Powered Executive<br>Compensation <em style="color:#22b89a;font-style:italic;">Intelligence.</em>
                 </h1>
                 <p style="font-size:16px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:520px;margin:0;">
                     Structured compensation data from SEC proxy filings. AI-powered peer analysis. Updated quarterly.
