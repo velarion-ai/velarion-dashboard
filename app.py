@@ -42,29 +42,41 @@ def check_password():
         .main .block-container, .main,
         section.main > div { background-color: #0a1628 !important; padding-top: 0 !important; }
 
-        .stTextInput > div > div > input {
+        .stTextInput > div > div > input,
+        .stTextInput > div > div > input:focus,
+        .stTextInput > div > div > input:active,
+        .stTextInput input,
+        input[type="text"], input[type="password"],
+        [data-testid="stTextInput"] input {
             background-color: rgba(255,255,255,0.05) !important;
             border: 1px solid rgba(212,168,75,0.2) !important;
             color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            caret-color: #ffffff !important;
             border-radius: 4px !important;
             padding: 14px 16px !important;
             font-size: 15px !important;
-            font-family: 'DM Sans', sans-serif !important;
-            -webkit-text-fill-color: #ffffff !important;
-            caret-color: #ffffff !important;
         }
-        .stTextInput input, input[type="text"], input[type="password"] {
-            color: #ffffff !important;
-            -webkit-text-fill-color: #ffffff !important;
-            caret-color: #ffffff !important;
-        }
-        .stTextInput > div > div > input:focus {
+        .stTextInput > div > div > input:focus,
+        [data-testid="stTextInput"] input:focus {
             border-color: #d4a84b !important;
             box-shadow: 0 0 0 2px rgba(212,168,75,0.12) !important;
-            color: #ffffff !important;
-            -webkit-text-fill-color: #ffffff !important;
+            background-color: rgba(255,255,255,0.07) !important;
         }
-        .stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.25) !important; }
+        .stTextInput > div > div > input::placeholder,
+        [data-testid="stTextInput"] input::placeholder {
+            color: rgba(255,255,255,0.25) !important;
+            -webkit-text-fill-color: rgba(255,255,255,0.25) !important;
+        }
+        /* Override autofill styling */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #ffffff !important;
+            -webkit-box-shadow: 0 0 0px 1000px rgba(10,22,40,0.97) inset !important;
+            box-shadow: 0 0 0px 1000px rgba(10,22,40,0.97) inset !important;
+            caret-color: #ffffff !important;
+        }
         .stTextInput > label {
             color: rgba(255,255,255,0.4) !important;
             font-size: 12px !important;
