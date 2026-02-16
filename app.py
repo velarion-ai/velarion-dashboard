@@ -50,10 +50,19 @@ def check_password():
             padding: 14px 16px !important;
             font-size: 15px !important;
             font-family: 'DM Sans', sans-serif !important;
+            -webkit-text-fill-color: #ffffff !important;
+            caret-color: #ffffff !important;
+        }
+        .stTextInput input, input[type="text"], input[type="password"] {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            caret-color: #ffffff !important;
         }
         .stTextInput > div > div > input:focus {
             border-color: #d4a84b !important;
             box-shadow: 0 0 0 2px rgba(212,168,75,0.12) !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
         .stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.25) !important; }
         .stTextInput > label {
