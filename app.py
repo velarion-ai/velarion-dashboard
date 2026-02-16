@@ -1365,7 +1365,10 @@ with st.sidebar:
     # Mode toggle
     if has_company and has_proxy_peers:
         st.markdown("## Peer Group")
-        if 'peer_mode_radio' not in st.session_state:
+        # Check if we need to reset to proxy (company changed)
+        if st.session_state.pop('_reset_to_proxy', False):
+            st.session_state['peer_mode_radio'] = "Proxy Peers"
+        elif 'peer_mode_radio' not in st.session_state:
             st.session_state['peer_mode_radio'] = "Proxy Peers"
         prev_mode = st.session_state.get('peer_mode', 'proxy')
         mode = st.radio("Benchmarking source", ["Proxy Peers", "Custom Peer Group"], 
@@ -1546,7 +1549,12 @@ if sel3 and sel3 != PLACEHOLDER:
         st.session_state['_prev_cv'] = sel3
         st.session_state['selected_company'] = sel3
         st.session_state['peer_mode'] = 'proxy'  # Reset to proxy mode on company change
-        st.session_state['peer_mode_radio'] = "Proxy Peers"  # Reset radio widget
+        st.session_state['_reset_to_proxy'] = True  # Flag for sidebar to reset radio
+        # Clear custom peer state
+        if 'custom_peer_sel' in st.session_state:
+            del st.session_state['custom_peer_sel']
+        if '_custom_mcap_preset' in st.session_state:
+            del st.session_state['_custom_mcap_preset']
         st.rerun()
     stk3 = co_labels[sel3]; cd3 = df[df['ticker']==stk3]
     if not cd3.empty:
@@ -1738,8 +1746,10 @@ if sel3 and sel3 != PLACEHOLDER:
                 ldf = ldf.sort_values('total_comp', ascending=False).reset_index(drop=True)
                 ldf['_rank'] = range(1, len(ldf)+1)
                 pos_label = POSITION_FILTER_LABEL.get(lpos, lpos)
-                active_props_lt = sorted([p for p in filt['property_type'].dropna().unique()])
-                lprop_label = ' & '.join(active_props_lt) if len(active_props_lt) > 1 else (active_props_lt[0] if active_props_lt else pt3)
+                if st.session_state.get('peer_mode') == 'proxy':
+                    lprop_label = "Proxy Peer Group"
+                else:
+                    lprop_label = "Custom Peer Group"
                 st.markdown(f"##### {lprop_label} \u2014 {pos_label} Rankings (FY{FY_YEAR})")
                 components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
                 if hl_tk and hl_tk in ldf['ticker'].values:
