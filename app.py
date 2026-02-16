@@ -136,6 +136,21 @@ def load_data():
     df = df[~df['title'].str.lower().str.contains('former', na=False)].copy()
     df['position_display'] = df['position'].map(POSITION_DISPLAY).fillna(df['position'])
     df['pos_order'] = df['position'].map(POS_ORDER).fillna(99)
+    # Clean up garbage region values
+    if 'geographic_region' in df.columns:
+        # Fix known misclassifications
+        df.loc[df['hq_state'] == 'IL', 'geographic_region'] = 'Midwest'
+        # Fold Unknown/Other into nearest region by HQ state
+        _state_region_fix = {
+            'CO': 'Mountain', 'UT': 'Mountain', 'MT': 'Mountain', 'WY': 'Mountain', 'NM': 'Southwest',
+            'AZ': 'Southwest', 'NV': 'Southwest', 'HI': 'California', 'AK': 'Pacific Northwest',
+        }
+        for st, reg in _state_region_fix.items():
+            mask = (df['geographic_region'].isin(['Unknown','Other'])) & (df['hq_state'] == st)
+            df.loc[mask, 'geographic_region'] = reg
+        # Any remaining Unknown/Other → assign "National" so they're not lost
+        df.loc[df['geographic_region'].isin(['Unknown','Other','']), 'geographic_region'] = 'National'
+        df.loc[df['geographic_region'].isna(), 'geographic_region'] = 'National'
     # Placeholder for 8-K cross-reference partial year flag (populated when 8-K data is in Supabase)
     if 'partial_year_8k' not in df.columns:
         df['partial_year_8k'] = False
