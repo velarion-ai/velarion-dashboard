@@ -945,8 +945,8 @@ def chart_comp_mix(co_d, peers, pt, all_df=None, mcap_min=0, mcap_max=50.0):
     fig.add_trace(go.Bar(name='Base Salary', y=labels, x=sal_pcts, orientation='h', marker_color=CHART_COLORS['salary'], text=[f'{v:.0f}%' for v in sal_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.add_trace(go.Bar(name='Cash Bonus', y=labels, x=cash_pcts, orientation='h', marker_color=CHART_COLORS['cash'], text=[f'{v:.0f}%' for v in cash_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.add_trace(go.Bar(name='Non-Cash Equity', y=labels, x=eq_pcts, orientation='h', marker_color=CHART_COLORS['equity'], text=[f'{v:.0f}%' for v in eq_pcts], textposition='inside', textfont=dict(color='white', size=11)))
-    fig.update_layout(barmode='stack', height=max(220, len(labels)*42), margin=dict(l=10, r=10, t=30, b=10),
-        title=dict(text='Compensation Mix: Company vs Peer Median', font=dict(size=14, color=CHART_COLORS['text'])),
+    fig.update_layout(barmode='stack', height=max(250, len(labels)*42+30), margin=dict(l=10, r=10, t=60, b=10),
+        title=dict(text='Compensation Mix: Company vs Peer Median', font=dict(size=14, color=CHART_COLORS['text']), y=0.97),
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5, font=dict(size=11)),
         xaxis=dict(title='% of Total Compensation', range=[0, 100], showgrid=False),
         yaxis=dict(autorange='reversed'), plot_bgcolor='white', paper_bgcolor='white',
@@ -1022,8 +1022,8 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
         text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in vnq_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
     y_min = min([v for v in co_vals + peer_vals + vnq_vals if v is not None] or [0]) - 5
     y_max = max([v for v in co_vals + peer_vals + vnq_vals if v is not None] or [0]) + 8
-    fig.update_layout(barmode='group', height=350, margin=dict(l=10, r=10, t=40, b=10),
-        title=dict(text=f'Shareholder Returns: {tk} vs Peers vs FTSE Nareit', font=dict(size=14, color=CHART_COLORS['text'])),
+    fig.update_layout(barmode='group', height=380, margin=dict(l=10, r=10, t=70, b=10),
+        title=dict(text=f'Shareholder Returns: {tk} vs Peers vs FTSE Nareit', font=dict(size=14, color=CHART_COLORS['text']), y=0.97),
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5, font=dict(size=11)),
         yaxis=dict(title='Return (%)', range=[y_min, y_max], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#cbd5e1'),
         plot_bgcolor='white', paper_bgcolor='white',
