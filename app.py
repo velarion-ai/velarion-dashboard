@@ -1315,8 +1315,10 @@ with st.sidebar:
     # Mode toggle
     if has_company and has_proxy_peers:
         st.markdown("## Peer Group")
+        # Ensure radio key defaults to Proxy Peers for companies with proxy data
+        if 'peer_mode_radio' not in st.session_state:
+            st.session_state['peer_mode_radio'] = "Proxy Peers"
         mode = st.radio("Benchmarking source", ["Proxy Peers", "Custom Peer Group"], 
-                       index=0 if st.session_state.get('peer_mode', 'proxy') == 'proxy' else 1,
                        key="peer_mode_radio", label_visibility="collapsed")
         st.session_state['peer_mode'] = 'proxy' if mode == "Proxy Peers" else 'custom'
         
@@ -1451,6 +1453,7 @@ if sel3 and sel3 != PLACEHOLDER:
         st.session_state['_prev_cv'] = sel3
         st.session_state['selected_company'] = sel3
         st.session_state['peer_mode'] = 'proxy'  # Reset to proxy mode on company change
+        st.session_state['peer_mode_radio'] = "Proxy Peers"  # Reset radio widget
         st.rerun()
     stk3 = co_labels[sel3]; cd3 = df[df['ticker']==stk3]
     if not cd3.empty:
