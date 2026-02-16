@@ -136,8 +136,20 @@ def check_password():
                 return;
             }
             err.style.display = 'none';
-            var base = window.parent.location.href.split('?')[0];
-            window.parent.location.href = base + '?_auth_email=' + encodeURIComponent(email) + '&_auth_pw=' + encodeURIComponent(pw);
+            var base = window.location.ancestorOrigins ? window.location.ancestorOrigins[0] : '';
+            if (!base) {
+                try { base = window.parent.location.href.split('?')[0]; } catch(e) { base = ''; }
+            }
+            if (!base) {
+                // Fallback: use the known Streamlit URL
+                base = 'https://velarion-dashboard-7ar6vbxfamfk6w3wqql37o.streamlit.app';
+            }
+            var url = base + '?_auth_email=' + encodeURIComponent(email) + '&_auth_pw=' + encodeURIComponent(pw);
+            try {
+                window.parent.location.href = url;
+            } catch(e) {
+                window.top.location.href = url;
+            }
         }
         document.getElementById('pw').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') doLogin();
