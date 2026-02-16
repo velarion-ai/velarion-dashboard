@@ -1414,7 +1414,11 @@ with st.sidebar:
             st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">Select companies for comparison.</div>', unsafe_allow_html=True)
         
         # Initialize custom peer selection
-        if 'custom_peer_sel' not in st.session_state:
+        if '_pending_pt_add' in st.session_state:
+            st.session_state['custom_peer_sel'] = st.session_state.pop('_pending_pt_add')
+        elif '_pending_mcap_filter' in st.session_state:
+            st.session_state['custom_peer_sel'] = st.session_state.pop('_pending_mcap_filter')
+        elif 'custom_peer_sel' not in st.session_state:
             if has_company and has_proxy_peers:
                 st.session_state['custom_peer_sel'] = proxy_peer_labels
             else:
@@ -1445,9 +1449,9 @@ with st.sidebar:
         mcap_min = mcap_min_b if mcap_min_b is not None else 0.0
         mcap_max = mcap_max_b if mcap_max_b is not None else 50.0
         
-        # Auto-deselect companies outside market cap range
+        # Auto-deselect companies outside market cap range (use pending flag to avoid widget error)
         if mcap_choice != 'All Market Caps':
-            current_sel = list(st.session_state.get('custom_peer_sel', []))
+            current_sel = list(sel_companies)  # Already rendered, read from widget
             removed = []
             kept = []
             for lbl in current_sel:
@@ -1457,10 +1461,20 @@ with st.sidebar:
                 else:
                     kept.append(lbl)
             if removed:
-                st.session_state['custom_peer_sel'] = kept
-                removed_tks = [_label_to_ticker(l) or '?' for l in removed]
-                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u26A0\uFE0F Removed {len(removed)} companies outside market cap range: {", ".join(removed_tks)}</div>', unsafe_allow_html=True)
-                sel_companies = kept
+                # Store pending removal and trigger rerun
+                if st.session_state.get('_mcap_removed') != removed:
+                    st.session_state['_mcap_removed'] = removed
+                    st.session_state['_pending_mcap_filter'] = kept
+                    st.rerun()
+            else:
+                st.session_state.pop('_mcap_removed', None)
+        else:
+            st.session_state.pop('_mcap_removed', None)
+        
+        # Show market cap removal notification
+        if st.session_state.get('_mcap_removed'):
+            removed_tks = [_label_to_ticker(l) or '?' for l in st.session_state['_mcap_removed']]
+            st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u26A0\uFE0F Removed {len(removed_tks)} companies outside market cap range: {", ".join(removed_tks)}</div>', unsafe_allow_html=True)
         
         # === 3. ADD BY PROPERTY TYPE (bulk-add tool) ===
         add_by_pt = st.checkbox("Add companies to peer list by Property Type", key="_add_by_pt")
@@ -1479,14 +1493,18 @@ with st.sidebar:
                         if lbl not in sel_companies:
                             new_labels.append(lbl)
                 if new_labels:
-                    updated = sorted(set(sel_companies + new_labels))
-                    st.session_state['custom_peer_sel'] = updated
-                    st.markdown(f'<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#166534;margin:0.3rem 0;">\u2705 Added {len(new_labels)} companies from {", ".join(pt_add)}</div>', unsafe_allow_html=True)
-                    sel_companies = updated
+                    updated = sorted(set(list(sel_companies) + new_labels))
+                    st.session_state['_pending_pt_add'] = updated
+                    st.session_state['_pt_add_count'] = len(new_labels)
+                    st.session_state['_pt_add_types'] = pt_add
+                    st.rerun()
         
-        # Build excluded list
-        excluded_labels = [c for c in all_db_label_list if c not in sel_companies]
-        excluded_tickers = [_label_to_ticker(c) for c in excluded_labels if _label_to_ticker(c)]
+        # Track changes vs proxy peer baseline
+        sel_tickers = set(_label_to_ticker(c) for c in sel_companies if _label_to_ticker(c))
+        proxy_tk_set = set(proxy_tickers) if has_proxy_peers else set()
+        removed_from_proxy = sorted(proxy_tk_set - sel_tickers) if proxy_tk_set else []
+        added_beyond_proxy = sorted(sel_tickers - proxy_tk_set) if proxy_tk_set else []
+        excluded_tickers = removed_from_proxy  # For downstream compatibility
         
         # Set sel_prop to all (property type no longer used as filter)
         sel_prop = all_props
@@ -1616,9 +1634,18 @@ if sel3 and sel3 != PLACEHOLDER:
         if st.session_state.get('peer_mode') == 'proxy':
             peer_line = f"Compared to <strong>{n_co} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
         else:
-            peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> in the {mcr} market cap range ({', '.join(peer_tks)})"
-            if excluded_tickers:
-                peer_line += f"<br><span style='color:#dc2626;font-size:0.85rem;'>Excluded: {', '.join(sorted(excluded_tickers))}</span>"
+            peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> ({', '.join(peer_tks)})"
+            # Show changes vs proxy baseline
+            changes = []
+            if hasattr(st.session_state, '__contains__'):
+                r_from_p = [t for t in (set(proxy_tickers) - set(peer_tks))] if proxy_tickers else []
+                a_beyond_p = [t for t in peer_tks if t not in proxy_tickers] if proxy_tickers else []
+                if r_from_p:
+                    changes.append(f'<span style="color:#dc2626;font-size:0.85rem;">Removed from proxy peers: {", ".join(sorted(r_from_p))}</span>')
+                if a_beyond_p:
+                    changes.append(f'<span style="color:#166534;font-size:0.85rem;">Added beyond proxy peers: {", ".join(sorted(a_beyond_p))}</span>')
+            if changes:
+                peer_line += "<br>" + "<br>".join(changes)
         st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
         
         if st.session_state.get('peer_mode') == 'custom':
@@ -1767,7 +1794,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 lshow['Non-Cash Equity \u00B9'] = ldf['stock_based_comp'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                 lshow['Total Comp'] = ldf['total_comp'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                 lshow['Mkt Cap'] = ldf['market_cap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "\u2014").values
-                is_combined_lt = len(active_props_lt) > 1
+                is_combined_lt = filt['property_type'].dropna().nunique() > 1
                 if is_combined_lt:
                     lshow['Prop Type'] = ldf['property_type'].values
                 lshow[f'1-Yr (FY{FY_YEAR})'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_1y'))).values
@@ -1847,13 +1874,17 @@ if sel3 and sel3 != PLACEHOLDER:
         
         # ---- INDIVIDUAL EXEC BENCHMARKING ----
         st.markdown("---")
-        # Build widened peer set: all REITs in market cap range (not just property type), excluding subject
-        wide_peers_base = df[df['ticker'] != stk3].copy()
-        if mcap_max >= 50.0:
-            wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
+        is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
+        # Build widened peer set only for custom mode
+        if not is_proxy_mode:
+            wide_peers_base = df[df['ticker'] != stk3].copy()
+            if mcap_max >= 50.0:
+                wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
+            else:
+                wide_peers_base = wide_peers_base[((wide_peers_base['market_cap'] >= mcap_min*1e9) & (wide_peers_base['market_cap'] <= mcap_max*1e9)) | (wide_peers_base['market_cap'].isna())]
+            wide_peers = get_peer_stats(wide_peers_base)
         else:
-            wide_peers_base = wide_peers_base[((wide_peers_base['market_cap'] >= mcap_min*1e9) & (wide_peers_base['market_cap'] <= mcap_max*1e9)) | (wide_peers_base['market_cap'].isna())]
-        wide_peers = get_peer_stats(wide_peers_base)
+            wide_peers = None
         MIN_PEERS = 5
         for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
             if 'former' in str(er.get('title', '')).lower():
@@ -1876,19 +1907,28 @@ if sel3 and sel3 != PLACEHOLDER:
                     render_peer_table(er, peers_only, pos)
                 st.markdown("")
                 continue
-            # Check if enough peers in property-type set; if not, widen to all REITs
+            # Proxy mode: always use proxy peers, no widening
+            # Custom mode: widen if thin
             narrow_peers = auto_peers[auto_peers['position']==pos]
             n_narrow = len(narrow_peers[narrow_peers['total_comp'].notna()])
-            if n_narrow >= MIN_PEERS:
+            if is_proxy_mode:
+                # Proxy mode — use proxy peers only, show limited data note if thin
                 peers = narrow_peers
                 widened = False
+                if n_narrow < MIN_PEERS and n_narrow > 0:
+                    st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#0c4a6e;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s in proxy peer group.</div>', unsafe_allow_html=True)
             else:
-                peers = wide_peers[wide_peers['position']==pos]
-                widened = True
+                # Custom mode — widen if thin
+                if n_narrow >= MIN_PEERS:
+                    peers = narrow_peers
+                    widened = False
+                else:
+                    peers = wide_peers[wide_peers['position']==pos] if wide_peers is not None else narrow_peers
+                    widened = True
             n_pos = len(peers[peers['total_comp'].notna()])
             if widened:
                 n_wide_cos = peers['ticker'].nunique()
-                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 Widened to <strong>{n_pos} {pd2 if pd2 else "NEO"}s across {n_wide_cos} REITs</strong> in the market cap range (only {n_narrow} {pt3} peers available).</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 Widened to <strong>{n_pos} {pd2 if pd2 else "NEO"}s across {n_wide_cos} companies</strong> (only {n_narrow} in custom peer group).</div>', unsafe_allow_html=True)
             cols = st.columns(4)
             for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
                 v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
@@ -1917,17 +1957,17 @@ if sel3 and sel3 != PLACEHOLDER:
                 render_peer_table(er, wide_peers if widened else peers_only, pos)
             st.markdown("")
         
-        st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="source-note">Returns: Yahoo Finance, through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
 
-# MONTHLY INTELLIGENCE
-st.markdown("---")
-st.markdown("#### Monthly Executive Intelligence")
-st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;">'
-    '<div style="font-size:0.85rem;color:#0c4a6e;line-height:1.6;">'
-    '\U0001F4E8 <strong>Monthly Executive Changes Report</strong> \u2014 Track C-suite movements, new hires, departures, '
-    'and employment agreement terms across the REIT universe. Delivered monthly to subscribers.'
-    '<br><br><span style="color:#64748b;font-size:0.8rem;">Coming soon \u2014 reports will be available for download here.</span>'
-    '</div></div>', unsafe_allow_html=True)
+# MONTHLY INTELLIGENCE — placeholder, revisit placement later
+# st.markdown("---")
+# st.markdown("#### Monthly Executive Intelligence")
+# st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;">'
+#     '<div style="font-size:0.85rem;color:#0c4a6e;line-height:1.6;">'
+#     '\U0001F4E8 <strong>Monthly Executive Changes Report</strong> \u2014 Track C-suite movements, new hires, departures, '
+#     'and employment agreement terms across the REIT universe. Delivered monthly to subscribers.'
+#     '<br><br><span style="color:#64748b;font-size:0.8rem;">Coming soon \u2014 reports will be available for download here.</span>'
+#     '</div></div>', unsafe_allow_html=True)
 
 # FOOTER
 st.markdown("---")
