@@ -252,10 +252,10 @@ st.markdown("""
     .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; font-weight: 600; white-space: nowrap; }
     .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
     .metric-card .sub { font-size: 0.78rem; color: #94a3b8; margin-top: 0.1rem; }
-    .ai-narrative { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border: 1px solid #bae6fd; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; }
-    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #0284c7; font-weight: 700; margin-bottom: 0.5rem; }
-    .ai-report { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1px solid #86efac; border-left: 4px solid #16a34a; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; }
-    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #16a34a; font-weight: 700; margin-bottom: 0.5rem; }
+    .ai-narrative { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border: 1px solid #bae6fd; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; }
+    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #0284c7; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
+    .ai-report { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1px solid #86efac; border-left: 4px solid #16a34a; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; }
+    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #16a34a; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
     .lookup-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
     .lookup-box h2 { margin: 0 0 0.3rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; }
     .lookup-box p { margin: 0 0 0.5rem 0; color: #475569; font-size: 0.83rem; }
@@ -827,13 +827,18 @@ INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs pee
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, mcap_max=50.0):
+def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, mcap_max=50.0, peer_mode='proxy'):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
     hq = f"{co_d['hq_city'].iloc[0]}, {co_d['hq_state'].iloc[0]}"
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
     n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
+    # Peer group descriptor based on mode
+    if peer_mode == 'proxy':
+        peer_desc = f"{n_co} companies from {cn}'s proxy-disclosed compensation peer group (cross-sector, not limited to REITs)"
+    else:
+        peer_desc = f"{n_co} custom peer companies"
     en = "\nCRITICAL: Externally advised." if ea else ""
     # Build widened peer set for thin positions
     MIN_PEERS = 5
@@ -915,7 +920,7 @@ Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
 FY{RETURNS_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
 Peer Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(vnq.get('return_ytd'))}
-Peers: {n_co} companies | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
+Peers: {peer_desc} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
 
 NOTE: Compensation data is from the FY{FY_YEAR} DEF 14A proxy filing (filed in {FY_YEAR+1}). Returns are 1-yr and 3-yr through Dec 31, {RETURNS_YEAR}, plus YTD {RETURNS_YEAR+1}. Frame the analysis as: how has the compensation structure approved by the board in the {FY_YEAR} proxy performed against {RETURNS_YEAR} and current shareholder returns?
 CRITICAL: Only reference return figures explicitly provided above. Do NOT invent, estimate, or reference any return data not given. Do NOT reference years or periods for which no data is provided.
@@ -923,16 +928,20 @@ CRITICAL: Only reference return figures explicitly provided above. Do NOT invent
 CRITICAL FORMAT INSTRUCTIONS: You MUST include the exact section markers shown below on their own line before each section. These markers control chart placement. Do not skip any markers.
 
 [SECTION:POSITIONING]
-Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond the primary peer set.
+<h4>Executive Compensation Overview</h4>
+Opening assessment: Company context, peer group with company names (note if cross-sector), and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond the primary peer set.
 
 [SECTION:MIX]
+<h4>Compensation Mix & Structure</h4>
 Overall comp mix philosophy and how the company's approach to salary/cash/equity split compares to peers. CEO/CFO ratio analysis. (3-4 sent)
 
 [SECTION:RETURNS]
+<h4>FY{RETURNS_YEAR} Performance & Pay Alignment</h4>
 PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using the {RETURNS_YEAR} returns AND YTD {RETURNS_YEAR+1} stock performance provided above. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
 
 [SECTION:WATCH]
-AREAS TO WATCH: Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
+<h4>Board Considerations</h4>
+Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
 
 Summary with peer group disclosure including any excluded companies (2-3 sent, list all peer tickers)
 DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publicly available earnings releases, and market data. Verify all information against original filings before making decisions."{en}
@@ -1081,7 +1090,7 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
     fig = go.Figure()
     fig.add_trace(go.Bar(name=tk, x=categories, y=co_vals, marker_color=CHART_COLORS['accent'],
         text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in co_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
-    fig.add_trace(go.Bar(name=f'{pt} Avg', x=categories, y=peer_vals, marker_color=CHART_COLORS['primary'],
+    fig.add_trace(go.Bar(name='Peer Avg', x=categories, y=peer_vals, marker_color=CHART_COLORS['primary'],
         text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in peer_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
     fig.add_trace(go.Bar(name='FTSE Nareit', x=categories, y=vnq_vals, marker_color=CHART_COLORS['muted'],
         text=[f'{v:+.1f}%' if v is not None else 'N/A' for v in vnq_vals], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
@@ -1433,11 +1442,7 @@ with st.sidebar:
             st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">Select companies for comparison.</div>', unsafe_allow_html=True)
         
         # Initialize custom peer selection
-        if '_pending_pt_add' in st.session_state:
-            st.session_state['custom_peer_sel'] = st.session_state.pop('_pending_pt_add')
-        elif '_pending_mcap_filter' in st.session_state:
-            st.session_state['custom_peer_sel'] = st.session_state.pop('_pending_mcap_filter')
-        elif 'custom_peer_sel' not in st.session_state:
+        if 'custom_peer_sel' not in st.session_state:
             if has_company and has_proxy_peers:
                 st.session_state['custom_peer_sel'] = proxy_peer_labels
             else:
@@ -1468,32 +1473,19 @@ with st.sidebar:
         mcap_min = mcap_min_b if mcap_min_b is not None else 0.0
         mcap_max = mcap_max_b if mcap_max_b is not None else 50.0
         
-        # Auto-deselect companies outside market cap range (use pending flag to avoid widget error)
+        # Filter selected companies by market cap range (no rerun — just filter downstream)
         if mcap_choice != 'All Market Caps':
-            current_sel = list(sel_companies)  # Already rendered, read from widget
-            removed = []
-            kept = []
-            for lbl in current_sel:
+            filtered_companies = []
+            removed_by_mcap = []
+            for lbl in sel_companies:
                 tk = _label_to_ticker(lbl)
                 if tk and not _ticker_in_mcap_range(tk, mcap_min_b, mcap_max_b):
-                    removed.append(lbl)
+                    removed_by_mcap.append(tk)
                 else:
-                    kept.append(lbl)
-            if removed:
-                # Store pending removal and trigger rerun
-                if st.session_state.get('_mcap_removed') != removed:
-                    st.session_state['_mcap_removed'] = removed
-                    st.session_state['_pending_mcap_filter'] = kept
-                    st.rerun()
-            else:
-                st.session_state.pop('_mcap_removed', None)
-        else:
-            st.session_state.pop('_mcap_removed', None)
-        
-        # Show market cap removal notification
-        if st.session_state.get('_mcap_removed'):
-            removed_tks = [_label_to_ticker(l) or '?' for l in st.session_state['_mcap_removed']]
-            st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u26A0\uFE0F Removed {len(removed_tks)} companies outside market cap range: {", ".join(removed_tks)}</div>', unsafe_allow_html=True)
+                    filtered_companies.append(lbl)
+            if removed_by_mcap:
+                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u26A0\uFE0F {len(removed_by_mcap)} companies outside market cap range excluded from analysis: {", ".join(removed_by_mcap)}</div>', unsafe_allow_html=True)
+            sel_companies = filtered_companies
         
         # === 3. ADD BY PROPERTY TYPE (bulk-add tool) ===
         add_by_pt = st.checkbox("Add companies to peer list by Property Type", key="_add_by_pt")
@@ -1512,11 +1504,9 @@ with st.sidebar:
                         if lbl not in sel_companies:
                             new_labels.append(lbl)
                 if new_labels:
-                    updated = sorted(set(list(sel_companies) + new_labels))
-                    st.session_state['_pending_pt_add'] = updated
-                    st.session_state['_pt_add_count'] = len(new_labels)
-                    st.session_state['_pt_add_types'] = pt_add
-                    st.rerun()
+                    # Add to sel_companies for this render pass (downstream will pick them up)
+                    sel_companies = sorted(set(sel_companies + new_labels))
+                    st.markdown(f'<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#166534;margin:0.3rem 0;">\u2705 Added {len(new_labels)} companies from {", ".join(pt_add)} to analysis</div>', unsafe_allow_html=True)
         
         # Track changes vs proxy peer baseline
         sel_tickers = set(_label_to_ticker(c) for c in sel_companies if _label_to_ticker(c))
@@ -1676,7 +1666,7 @@ if sel3 and sel3 != PLACEHOLDER:
         with btn_r1a:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
-                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
+                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max, peer_mode=st.session_state.get('peer_mode', 'proxy'))
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
                     # Clear any previous addendum
@@ -1756,54 +1746,56 @@ if sel3 and sel3 != PLACEHOLDER:
             
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # Display addendum if exists
-            if st.session_state.get('lk_addendum'):
-                st.markdown(f'<div class="ai-report" style="border-left:4px solid #f59e0b;margin-top:1rem;">'
-                    f'<div class="ai-label">\U0001F4DD Analysis Addendum \u2014 User-Provided Context</div>'
-                    f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.8rem;color:#92400e;margin-bottom:0.8rem;">'
-                    f'\u26A0\uFE0F The following incorporates context provided by the user. Information below has not been independently verified against SEC filings.</div>'
-                    f'{st.session_state["lk_addendum"]}</div>', unsafe_allow_html=True)
+            # Show if analysis was regenerated with user context
+            if st.session_state.get('lk_user_context'):
+                st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.5rem 0;">\U0001F504 This analysis was regenerated with additional user-provided context.</div>', unsafe_allow_html=True)
             
             # Context refinement input
-            st.markdown('<div style="margin-top:1rem;padding:0.8rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">'
-                '<div style="font-size:0.85rem;font-weight:600;color:#334155;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
-                '<div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;">Add information the AI should consider \u2014 pending transactions, employment agreements, recruiting context, strategic plans. The base analysis above will remain unchanged; your context generates a separate addendum.</div>'
+            st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #16a34a;border-radius:8px;">'
+                '<div style="font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
+                '<div style="font-size:0.8rem;color:#475569;margin-bottom:0.5rem;">Add information the AI should consider \u2014 pending transactions, employment agreements, recruiting context, strategic plans. The analysis will be regenerated incorporating your context, with a footnote disclosing what was provided.</div>'
                 '</div>', unsafe_allow_html=True)
             user_context = st.text_area("Additional context", placeholder="e.g., 'The company is in active negotiations for a $2B portfolio acquisition' or 'The CEO has a verbal agreement for a 3-year extension with a $1.5M base'", 
                                          label_visibility="collapsed", key="user_analysis_context", height=100)
             ctx_col1, ctx_col2 = st.columns([1, 4])
             with ctx_col1:
-                if st.button("\U0001F504 Generate Addendum", key="cv_gen_addendum", use_container_width=True, disabled=not user_context):
-                    with st.spinner("Analyzing additional context..."):
-                        addendum_prompt = f"""You are a senior compensation consultant. Below is your original compensation analysis for {cn3} ({stk3}).
+                if st.button("\U0001F504 Regenerate with Context", key="cv_gen_addendum", use_container_width=True, disabled=not user_context):
+                    with st.spinner("Regenerating analysis with additional context..."):
+                        # Get all the same data as the original analysis
+                        peers_for_regen = filt_no_pos[filt_no_pos['ticker'] != stk3]
+                        regen_prompt = f"""You are a senior compensation consultant. Regenerate the full compensation analysis for {cn3} ({stk3}), incorporating the additional context provided by the user.
 
-ORIGINAL ANALYSIS:
+ORIGINAL ANALYSIS (for reference — maintain same structure and data):
 {rt}
 
-The user has provided additional context they want incorporated into the analysis:
-
-USER-PROVIDED CONTEXT:
+USER-PROVIDED ADDITIONAL CONTEXT:
 {user_context}
 
-Generate a brief addendum (2-4 paragraphs) that:
-1. Categorizes the user's input: Is it a verifiable document (press release, 8-K, employment agreement), a strategic claim (pending acquisition, restructuring), or anecdotal/opinion?
-2. Analyzes how this context affects the compensation positioning and recommendations from the original analysis
-3. Clearly states what information came from the user vs. verified SEC data
-4. Notes any implications for peer group selection, pay positioning, or governance considerations
+INSTRUCTIONS:
+1. Regenerate the complete analysis, weaving in the user's context where it is relevant
+2. Maintain all original section markers: [SECTION:POSITIONING], [SECTION:MIX], [SECTION:RETURNS], [SECTION:WATCH]
+3. Use the same factual compensation and returns data from the original
+4. Where user context is incorporated, integrate it naturally into the narrative
+5. At the very end, after [SECTION:WATCH], add a clearly marked footnote section:
+   <div style="margin-top:1rem;padding:0.8rem;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:0.8rem;color:#92400e;">
+   <strong>Disclosure:</strong> This analysis incorporates the following additional context provided by the user, which has not been independently verified against SEC filings: "{user_context}"
+   </div>
+6. CRITICAL: Only reference return figures and compensation data from the original analysis. Do NOT invent any numbers.
 
-Format the addendum in clear HTML paragraphs. Be specific about how the new context changes (or doesn't change) the original conclusions. If the user's input contains claims that cannot be verified, say so directly."""
+Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation Mix & Structure</h4>, <h4>FY{RETURNS_YEAR} Performance & Pay Alignment</h4>, <h4>Board Considerations</h4>
+
+{AI_TONE}"""
                         try:
                             cl = get_client()
                             if cl:
-                                resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=1500, messages=[{"role":"user","content":addendum_prompt}])
-                                addendum = resp.content[0].text
-                                st.session_state['lk_addendum'] = addendum
+                                resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=2500, messages=[{"role":"user","content":regen_prompt}])
+                                st.session_state['lk_rpt'] = clean_ai(resp.content[0].text)
                                 st.session_state['lk_user_context'] = user_context
                                 st.rerun()
                             else:
                                 st.error("API client not available. Check ANTHROPIC_API_KEY.")
                         except Exception as e:
-                            st.error(f"Error generating addendum: {e}")
+                            st.error(f"Error regenerating: {e}")
             
             # Close / Download buttons
             cl0, dl0 = st.columns([1,4])
