@@ -1654,40 +1654,30 @@ if sel3 and sel3 != PLACEHOLDER:
         if st.session_state.get('peer_mode') == 'custom':
             st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#0c4a6e;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
         cur_fp0 = filter_fingerprint(peers_only)
+        # Button layout: 2x2 grid
         btn_r1a, btn_r1b = st.columns(2)
         with btn_r1a:
-            if st.button("\U0001F4CA  Generate Summary Analysis", key="cv_lookup_sum", use_container_width=True):
-                with st.spinner("Analyzing..."):
-                    st.session_state['lk_sum'] = gen_analysis(cd3, peers_only, ret_data, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
-                    st.session_state['lk_sum_tk'] = stk3
-                    st.session_state['fp_lk_sum'] = cur_fp0
-        with btn_r1b:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
                     st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=excluded_tickers, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
-        btn_r2a, btn_r2b, btn_r2c = st.columns(3)
-        with btn_r2a:
+                    # Clear any previous addendum
+                    st.session_state.pop('lk_addendum', None)
+                    st.session_state.pop('lk_user_context', None)
+        with btn_r1b:
             if st.button("\U0001F3C6  League Tables", key="cv_league_toggle", use_container_width=True):
                 st.session_state['show_league'] = not st.session_state.get('show_league', False)
-        with btn_r2b:
+        btn_r2a, btn_r2b = st.columns(2)
+        with btn_r2a:
             if st.button("\U0001F4CB  Comp Summary Table", key="cv_comp_toggle", use_container_width=True):
                 st.session_state['show_comp_table'] = not st.session_state.get('show_comp_table', False)
-        with btn_r2c:
+        with btn_r2b:
             proxy_url = lookup_proxy_url(cn3, FY_YEAR)
             if proxy_url:
                 st.link_button("\U0001F4C4  View Proxy", proxy_url, use_container_width=True)
             else:
                 st.button("\U0001F4C4  View Proxy", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
-        # Display Summary
-        if st.session_state.get('lk_sum_tk') == stk3 and st.session_state.get('lk_sum'):
-            if st.session_state.get('fp_lk_sum') != cur_fp0:
-                st.markdown(STALE_WARNING, unsafe_allow_html=True)
-            st.markdown(f'<div class="ai-narrative"><div class="ai-label">\U0001F4CA Compensation & Performance Summary</div>{st.session_state["lk_sum"]}</div>', unsafe_allow_html=True)
-            if st.button("\u2715 Close Summary", key="cv_close_lk_sum"):
-                del st.session_state['lk_sum']
-                st.rerun()
         # Display Full Report
         if st.session_state.get('lk_tk') == stk3 and st.session_state.get('lk_rpt'):
             if st.session_state.get('fp_lk_rpt') != cur_fp0:
@@ -1701,7 +1691,6 @@ if sel3 and sel3 != PLACEHOLDER:
             import re
             section_pattern = r'\[SECTION:(POSITIONING|MIX|RETURNS|WATCH)\]'
             parts = re.split(section_pattern, rt)
-            # parts alternates: [text_before, marker_name, text_after, marker_name, text_after, ...]
             
             try:
                 n_co_ctx, _, peer_tks_ctx, _ = peer_context_str(peers_only, pt3)
@@ -1712,10 +1701,8 @@ if sel3 and sel3 != PLACEHOLDER:
             while i < len(parts):
                 text = parts[i].strip()
                 if text and text not in ('POSITIONING', 'MIX', 'RETURNS', 'WATCH'):
-                    # Regular text block
                     st.markdown(text, unsafe_allow_html=True)
                 elif text == 'POSITIONING':
-                    # Next part is the positioning text
                     if i + 1 < len(parts):
                         st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
                         i += 1
@@ -1752,10 +1739,62 @@ if sel3 and sel3 != PLACEHOLDER:
             
             st.markdown('</div>', unsafe_allow_html=True)
             
+            # Display addendum if exists
+            if st.session_state.get('lk_addendum'):
+                st.markdown(f'<div class="ai-report" style="border-left:4px solid #f59e0b;margin-top:1rem;">'
+                    f'<div class="ai-label">\U0001F4DD Analysis Addendum \u2014 User-Provided Context</div>'
+                    f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.8rem;color:#92400e;margin-bottom:0.8rem;">'
+                    f'\u26A0\uFE0F The following incorporates context provided by the user. Information below has not been independently verified against SEC filings.</div>'
+                    f'{st.session_state["lk_addendum"]}</div>', unsafe_allow_html=True)
+            
+            # Context refinement input
+            st.markdown('<div style="margin-top:1rem;padding:0.8rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">'
+                '<div style="font-size:0.85rem;font-weight:600;color:#334155;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
+                '<div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;">Add information the AI should consider \u2014 pending transactions, employment agreements, recruiting context, strategic plans. The base analysis above will remain unchanged; your context generates a separate addendum.</div>'
+                '</div>', unsafe_allow_html=True)
+            user_context = st.text_area("Additional context", placeholder="e.g., 'The company is in active negotiations for a $2B portfolio acquisition' or 'The CEO has a verbal agreement for a 3-year extension with a $1.5M base'", 
+                                         label_visibility="collapsed", key="user_analysis_context", height=100)
+            ctx_col1, ctx_col2 = st.columns([1, 4])
+            with ctx_col1:
+                if st.button("\U0001F504 Generate Addendum", key="cv_gen_addendum", use_container_width=True, disabled=not user_context):
+                    with st.spinner("Analyzing additional context..."):
+                        addendum_prompt = f"""You are a senior compensation consultant. Below is your original compensation analysis for {cn3} ({stk3}).
+
+ORIGINAL ANALYSIS:
+{rt}
+
+The user has provided additional context they want incorporated into the analysis:
+
+USER-PROVIDED CONTEXT:
+{user_context}
+
+Generate a brief addendum (2-4 paragraphs) that:
+1. Categorizes the user's input: Is it a verifiable document (press release, 8-K, employment agreement), a strategic claim (pending acquisition, restructuring), or anecdotal/opinion?
+2. Analyzes how this context affects the compensation positioning and recommendations from the original analysis
+3. Clearly states what information came from the user vs. verified SEC data
+4. Notes any implications for peer group selection, pay positioning, or governance considerations
+
+Format the addendum in clear HTML paragraphs. Be specific about how the new context changes (or doesn't change) the original conclusions. If the user's input contains claims that cannot be verified, say so directly."""
+                        try:
+                            cl = get_client()
+                            if cl:
+                                resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=1500, messages=[{"role":"user","content":addendum_prompt}])
+                                addendum = resp.content[0].text
+                                st.session_state['lk_addendum'] = addendum
+                                st.session_state['lk_user_context'] = user_context
+                                st.rerun()
+                            else:
+                                st.error("API client not available. Check ANTHROPIC_API_KEY.")
+                        except Exception as e:
+                            st.error(f"Error generating addendum: {e}")
+            
+            # Close / Download buttons
             cl0, dl0 = st.columns([1,4])
             with cl0:
                 if st.button("\u2715 Close Report", key="cv_close_lk_rpt"):
                     del st.session_state['lk_rpt']
+                    st.session_state.pop('lk_addendum', None)
+                    st.session_state.pop('lk_user_context', None)
                     st.rerun()
             with dl0:
                 try:
