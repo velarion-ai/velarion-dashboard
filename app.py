@@ -115,7 +115,7 @@ def check_password():
         st.markdown("""
         <div style="padding:0 0 0 2vw;display:flex;gap:28px;margin-bottom:5vh;">
             <div>
-                <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">190+</div>
+                <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">165+</div>
                 <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Companies</div>
             </div>
             <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
