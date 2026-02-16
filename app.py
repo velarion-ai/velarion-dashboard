@@ -15,20 +15,133 @@ st.set_page_config(page_title="Velarion Company Intelligence", page_icon="📊",
 # ============================================================
 # AUTH GATE
 # ============================================================
+def _log_login(email):
+    """Log login event to Supabase for tracking."""
+    try:
+        sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+        sb.table("login_events").insert({
+            "email": email.lower().strip(),
+            "logged_in_at": datetime.utcnow().isoformat()
+        }).execute()
+    except Exception:
+        pass  # Don't block login if logging fails
+
 def check_password():
-    if st.session_state.get('authenticated'): return True
-    st.markdown('<div style="max-width:400px;margin:4rem auto;text-align:center;">', unsafe_allow_html=True)
-    st.markdown("### 🔒 Velarion Company Intelligence")
-    st.markdown("Enter credentials to access the dashboard.")
-    user = st.text_input("Username", key="auth_user")
-    pw = st.text_input("Password", type="password", key="auth_pw")
-    if st.button("Login"):
-        if user == "velarion" and pw == "demo2026":
-            st.session_state['authenticated'] = True
-            st.rerun()
-        else:
-            st.error("Invalid credentials.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    if st.session_state.get('authenticated'):
+        return True
+
+    # Hide Streamlit default elements on login page
+    st.markdown("""
+    <style>
+        /* Hide sidebar, header, footer on login */
+        [data-testid="stSidebar"], header, footer,
+        [data-testid="stToolbar"], [data-testid="stDecoration"],
+        #MainMenu, .stDeployButton { display: none !important; }
+
+        /* Full-page dark background */
+        .stApp, [data-testid="stAppViewContainer"],
+        .main .block-container {
+            background-color: #0a1628 !important;
+            padding-top: 0 !important;
+        }
+        .main { background-color: #0a1628 !important; }
+
+        /* Style text inputs */
+        .login-container input {
+            background-color: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(212,168,75,0.25) !important;
+            color: #ffffff !important;
+            border-radius: 6px !important;
+            padding: 12px 16px !important;
+            font-size: 15px !important;
+            font-family: 'Georgia', serif !important;
+            transition: border-color 0.3s ease !important;
+        }
+        .login-container input:focus {
+            border-color: #d4a84b !important;
+            box-shadow: 0 0 0 2px rgba(212,168,75,0.15) !important;
+        }
+        .login-container input::placeholder {
+            color: rgba(255,255,255,0.3) !important;
+        }
+        .login-container label {
+            color: rgba(255,255,255,0.5) !important;
+            font-family: 'Georgia', serif !important;
+            font-size: 13px !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Style the login button */
+        .login-container .stButton > button {
+            background: linear-gradient(135deg, #d4a84b 0%, #b8923e 100%) !important;
+            color: #0a1628 !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 12px 32px !important;
+            font-family: 'Georgia', serif !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.5px !important;
+            width: 100% !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+        }
+        .login-container .stButton > button:hover {
+            background: linear-gradient(135deg, #e0b855 0%, #c49d45 100%) !important;
+            box-shadow: 0 4px 20px rgba(212,168,75,0.3) !important;
+        }
+
+        /* Error message styling */
+        .login-container .stAlert {
+            background-color: rgba(220,38,38,0.1) !important;
+            border: 1px solid rgba(220,38,38,0.3) !important;
+            color: #fca5a5 !important;
+            border-radius: 6px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Centered login card
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        st.markdown("""
+        <div class="login-container" style="margin-top:12vh;">
+            <!-- Logo -->
+            <div style="text-align:center;margin-bottom:45px;">
+                <div style="margin-bottom:8px;">
+                    <span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:bold;color:#d4a84b;">.</span>
+                </div>
+                <div style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);">Company Intelligence</div>
+            </div>
+
+            <!-- Decorative gold line -->
+            <div style="width:60px;height:2px;background:#d4a84b;margin:0 auto 40px;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        email = st.text_input("Email address", key="auth_email", placeholder="you@company.com")
+        pw = st.text_input("Password", type="password", key="auth_pw", placeholder="Enter your password")
+
+        if st.button("Sign In", use_container_width=True):
+            email_clean = email.strip().lower()
+            if email_clean and "@" in email_clean and pw == "demo2026":
+                st.session_state['authenticated'] = True
+                st.session_state['user_email'] = email_clean
+                _log_login(email_clean)
+                st.rerun()
+            elif not email_clean or "@" not in email_clean:
+                st.error("Please enter a valid email address.")
+            else:
+                st.error("Invalid credentials. Please try again.")
+
+        st.markdown("""
+            <div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);">
+                <p style="font-family:Georgia,serif;font-size:12px;color:rgba(255,255,255,0.2);margin:0;">SEC data. Structured. Intelligent. Verified.</p>
+            </div>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
     return False
 
 if not check_password(): st.stop()
