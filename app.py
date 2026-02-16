@@ -208,36 +208,6 @@ def check_password():
         </div>
         """, unsafe_allow_html=True)
 
-        # JS injection to force-style inputs after Streamlit renders them
-        components.html("""
-        <script>
-        function fixInputs() {
-            const root = window.parent.document;
-            root.querySelectorAll('input[type="text"], input[type="password"]').forEach(el => {
-                el.style.setProperty('background-color', '#0f1d30', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-                el.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
-                el.style.setProperty('border', '1px solid rgba(212,168,75,0.25)', 'important');
-                el.style.setProperty('caret-color', '#ffffff', 'important');
-                el.style.setProperty('border-radius', '4px', 'important');
-            });
-            root.querySelectorAll('[data-baseweb="input"], [data-baseweb="base-input"]').forEach(el => {
-                el.style.setProperty('background-color', '#0f1d30', 'important');
-                el.style.setProperty('background', '#0f1d30', 'important');
-            });
-            // Hide badges
-            root.querySelectorAll('footer, [data-testid="manage-app-button"], .viewerBadge_container__r5tak, .styles_viewerBadge__CvC9N, ._profileContainer_gzau3_53').forEach(el => {
-                el.style.setProperty('display', 'none', 'important');
-            });
-        }
-        fixInputs();
-        setInterval(fixInputs, 300);
-        const observer = new MutationObserver(fixInputs);
-        observer.observe(window.parent.document.body, {childList: true, subtree: true});
-        </script>
-        """, height=0)
-
-
     return False
 
 if not check_password(): st.stop()
