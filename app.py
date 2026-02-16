@@ -338,12 +338,21 @@ def load_data():
 
 @st.cache_data(ttl=300)
 def load_peer_groups():
-    """Load proxy-disclosed peer groups from Supabase."""
+    """Load proxy-disclosed peer groups from Supabase (paginated to handle >1000 rows)."""
     try:
         sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-        result = sb.table('proxy_peer_groups').select('*').execute()
-        if result.data:
-            return pd.DataFrame(result.data)
+        all_data = []
+        offset = 0
+        batch = 1000
+        while True:
+            result = sb.table('proxy_peer_groups').select('*').range(offset, offset + batch - 1).execute()
+            if result.data:
+                all_data.extend(result.data)
+            if not result.data or len(result.data) < batch:
+                break
+            offset += batch
+        if all_data:
+            return pd.DataFrame(all_data)
     except Exception:
         pass
     return pd.DataFrame()
@@ -1323,19 +1332,22 @@ with st.sidebar:
         st.session_state['peer_mode'] = 'proxy' if mode == "Proxy Peers" else 'custom'
         
         if st.session_state['peer_mode'] == 'proxy':
-            st.markdown(f'<div class="filter-note">\U0001F3AF Using <strong>{sel_co_data["company_name"].iloc[0]}</strong>\'s proxy-disclosed peer group ({len(proxy_tickers)} companies in database).</div>', unsafe_allow_html=True)
+            co_name_display = sel_co_data["company_name"].iloc[0] if not sel_co_data.empty else sel_tk
+            st.markdown(f'<div class="filter-note">\U0001F3AF Benchmarking uses peer group from <strong>{co_name_display}</strong>\'s FY{FY_YEAR} DEF 14A proxy filing ({len(proxy_tickers)} peers in database).</div>', unsafe_allow_html=True)
+            # Show greyed-out custom filters as collapsed info
+            st.markdown('<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.8rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">\U0001F512 Custom filters available when "Custom Peer Group" is selected above.</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="filter-note">\U0001F527 Build a custom comparison set below.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="filter-note">\U0001F527 Build a custom comparison set using the filters below.</div>', unsafe_allow_html=True)
     elif has_company:
         st.markdown("## Custom Peer Group Filters")
         st.session_state['peer_mode'] = 'custom'
         st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found for this company. Use custom filters below.</div>', unsafe_allow_html=True)
     else:
-        st.markdown("## Peer Group Filters")
+        st.markdown("## Custom Peer Group Filters")
         st.session_state['peer_mode'] = 'custom'
         st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-load its proxy peer group, or customize below.</div>', unsafe_allow_html=True)
 
-    # Custom peer group filters — only show when in custom mode or no company selected
+    # Custom peer group filters — only show in custom mode or when no company selected
     if st.session_state['peer_mode'] == 'custom' or not has_company:
         # 1. Property Type
         st.markdown("### Property Type")
@@ -1378,11 +1390,12 @@ with st.sidebar:
         excluded_labels = [c for c in eligible_labels if c not in sel_companies]
         excluded_tickers = [co_labels.get(c, '') for c in excluded_labels if c in co_labels]
         
-        # 4. Region
-        st.markdown("### Region")
-        regions = sorted(reit_df['geographic_region'].dropna().unique())
-        all_reg_chk = st.checkbox("Select All", value=True, key="reg_all")
-        sel_reg = st.multiselect("Region", regions, default=regions if all_reg_chk else [], label_visibility="collapsed", key="reg_sel")
+        # Region filter — commented out for now, can re-enable later
+        # st.markdown("### Region")
+        # regions = sorted(reit_df['geographic_region'].dropna().unique())
+        # all_reg_chk = st.checkbox("Select All", value=True, key="reg_all")
+        # sel_reg = st.multiselect("Region", regions, default=regions if all_reg_chk else [], label_visibility="collapsed", key="reg_sel")
+        sel_reg = sorted(reit_df['geographic_region'].dropna().unique()) if 'geographic_region' in reit_df.columns else []
     else:
         # Proxy mode — set default filter values so downstream code works
         sel_prop = all_props
@@ -1410,8 +1423,9 @@ else:
     else:
         filt = filt[((filt['market_cap'] >= mcap_min*1e9) & (filt['market_cap'] <= mcap_max*1e9)) | (filt['market_cap'].isna())]
         filt_no_pos = filt_no_pos[((filt_no_pos['market_cap'] >= mcap_min*1e9) & (filt_no_pos['market_cap'] <= mcap_max*1e9)) | (filt_no_pos['market_cap'].isna())]
-    filt = filt[filt['geographic_region'].isin(sel_reg)]
-    filt_no_pos = filt_no_pos[filt_no_pos['geographic_region'].isin(sel_reg)]
+    # Region filter — commented out for now, can re-enable later
+    # filt = filt[filt['geographic_region'].isin(sel_reg)]
+    # filt_no_pos = filt_no_pos[filt_no_pos['geographic_region'].isin(sel_reg)]
 peer_stats_df = get_peer_stats(filt)
 
 # METRICS — context-aware
@@ -1815,6 +1829,16 @@ if sel3 and sel3 != PLACEHOLDER:
             st.markdown("")
         
         st.markdown(f'<div class="source-note">Returns: Yahoo Finance (VNQ proxy), through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
+
+# MONTHLY INTELLIGENCE
+st.markdown("---")
+st.markdown("#### Monthly Executive Intelligence")
+st.markdown('<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;">'
+    '<div style="font-size:0.85rem;color:#0c4a6e;line-height:1.6;">'
+    '\U0001F4E8 <strong>Monthly Executive Changes Report</strong> \u2014 Track C-suite movements, new hires, departures, '
+    'and employment agreement terms across the REIT universe. Delivered monthly to subscribers.'
+    '<br><br><span style="color:#64748b;font-size:0.8rem;">Coming soon \u2014 reports will be available for download here.</span>'
+    '</div></div>', unsafe_allow_html=True)
 
 # FOOTER
 st.markdown("---")
