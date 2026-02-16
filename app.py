@@ -758,7 +758,7 @@ FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pc
 {pt} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
 FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
 Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
-INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
+INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
@@ -858,7 +858,7 @@ Peers: {n_co} {pt} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_not
 CRITICAL FORMAT INSTRUCTIONS: You MUST include the exact section markers shown below on their own line before each section. These markers control chart placement. Do not skip any markers.
 
 [SECTION:POSITIONING]
-Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt} to all REITs in the market cap range.
+Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt} to all REITs in the market cap range.
 
 [SECTION:MIX]
 Overall comp mix philosophy and how the company's approach to salary/cash/equity split compares to peers. CEO/CFO ratio analysis. (3-4 sent)
@@ -1412,9 +1412,9 @@ if sel3 and sel3 != PLACEHOLDER:
         with btn_r2c:
             proxy_url = lookup_proxy_url(cn3, FY_YEAR)
             if proxy_url:
-                st.link_button("\U0001F4C4  View Proxy Filing (SEC)", proxy_url, use_container_width=True)
+                st.link_button("\U0001F4C4  View Proxy", proxy_url, use_container_width=True)
             else:
-                st.button("\U0001F4C4  View Proxy Filing (SEC)", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
+                st.button("\U0001F4C4  View Proxy", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
         # Display Summary
         if st.session_state.get('lk_sum_tk') == stk3 and st.session_state.get('lk_sum'):
             if st.session_state.get('fp_lk_sum') != cur_fp0:
