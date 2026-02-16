@@ -1118,7 +1118,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
         ('LINEBELOW',(0,-1),(-1,-1),0.5,colors.HexColor('#e2e8f0'))]))
     story.append(it); story.append(Spacer(1, 10))
     ps = get_peer_stats(filt); prp = ps[ps['property_type'] == pt]
-    n_co, mcr, peer_tickers = peer_context_str(filt, pt)
+    n_co, mcr, peer_tickers, _ = peer_context_str(filt, pt)
     story.append(Paragraph("PEER GROUP BENCHMARKS", hs))
     story.append(Paragraph(f"Peer group: {n_co} {pt} REITs, market cap {mcr}", ds))
     for pos in ['CEO','CFO','CIO','GC']:
@@ -1384,7 +1384,7 @@ if sel3 and sel3 != PLACEHOLDER:
         st.markdown("#### Peer Compensation Benchmarking")
         # Exclude subject company from peer set — you don't compare yourself to yourself
         peers_only = filt_no_pos[filt_no_pos['ticker'] != stk3]
-        n_co, mcr, peer_tks = peer_context_str(peers_only, pt3)
+        n_co, mcr, peer_tks, _ = peer_context_str(peers_only, pt3)
         auto_peers = get_peer_stats(peers_only)
         peer_line = f"Compared to <strong>{n_co} {pt3} REITs</strong> in the {mcr} market cap range ({', '.join(peer_tks)})"
         if excluded_tickers:
@@ -1442,7 +1442,7 @@ if sel3 and sel3 != PLACEHOLDER:
             # parts alternates: [text_before, marker_name, text_after, marker_name, text_after, ...]
             
             try:
-                n_co_ctx, _, peer_tks_ctx = peer_context_str(peers_only, pt3)
+                n_co_ctx, _, peer_tks_ctx, _ = peer_context_str(peers_only, pt3)
             except Exception:
                 peer_tks_ctx = []
             
