@@ -3,840 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Velarion REIT Intelligence — Executive Compensation Data & AI Analytics</title>
+<title>Velarion Company Intelligence — Executive Compensation Data & AI Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --ink: #0a1628;
-  --deep: #0f2035;
-  --slate: #1a3550;
-  --teal: #1a8c7a;
-  --teal-light: #22b89a;
-  --gold: #d4a84b;
-  --gold-light: #e8c36e;
-  --cream: #f8f6f1;
-  --mist: #e8edf2;
-  --white: #ffffff;
-  --text: #2d3748;
-  --text-light: #718096;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  color: var(--text);
-  background: var(--cream);
-  overflow-x: hidden;
-}
-
-/* ===== HERO ===== */
-.hero {
-  position: relative;
-  min-height: 100vh;
-  background: linear-gradient(165deg, var(--ink) 0%, var(--deep) 40%, var(--slate) 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 8%;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: -30%; right: -15%;
-  width: 70vw; height: 70vw;
-  background: radial-gradient(circle, rgba(26,140,122,0.12) 0%, transparent 65%);
-  pointer-events: none;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  bottom: -20%; left: -10%;
-  width: 50vw; height: 50vw;
-  background: radial-gradient(circle, rgba(212,168,75,0.06) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-/* Grid lines background */
-.grid-overlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 80px 80px;
-  pointer-events: none;
-}
-
-.hero-nav {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  padding: 2rem 8%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 10;
-}
-
-.logo {
-  font-family: 'Playfair Display', serif;
-  font-weight: 700;
-  font-size: 1.6rem;
-  color: var(--white);
-  letter-spacing: 0.5px;
-}
-.logo span { color: var(--gold); }
-
-.nav-cta {
-  background: transparent;
-  border: 1.5px solid var(--gold);
-  color: var(--gold);
-  padding: 0.6rem 1.8rem;
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-.nav-cta:hover {
-  background: var(--gold);
-  color: var(--ink);
-}
-
-.hero-content {
-  position: relative;
-  z-index: 5;
-  max-width: 780px;
-}
-
-.hero-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 1.5rem;
-  opacity: 0;
-  animation: fadeUp 0.8s ease 0.2s forwards;
-}
-
-.hero h1 {
-  font-family: 'Playfair Display', serif;
-  font-weight: 900;
-  font-size: clamp(2.8rem, 5.5vw, 4.5rem);
-  color: var(--white);
-  line-height: 1.08;
-  margin-bottom: 1.5rem;
-  opacity: 0;
-  animation: fadeUp 0.8s ease 0.4s forwards;
-}
-.hero h1 em {
-  font-style: italic;
-  color: var(--teal-light);
-}
-
-.hero-sub {
-  font-size: 1.2rem;
-  font-weight: 300;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.7;
-  max-width: 600px;
-  margin-bottom: 2.5rem;
-  opacity: 0;
-  animation: fadeUp 0.8s ease 0.6s forwards;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 1.2rem;
-  align-items: center;
-  opacity: 0;
-  animation: fadeUp 0.8s ease 0.8s forwards;
-}
-
-.btn-primary {
-  background: var(--gold);
-  color: var(--ink);
-  padding: 1rem 2.5rem;
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  display: inline-block;
-}
-.btn-primary:hover {
-  background: var(--gold-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(212,168,75,0.3);
-}
-
-.btn-ghost {
-  color: rgba(255,255,255,0.8);
-  font-weight: 500;
-  font-size: 0.9rem;
-  text-decoration: none;
-  padding: 1rem 0;
-  transition: color 0.3s ease;
-}
-.btn-ghost:hover { color: var(--white); }
-
-/* Floating stats on the right */
-.hero-stats {
-  position: absolute;
-  right: 8%;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  z-index: 5;
-  opacity: 0;
-  animation: fadeIn 1s ease 1s forwards;
-}
-
-.stat-card {
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 1.4rem 2rem;
-  min-width: 200px;
-  transition: transform 0.3s ease, border-color 0.3s ease;
-}
-.stat-card:hover {
-  transform: translateX(-5px);
-  border-color: rgba(212,168,75,0.3);
-}
-
-.stat-number {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--white);
-}
-.stat-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
-  margin-top: 0.3rem;
-}
-
-/* ===== PROBLEM / PROOF ===== */
-.proof {
-  padding: 7rem 8%;
-  background: var(--white);
-}
-
-.proof-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5rem;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.proof-text h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.15;
-  margin-bottom: 1.5rem;
-}
-.proof-text h2 em { color: var(--teal); font-style: italic; }
-
-.proof-text p {
-  font-size: 1.05rem;
-  color: var(--text-light);
-  line-height: 1.8;
-  margin-bottom: 1.5rem;
-}
-
-.proof-quote {
-  border-left: 3px solid var(--gold);
-  padding-left: 1.5rem;
-  font-style: italic;
-  font-size: 1.1rem;
-  color: var(--text);
-  line-height: 1.6;
-}
-.proof-quote cite {
-  display: block;
-  margin-top: 0.8rem;
-  font-style: normal;
-  font-size: 0.85rem;
-  color: var(--text-light);
-  font-weight: 600;
-}
-
-/* Pain points */
-.pain-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-}
-
-.pain-card {
-  background: var(--cream);
-  padding: 1.5rem 2rem;
-  border-left: 3px solid var(--teal);
-  transition: transform 0.3s ease;
-}
-.pain-card:hover { transform: translateX(5px); }
-
-.pain-card h4 {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--ink);
-  margin-bottom: 0.4rem;
-}
-.pain-card p {
-  font-size: 0.88rem;
-  color: var(--text-light);
-  line-height: 1.6;
-}
-
-/* ===== FEATURES ===== */
-.features {
-  padding: 7rem 8%;
-  background: var(--cream);
-}
-
-.section-header {
-  text-align: center;
-  max-width: 700px;
-  margin: 0 auto 4rem;
-}
-
-.section-eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 1rem;
-}
-
-.section-header h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.15;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.feature-card {
-  background: var(--white);
-  padding: 2.5rem 2rem;
-  border: 1px solid rgba(0,0,0,0.06);
-  transition: all 0.35s ease;
-  position: relative;
-  overflow: hidden;
-}
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 3px;
-  background: linear-gradient(90deg, var(--teal), var(--gold));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.35s ease;
-}
-.feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 15px 40px rgba(0,0,0,0.06);
-}
-.feature-card:hover::before { transform: scaleX(1); }
-
-.feature-icon {
-  font-size: 2rem;
-  margin-bottom: 1.2rem;
-}
-
-.feature-card h3 {
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: var(--ink);
-  margin-bottom: 0.6rem;
-}
-
-.feature-card p {
-  font-size: 0.9rem;
-  color: var(--text-light);
-  line-height: 1.7;
-}
-
-/* ===== AI SECTION ===== */
-.ai-section {
-  padding: 7rem 8%;
-  background: linear-gradient(165deg, var(--ink) 0%, var(--deep) 100%);
-  position: relative;
-  overflow: hidden;
-}
-.ai-section::before {
-  content: '';
-  position: absolute;
-  top: -20%; right: -10%;
-  width: 50vw; height: 50vw;
-  background: radial-gradient(circle, rgba(26,140,122,0.08) 0%, transparent 60%);
-}
-
-.ai-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5rem;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
-}
-
-.ai-text .section-eyebrow { color: var(--gold); text-align: left; }
-.ai-text h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--white);
-  line-height: 1.15;
-  margin-bottom: 1.5rem;
-}
-.ai-text h2 em { color: var(--teal-light); font-style: italic; }
-.ai-text p {
-  font-size: 1.05rem;
-  color: rgba(255,255,255,0.65);
-  line-height: 1.8;
-  margin-bottom: 1.5rem;
-}
-
-/* AI demo mockup */
-.ai-demo {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 2rem;
-  font-family: 'DM Sans', monospace;
-}
-.ai-demo-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.ai-dot { width: 8px; height: 8px; border-radius: 50%; }
-.ai-dot.green { background: var(--teal-light); }
-.ai-demo-label {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.4);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-left: 0.5rem;
-}
-.ai-demo-text {
-  font-size: 0.88rem;
-  color: rgba(255,255,255,0.75);
-  line-height: 1.9;
-}
-.ai-demo-text .highlight {
-  color: var(--teal-light);
-  font-weight: 600;
-}
-.ai-demo-text .gold { color: var(--gold); font-weight: 600; }
-
-/* ===== PRICING ===== */
-.pricing {
-  padding: 7rem 8%;
-  background: var(--white);
-}
-
-.pricing-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  max-width: 800px;
-  margin: 3rem auto 0;
-}
-
-.price-card {
-  padding: 3rem 2.5rem;
-  border: 1px solid rgba(0,0,0,0.08);
-  position: relative;
-  transition: all 0.3s ease;
-}
-.price-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(0,0,0,0.06);
-}
-
-.price-card.featured {
-  background: var(--ink);
-  border-color: transparent;
-}
-
-.price-badge {
-  position: absolute;
-  top: -12px; left: 2.5rem;
-  background: var(--gold);
-  color: var(--ink);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 0.3rem 1rem;
-}
-
-.price-card h3 {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-light);
-  margin-bottom: 0.8rem;
-}
-.price-card.featured h3 { color: rgba(255,255,255,0.5); }
-
-.price-amount {
-  font-family: 'Playfair Display', serif;
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-.price-card.featured .price-amount { color: var(--white); }
-
-.price-period {
-  font-size: 0.9rem;
-  color: var(--text-light);
-}
-.price-card.featured .price-period { color: rgba(255,255,255,0.5); }
-
-.price-features {
-  list-style: none;
-  margin: 1.5rem 0 2rem;
-}
-.price-features li {
-  padding: 0.5rem 0;
-  font-size: 0.9rem;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.price-card.featured .price-features li { color: rgba(255,255,255,0.75); }
-
-.price-features li::before {
-  content: '✓';
-  color: var(--teal);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-.price-card.featured .price-features li::before { color: var(--gold); }
-
-.price-cta {
-  display: block;
-  text-align: center;
-  padding: 0.9rem;
-  font-weight: 700;
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-.price-cta.outline {
-  border: 1.5px solid var(--ink);
-  color: var(--ink);
-}
-.price-cta.outline:hover { background: var(--ink); color: var(--white); }
-.price-cta.gold {
-  background: var(--gold);
-  color: var(--ink);
-  border: 1.5px solid var(--gold);
-}
-.price-cta.gold:hover {
-  background: var(--gold-light);
-  transform: translateY(-1px);
-}
-
-/* ===== CTA ===== */
-.final-cta {
-  padding: 6rem 8%;
-  background: var(--cream);
-  text-align: center;
-}
-.final-cta h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 1rem;
-}
-.final-cta p {
-  font-size: 1.1rem;
-  color: var(--text-light);
-  max-width: 550px;
-  margin: 0 auto 2rem;
-  line-height: 1.7;
-}
-.final-cta .btn-primary { font-size: 1rem; padding: 1.1rem 3rem; }
-
-/* ===== FOOTER ===== */
-.footer {
-  padding: 3rem 8%;
-  background: var(--ink);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.footer-logo {
-  font-family: 'Playfair Display', serif;
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--white);
-}
-.footer-logo span { color: var(--gold); }
-.footer-text {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.35);
-}
-.footer-contact {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.6);
-}
-.footer-contact a {
-  color: var(--gold);
-  text-decoration: none;
-}
-
-/* ===== ANIMATIONS ===== */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(25px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 900px) {
-  .hero-stats { display: none; }
-  .proof-grid, .ai-grid, .pricing-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-  .features-grid { grid-template-columns: 1fr; }
-  .hero h1 { font-size: 2.4rem; }
-  .footer { flex-direction: column; gap: 1rem; text-align: center; }
-}
+:root{--ink:#0a1628;--deep:#0f2035;--slate:#1a3550;--teal:#1a8c7a;--teal-light:#22b89a;--gold:#d4a84b;--gold-light:#e8c36e;--cream:#f8f6f1;--white:#ffffff;--text:#2d3748;--text-light:#718096}*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--cream);overflow-x:hidden}.hero{position:relative;min-height:100vh;background:linear-gradient(165deg,var(--ink) 0%,var(--deep) 40%,var(--slate) 100%);display:flex;flex-direction:column;justify-content:center;padding:0 8%;overflow:hidden}.hero::before{content:'';position:absolute;top:-30%;right:-15%;width:70vw;height:70vw;background:radial-gradient(circle,rgba(26,140,122,0.12) 0%,transparent 65%);pointer-events:none}.hero::after{content:'';position:absolute;bottom:-20%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(212,168,75,0.06) 0%,transparent 60%);pointer-events:none}.grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:80px 80px;pointer-events:none}.hero-nav{position:absolute;top:0;left:0;right:0;padding:2rem 8%;display:flex;justify-content:space-between;align-items:center;z-index:10}.logo{font-family:'Playfair Display',serif;font-weight:700;font-size:1.6rem;color:var(--white);letter-spacing:.5px}.logo span{color:var(--gold)}.nav-cta{background:transparent;border:1.5px solid var(--gold);color:var(--gold);padding:.6rem 1.8rem;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .3s ease;text-decoration:none}.nav-cta:hover{background:var(--gold);color:var(--ink)}.hero-content{position:relative;z-index:5;max-width:780px}.hero-eyebrow{font-size:.8rem;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem;opacity:0;animation:fadeUp .8s ease .2s forwards}.hero h1{font-family:'Playfair Display',serif;font-weight:900;font-size:clamp(2.8rem,5.5vw,4.5rem);color:var(--white);line-height:1.08;margin-bottom:1.5rem;opacity:0;animation:fadeUp .8s ease .4s forwards}.hero h1 em{font-style:italic;color:var(--teal-light)}.hero-sub{font-size:1.2rem;font-weight:300;color:rgba(255,255,255,0.7);line-height:1.7;max-width:620px;margin-bottom:2.5rem;opacity:0;animation:fadeUp .8s ease .6s forwards}.hero-actions{display:flex;gap:1.2rem;align-items:center;opacity:0;animation:fadeUp .8s ease .8s forwards}.btn-primary{background:var(--gold);color:var(--ink);padding:1rem 2.5rem;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.5px;border:none;cursor:pointer;transition:all .3s ease;text-decoration:none;display:inline-block}.btn-primary:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 8px 30px rgba(212,168,75,0.3)}.btn-ghost{color:rgba(255,255,255,0.8);font-weight:500;font-size:.9rem;text-decoration:none;padding:1rem 0;transition:color .3s ease}.btn-ghost:hover{color:var(--white)}.hero-stats{position:absolute;right:8%;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:1.2rem;z-index:5;opacity:0;animation:fadeIn 1s ease 1s forwards}.stat-card{background:rgba(255,255,255,0.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);padding:1.4rem 2rem;min-width:200px;transition:transform .3s ease,border-color .3s ease}.stat-card:hover{transform:translateX(-5px);border-color:rgba(212,168,75,0.3)}.stat-number{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;color:var(--white)}.stat-label{font-size:.75rem;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:.3rem}.industries{padding:4rem 8%;background:var(--ink);border-top:1px solid rgba(255,255,255,0.05)}.industries-inner{max-width:1200px;margin:0 auto;text-align:center}.industries-label{font-size:.75rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:2rem}.industry-pills{display:flex;justify-content:center;flex-wrap:wrap;gap:.8rem}.pill{padding:.6rem 1.5rem;font-size:.85rem;font-weight:500;border-radius:0;transition:all .3s ease}.pill.active{background:var(--teal);color:var(--white);border:1px solid var(--teal)}.pill.coming{background:transparent;color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.1)}.pill.coming:hover{border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.55)}.pill-badge{font-size:.65rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-left:.5rem;opacity:.6}.proof{padding:7rem 8%;background:var(--white)}.proof-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;max-width:1200px;margin:0 auto}.proof-text h2{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1.15;margin-bottom:1.5rem}.proof-text h2 em{color:var(--teal);font-style:italic}.proof-text p{font-size:1.05rem;color:var(--text-light);line-height:1.8;margin-bottom:1.5rem}.proof-quote{border-left:3px solid var(--gold);padding-left:1.5rem;font-style:italic;font-size:1.1rem;color:var(--text);line-height:1.6}.proof-quote cite{display:block;margin-top:.8rem;font-style:normal;font-size:.85rem;color:var(--text-light);font-weight:600}.pain-cards{display:flex;flex-direction:column;gap:1.2rem}.pain-card{background:var(--cream);padding:1.5rem 2rem;border-left:3px solid var(--teal);transition:transform .3s ease}.pain-card:hover{transform:translateX(5px)}.pain-card h4{font-weight:700;font-size:.95rem;color:var(--ink);margin-bottom:.4rem}.pain-card p{font-size:.88rem;color:var(--text-light);line-height:1.6}.features{padding:7rem 8%;background:var(--cream)}.section-header{text-align:center;max-width:700px;margin:0 auto 4rem}.section-eyebrow{font-size:.75rem;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--teal);margin-bottom:1rem}.section-header h2{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1.15}.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1200px;margin:0 auto}.feature-card{background:var(--white);padding:2.5rem 2rem;border:1px solid rgba(0,0,0,0.06);transition:all .35s ease;position:relative;overflow:hidden}.feature-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--teal),var(--gold));transform:scaleX(0);transform-origin:left;transition:transform .35s ease}.feature-card:hover{transform:translateY(-4px);box-shadow:0 15px 40px rgba(0,0,0,0.06)}.feature-card:hover::before{transform:scaleX(1)}.feature-icon{font-size:2rem;margin-bottom:1.2rem}.feature-card h3{font-weight:700;font-size:1.05rem;color:var(--ink);margin-bottom:.6rem}.feature-card p{font-size:.9rem;color:var(--text-light);line-height:1.7}.ai-section{padding:7rem 8%;background:linear-gradient(165deg,var(--ink) 0%,var(--deep) 100%);position:relative;overflow:hidden}.ai-section::before{content:'';position:absolute;top:-20%;right:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(26,140,122,0.08) 0%,transparent 60%)}.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;max-width:1200px;margin:0 auto;position:relative;z-index:2}.ai-text .section-eyebrow{color:var(--gold);text-align:left}.ai-text h2{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:700;color:var(--white);line-height:1.15;margin-bottom:1.5rem}.ai-text h2 em{color:var(--teal-light);font-style:italic}.ai-text p{font-size:1.05rem;color:rgba(255,255,255,0.65);line-height:1.8;margin-bottom:1.5rem}.ai-demo{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:2rem}.ai-demo-header{display:flex;align-items:center;gap:.5rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.06)}.ai-dot{width:8px;height:8px;border-radius:50%}.ai-dot.green{background:var(--teal-light)}.ai-demo-label{font-size:.75rem;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-left:.5rem}.ai-demo-text{font-size:.88rem;color:rgba(255,255,255,0.75);line-height:1.9}.ai-demo-text .highlight{color:var(--teal-light);font-weight:600}.ai-demo-text .gold{color:var(--gold);font-weight:600}.roadmap{padding:7rem 8%;background:var(--white)}.roadmap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;max-width:1200px;margin:3rem auto 0}.roadmap-card{padding:2rem 1.5rem;border:1px solid rgba(0,0,0,0.06);position:relative}.roadmap-card.live{background:var(--cream);border-left:3px solid var(--teal)}.roadmap-card.next{background:var(--white);border-left:3px solid var(--gold)}.roadmap-tag{font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.8rem;display:inline-block;padding:.2rem .6rem}.roadmap-tag.live-tag{background:var(--teal);color:var(--white)}.roadmap-tag.next-tag{background:var(--gold);color:var(--ink)}.roadmap-card h4{font-weight:700;font-size:.95rem;color:var(--ink);margin-bottom:.4rem}.roadmap-card p{font-size:.82rem;color:var(--text-light);line-height:1.6}.pricing{padding:7rem 8%;background:var(--cream)}.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:800px;margin:3rem auto 0}.price-card{padding:3rem 2.5rem;border:1px solid rgba(0,0,0,0.08);position:relative;transition:all .3s ease}.price-card:hover{transform:translateY(-3px);box-shadow:0 12px 35px rgba(0,0,0,0.06)}.price-card.featured{background:var(--ink);border-color:transparent}.price-badge{position:absolute;top:-12px;left:2.5rem;background:var(--gold);color:var(--ink);font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:.3rem 1rem}.price-card h3{font-weight:700;font-size:1rem;color:var(--text-light);margin-bottom:.8rem}.price-card.featured h3{color:rgba(255,255,255,0.5)}.price-amount{font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;color:var(--ink)}.price-card.featured .price-amount{color:var(--white)}.price-period{font-size:.9rem;color:var(--text-light)}.price-card.featured .price-period{color:rgba(255,255,255,0.5)}.price-detail{font-size:.82rem;color:var(--text-light);margin-top:.3rem;line-height:1.5}.price-card.featured .price-detail{color:rgba(255,255,255,0.4)}.price-features{list-style:none;margin:1.5rem 0 2rem}.price-features li{padding:.5rem 0;font-size:.9rem;color:var(--text);display:flex;align-items:center;gap:.6rem}.price-card.featured .price-features li{color:rgba(255,255,255,0.75)}.price-features li::before{content:'✓';color:var(--teal);font-weight:700;font-size:.85rem}.price-card.featured .price-features li::before{color:var(--gold)}.price-cta{display:block;text-align:center;padding:.9rem;font-weight:700;font-size:.85rem;letter-spacing:.5px;text-decoration:none;transition:all .3s ease}.price-cta.outline{border:1.5px solid var(--ink);color:var(--ink)}.price-cta.outline:hover{background:var(--ink);color:var(--white)}.price-cta.gold{background:var(--gold);color:var(--ink);border:1.5px solid var(--gold)}.price-cta.gold:hover{background:var(--gold-light);transform:translateY(-1px)}.final-cta{padding:6rem 8%;background:var(--white);text-align:center}.final-cta h2{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:700;color:var(--ink);margin-bottom:1rem}.final-cta p{font-size:1.1rem;color:var(--text-light);max-width:550px;margin:0 auto 2rem;line-height:1.7}.final-cta .btn-primary{font-size:1rem;padding:1.1rem 3rem}.footer{padding:3rem 8%;background:var(--ink);display:flex;justify-content:space-between;align-items:center}.footer-logo{font-family:'Playfair Display',serif;font-weight:700;font-size:1.2rem;color:var(--white)}.footer-logo span{color:var(--gold)}.footer-text{font-size:.8rem;color:rgba(255,255,255,0.35)}.footer-contact{font-size:.85rem;color:rgba(255,255,255,0.6)}.footer-contact a{color:var(--gold);text-decoration:none}@keyframes fadeUp{from{opacity:0;transform:translateY(25px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@media(max-width:900px){.hero-stats{display:none}.proof-grid,.ai-grid,.pricing-grid{grid-template-columns:1fr;gap:2.5rem}.features-grid{grid-template-columns:1fr}.roadmap-grid{grid-template-columns:1fr 1fr}.hero h1{font-size:2.4rem}.footer{flex-direction:column;gap:1rem;text-align:center}}
 </style>
 </head>
 <body>
-
-<!-- ===== HERO ===== -->
 <section class="hero">
-  <div class="grid-overlay"></div>
-
-  <nav class="hero-nav">
-    <div class="logo">Velarion<span>.</span></div>
-    <a href="#pricing" class="nav-cta">Request Demo</a>
-  </nav>
-
-  <div class="hero-content">
-    <div class="hero-eyebrow">REIT Executive Compensation Intelligence</div>
-    <h1>Know what every<br>REIT exec <em>actually</em> earns.</h1>
-    <p class="hero-sub">Structured SEC proxy data across 190+ REITs, 600+ named executives, and 7 C-suite positions — with AI-powered peer analysis that writes itself.</p>
-    <div class="hero-actions">
-      <a href="#pricing" class="btn-primary">See Your Company's Data</a>
-      <a href="#features" class="btn-ghost">How it works &darr;</a>
-    </div>
-  </div>
-
-  <div class="hero-stats">
-    <div class="stat-card">
-      <div class="stat-number">190+</div>
-      <div class="stat-label">Public REITs</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">600+</div>
-      <div class="stat-label">Executives Tracked</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">$0</div>
-      <div class="stat-label">Consultant Markup</div>
-    </div>
-  </div>
+<div class="grid-overlay"></div>
+<nav class="hero-nav"><div class="logo">Velarion<span>.</span></div><a href="#pricing" class="nav-cta">Request Demo</a></nav>
+<div class="hero-content">
+<div class="hero-eyebrow">Company Intelligence Platform</div>
+<h1>Know what every exec in your industry <em>actually</em> earns.</h1>
+<p class="hero-sub">Structured executive compensation data from SEC proxy filings, across every public company in your sector. AI-powered peer analysis that writes itself. New industries added continuously.</p>
+<div class="hero-actions"><a href="#pricing" class="btn-primary">See Your Company's Data</a><a href="#features" class="btn-ghost">How it works &darr;</a></div>
+</div>
+<div class="hero-stats">
+<div class="stat-card"><div class="stat-number">190+</div><div class="stat-label">Companies (REITs)</div></div>
+<div class="stat-card"><div class="stat-number">600+</div><div class="stat-label">Executives Tracked</div></div>
+<div class="stat-card"><div class="stat-number">$0</div><div class="stat-label">Consultant Markup</div></div>
+</div>
 </section>
 
-<!-- ===== PROBLEM / PROOF ===== -->
-<section class="proof">
-  <div class="proof-grid">
-    <div class="proof-text">
-      <h2>Your comp committee deserves <em>better data</em> than a $200K consultant report.</h2>
-      <p>Every proxy season, REIT management teams spend months and six figures getting peer compensation data that's already public. The Summary Compensation Table is right there in the DEF 14A. The problem was never access — it was structure.</p>
-      <p>We solved that. Every number in Velarion traces directly back to an SEC filing. No surveys. No estimates. No black boxes.</p>
-      <div class="proof-quote">
-        "I spent 15 years on the other side of this table. I built this because I knew exactly what data I needed walking into a board meeting — and how much we were overpaying to get it."
-        <cite>— Andy Richardson, Founder & Former REIT Executive</cite>
-      </div>
-    </div>
-    <div class="pain-cards">
-      <div class="pain-card">
-        <h4>Board Compensation Negotiations</h4>
-        <p>Walk in with data showing exactly where your team sits vs. peers — by property type, market cap, and geography.</p>
-      </div>
-      <div class="pain-card">
-        <h4>Executive Recruiting</h4>
-        <p>Know the real market rate for a REIT CFO at your market cap before extending an offer. Not a survey average — actual disclosed pay.</p>
-      </div>
-      <div class="pain-card">
-        <h4>Proxy Preparation</h4>
-        <p>Build your peer group analysis and benchmarking section with verifiable data. Every number links to the SEC source filing.</p>
-      </div>
-      <div class="pain-card">
-        <h4>Activist Defense</h4>
-        <p>Anticipate questions about executive pay by understanding exactly how your comp compares before someone else tells you.</p>
-      </div>
-    </div>
-  </div>
-</section>
+<section class="industries"><div class="industries-inner">
+<div class="industries-label">Industry Coverage</div>
+<div class="industry-pills">
+<div class="pill active">Real Estate (REITs) <span class="pill-badge">LIVE</span></div>
+<div class="pill coming">Banks &amp; Financial Institutions <span class="pill-badge">Q2 2026</span></div>
+<div class="pill coming">Biotech &amp; Pharma <span class="pill-badge">Q3 2026</span></div>
+<div class="pill coming">Energy &amp; Utilities <span class="pill-badge">Q3 2026</span></div>
+<div class="pill coming">Technology <span class="pill-badge">Q4 2026</span></div>
+</div>
+</div></section>
 
-<!-- ===== FEATURES ===== -->
+<section class="proof"><div class="proof-grid">
+<div class="proof-text">
+<h2>Your comp committee deserves <em>better data</em> than a $200K consultant report.</h2>
+<p>Every proxy season, management teams spend months and six figures getting peer compensation data that's already public. The Summary Compensation Table is right there in the DEF 14A. The problem was never access — it was structure.</p>
+<p>We solved that. Every number in Velarion traces directly back to an SEC filing. No surveys. No estimates. No black boxes.</p>
+<div class="proof-quote">"I spent 15 years on the other side of this table. I built this because I knew exactly what data I needed walking into a board meeting — and how much we were overpaying to get it."<cite>— Andy Richardson, Founder &amp; Former REIT Executive</cite></div>
+</div>
+<div class="pain-cards">
+<div class="pain-card"><h4>Board Compensation Negotiations</h4><p>Walk in with data showing exactly where your team sits vs. peers — by sector, market cap, and geography. Updated quarterly, not annually.</p></div>
+<div class="pain-card"><h4>Executive Recruiting</h4><p>Know the real market rate for a C-suite hire at your market cap before extending an offer. Not a survey average — actual disclosed pay.</p></div>
+<div class="pain-card"><h4>Proxy Preparation</h4><p>Build your peer group analysis and benchmarking section with verifiable data. Every number links to the SEC source filing.</p></div>
+<div class="pain-card"><h4>Activist Defense</h4><p>Anticipate questions about executive pay by understanding exactly how your comp compares before someone else tells you.</p></div>
+</div>
+</div></section>
+
 <section class="features" id="features">
-  <div class="section-header">
-    <div class="section-eyebrow">What You Get</div>
-    <h2>Everything a REIT management team needs to benchmark comp. Nothing you don't.</h2>
-  </div>
-
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">📊</div>
-      <h3>Full Compensation Breakdown</h3>
-      <p>Base salary, cash bonus, equity awards, and total comp for CEO, CFO, COO, CIO, GC, CAO, and President. Across every public REIT.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🎯</div>
-      <h3>Smart Peer Filtering</h3>
-      <p>Property type, market cap range, geography, and specific company exclusions. Auto-widens thin peer groups so you always have meaningful comparisons.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">📈</div>
-      <h3>Percentile Rankings</h3>
-      <p>See where each executive falls on every comp component — with progress bars, medians, and peer counts so you know exactly how the numbers stack up.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🏆</div>
-      <h3>League Tables</h3>
-      <p>Rank any position by total comp, base, bonus, or equity across your peer set. Pin your company for instant visual comparison.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔗</div>
-      <h3>SEC Source Verification</h3>
-      <p>One click to the actual proxy filing. Every data point is traceable. No black boxes, no proprietary survey methodologies.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔄</div>
-      <h3>Quarterly Updates</h3>
-      <p>Fresh data every proxy season plus 8-K executive change alerts between cycles. Always current, always accurate.</p>
-    </div>
-  </div>
+<div class="section-header"><div class="section-eyebrow">What You Get</div><h2>Everything a management team needs to benchmark comp. Nothing you don't.</h2></div>
+<div class="features-grid">
+<div class="feature-card"><div class="feature-icon">📊</div><h3>Full Compensation Breakdown</h3><p>Base salary, cash bonus, equity awards, and total comp for CEO, CFO, COO, CIO, GC, CAO, and President. Across every public company in your sector.</p></div>
+<div class="feature-card"><div class="feature-icon">🎯</div><h3>Smart Peer Filtering</h3><p>Sector, market cap range, geography, and specific company exclusions. Auto-widens thin peer groups so you always have meaningful comparisons.</p></div>
+<div class="feature-card"><div class="feature-icon">📈</div><h3>Percentile Rankings</h3><p>See where each executive falls on every comp component — with medians, peer counts, and visual positioning against the full peer set.</p></div>
+<div class="feature-card"><div class="feature-icon">🏆</div><h3>League Tables</h3><p>Rank any position by total comp, base, bonus, or equity across your peer set. Pin your company for instant visual comparison.</p></div>
+<div class="feature-card"><div class="feature-icon">🔗</div><h3>SEC Source Verification</h3><p>One click to the actual proxy filing. Every data point is traceable. No black boxes, no proprietary survey methodologies.</p></div>
+<div class="feature-card"><div class="feature-icon">🔄</div><h3>Quarterly Updates</h3><p>Fresh data every proxy season plus executive change alerts between cycles. Always current, always accurate.</p></div>
+</div>
 </section>
 
-<!-- ===== AI SECTION ===== -->
-<section class="ai-section">
-  <div class="ai-grid">
-    <div class="ai-text">
-      <div class="section-eyebrow">AI-Powered Analysis</div>
-      <h2>Click a button.<br>Get a <em>board-ready</em> narrative.</h2>
-      <p>Our AI reads the actual CD&A from the proxy, pulls quarterly earnings data, checks current stock performance, and writes a compensation analysis positioned from management's perspective.</p>
-      <p>It's not a template. It's not a summary. It's an intelligent narrative that connects comp structure to company performance, names specific peers, and cites exact percentile rankings.</p>
-      <a href="#pricing" class="btn-primary" style="margin-top: 0.5rem;">Try It With Your Company</a>
-    </div>
-    <div class="ai-demo">
-      <div class="ai-demo-header">
-        <div class="ai-dot green"></div>
-        <div class="ai-dot green" style="opacity:0.5"></div>
-        <div class="ai-dot green" style="opacity:0.25"></div>
-        <span class="ai-demo-label">AI Summary Analysis</span>
-      </div>
-      <div class="ai-demo-text">
-        <p>CEO compensation of <span class="highlight">$9.2M</span> ranks at the <span class="gold">69th percentile</span> among Retail REIT peers — positioning that reflects the company's <span class="highlight">$9.1B market cap</span> and consistent outperformance vs. the FTSE Nareit index.</p>
-        <br>
-        <p>Base salary of <span class="highlight">$1.0M</span> sits at the <span class="gold">75th percentile</span>, while the equity-heavy comp mix (75% non-cash) aligns with shareholder interests and peer norms for large-cap retail REITs.</p>
-        <br>
-        <p>The company's <span class="highlight">+14.2% one-year return</span> meaningfully exceeds the peer median of +8.7%, supporting the compensation committee's positioning above the 50th percentile...</p>
-      </div>
-    </div>
-  </div>
+<section class="ai-section"><div class="ai-grid">
+<div class="ai-text">
+<div class="section-eyebrow">AI-Powered Analysis</div>
+<h2>Click a button.<br>Get a <em>board-ready</em> narrative.</h2>
+<p>Our AI reads the actual CD&A from the proxy, pulls quarterly earnings data, checks current stock performance, and writes a compensation analysis positioned from management's perspective.</p>
+<p>It's not a template. It's not a summary. It's an intelligent narrative that connects comp structure to company performance, names specific peers, and cites exact percentile rankings.</p>
+<a href="#pricing" class="btn-primary" style="margin-top:.5rem">Try It With Your Company</a>
+</div>
+<div class="ai-demo">
+<div class="ai-demo-header"><div class="ai-dot green"></div><div class="ai-dot green" style="opacity:.5"></div><div class="ai-dot green" style="opacity:.25"></div><span class="ai-demo-label">AI Summary Analysis</span></div>
+<div class="ai-demo-text">
+<p>CEO compensation of <span class="highlight">$9.2M</span> ranks at the <span class="gold">69th percentile</span> among Retail REIT peers — positioning that reflects the company's <span class="highlight">$9.1B market cap</span> and consistent outperformance vs. the FTSE Nareit index.</p><br>
+<p>Base salary of <span class="highlight">$1.0M</span> sits at the <span class="gold">75th percentile</span>, while the equity-heavy comp mix (75% non-cash) aligns with shareholder interests and peer norms for large-cap retail REITs.</p><br>
+<p>The company's <span class="highlight">+14.2% one-year return</span> meaningfully exceeds the peer median of +8.7%, supporting the compensation committee's positioning above the 50th percentile...</p>
+</div>
+</div>
+</div></section>
+
+<section class="roadmap">
+<div class="section-header"><div class="section-eyebrow">Platform Roadmap</div><h2>Building the definitive source for executive compensation intelligence.</h2></div>
+<div class="roadmap-grid">
+<div class="roadmap-card live"><div class="roadmap-tag live-tag">Live Now</div><h4>Executive Compensation</h4><p>Full SCT data, AI narratives, peer filtering, league tables, and percentile rankings for 190+ REITs.</p></div>
+<div class="roadmap-card next"><div class="roadmap-tag next-tag">Coming Soon</div><h4>Board of Director Comp</h4><p>Director retainers, committee fees, equity grants, and meeting compensation across your peer set.</p></div>
+<div class="roadmap-card next"><div class="roadmap-tag next-tag">Coming Soon</div><h4>Insider Transaction Tracking</h4><p>Form 3/4/5 filings parsed and filtered by sector. Know when peer executives are buying or selling.</p></div>
+<div class="roadmap-card next"><div class="roadmap-tag next-tag">Coming Soon</div><h4>Multi-Year Trend Analysis</h4><p>Historical comp trajectories, pay-for-performance alignment, and say-on-pay vote tracking over 5+ years.</p></div>
+</div>
 </section>
 
-<!-- ===== PRICING ===== -->
 <section class="pricing" id="pricing">
-  <div class="section-header">
-    <div class="section-eyebrow">Simple Pricing</div>
-    <h2>Less than your last consultant invoice.</h2>
-  </div>
-
-  <div class="pricing-grid">
-    <div class="price-card featured">
-      <div class="price-badge">Limited — 20 Firms</div>
-      <h3>Founding Member</h3>
-      <div class="price-amount">$2,500</div>
-      <div class="price-period">/year — locked for 2 years</div>
-      <ul class="price-features">
-        <li>Up to 10 executive seats</li>
-        <li>Full dashboard + AI analysis</li>
-        <li>Quarterly data refreshes</li>
-        <li>Priority feature requests</li>
-        <li>Direct line to the founder</li>
-      </ul>
-      <a href="mailto:andy@velarion.ai?subject=Founding Member Demo Request" class="price-cta gold">Request Demo</a>
-    </div>
-    <div class="price-card">
-      <h3>Individual Executive</h3>
-      <div class="price-amount">$5,000</div>
-      <div class="price-period">/year</div>
-      <ul class="price-features">
-        <li>Single seat license</li>
-        <li>Full dashboard + AI analysis</li>
-        <li>Quarterly data refreshes</li>
-        <li>Email support</li>
-      </ul>
-      <a href="mailto:andy@velarion.ai?subject=Velarion Demo Request" class="price-cta outline">Request Demo</a>
-    </div>
-  </div>
+<div class="section-header"><div class="section-eyebrow">Simple Pricing</div><h2>Less than your last consultant invoice.</h2></div>
+<div class="pricing-grid">
+<div class="price-card featured">
+<div class="price-badge">Early Adopter Rate</div>
+<h3>Real Estate Package</h3>
+<div class="price-amount">$5,000</div>
+<div class="price-period">/year</div>
+<div class="price-detail">Lock in this rate by signing up in 2026. New features and industries priced separately.</div>
+<ul class="price-features">
+<li>190+ REITs, 600+ executives</li>
+<li>Full dashboard + AI analysis</li>
+<li>Up to 5 executive seats</li>
+<li>Quarterly data refreshes</li>
+<li>Direct line to the founder</li>
+</ul>
+<a href="mailto:andy@velarion.ai?subject=Velarion Demo Request — Real Estate Package" class="price-cta gold">Request Demo</a>
+</div>
+<div class="price-card">
+<h3>Additional Industries</h3>
+<div class="price-amount" style="font-size:2rem">Custom</div>
+<div class="price-period">per vertical / year</div>
+<div class="price-detail">Add Banks, Biotech, Energy, Tech, or other sectors as they launch. A la carte pricing per industry.</div>
+<ul class="price-features">
+<li>Same platform, new datasets</li>
+<li>Cross-industry benchmarking</li>
+<li>Bundle discounts available</li>
+<li>Enterprise all-access option</li>
+</ul>
+<a href="mailto:andy@velarion.ai?subject=Velarion Multi-Industry Inquiry" class="price-cta outline">Get In Touch</a>
+</div>
+</div>
 </section>
 
-<!-- ===== FINAL CTA ===== -->
 <section class="final-cta">
-  <h2>See your company's data in 60 seconds.</h2>
-  <p>We'll pull up your company pinned against peers, live, on a call. No slides. No pitch deck. Just your data.</p>
-  <a href="mailto:andy@velarion.ai?subject=Velarion Demo Request&body=I'd like to see a demo with my company's data." class="btn-primary">Schedule a Demo</a>
+<h2>See your company's data in 60 seconds.</h2>
+<p>We'll pull up your company pinned against peers, live, on a call. No slides. No pitch deck. Just your data.</p>
+<a href="mailto:andy@velarion.ai?subject=Velarion Demo Request&body=I'd like to see a demo with my company's data." class="btn-primary">Schedule a Demo</a>
 </section>
 
-<!-- ===== FOOTER ===== -->
 <footer class="footer">
-  <div class="footer-logo">Velarion<span>.</span></div>
-  <div class="footer-text">SEC data. Structured. Intelligent. Verified.</div>
-  <div class="footer-contact"><a href="mailto:andy@velarion.ai">andy@velarion.ai</a></div>
+<div class="footer-logo">Velarion<span>.</span></div>
+<div class="footer-text">SEC data. Structured. Intelligent. Verified.</div>
+<div class="footer-contact"><a href="mailto:andy@velarion.ai">andy@velarion.ai</a></div>
 </footer>
-
 </body>
 </html>
