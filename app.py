@@ -1233,7 +1233,9 @@ cv_opts = [PLACEHOLDER] + co_opts
 cv_selected_val = st.session_state.get('cv_co', PLACEHOLDER)
 if not cv_selected_val or cv_selected_val == PLACEHOLDER:
     st.markdown('<div class="tab-instruction">\U0001F4A1 Select a company to view executive compensation and generate AI-powered analysis.</div>', unsafe_allow_html=True)
-sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
+_dd_col, _ = st.columns([1, 1])
+with _dd_col:
+    sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
 if sel3 and sel3 != PLACEHOLDER:
     # If company changed, sync sidebar filters and rerun
     prev_cv = st.session_state.get('_prev_cv')
