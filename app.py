@@ -1688,13 +1688,19 @@ if sel3 and sel3 != PLACEHOLDER:
         auto_peers = get_peer_stats(peers_only)
         
         # Show peer source context
+        no_proxy = not proxy_tickers or len(proxy_tickers) == 0
         if st.session_state.get('peer_mode') == 'proxy':
             peer_line = f"Compared to <strong>{n_co} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
         else:
-            peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> ({', '.join(peer_tks)})"
+            # Check if this is a no-proxy-peer company defaulting to property type
+            if no_proxy:
+                peer_line = f'<div style="background:#fffbeb;border:1px solid #d4a017;border-radius:6px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#92400e;">\u26A0\uFE0F <strong>No proxy-defined compensation peer group found</strong> in {cn3}\'s FY{FY_YEAR} DEF 14A filing. Defaulted to {pt3} REITs.</div>'
+                peer_line += f"Compared to <strong>{n_co} {pt3} peer companies</strong> ({', '.join(peer_tks)})"
+            else:
+                peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> ({', '.join(peer_tks)})"
             # Show changes vs proxy baseline
             changes = []
-            if hasattr(st.session_state, '__contains__'):
+            if hasattr(st.session_state, '__contains__') and proxy_tickers:
                 r_from_p = [t for t in (set(proxy_tickers) - set(peer_tks))] if proxy_tickers else []
                 a_beyond_p = [t for t in peer_tks if t not in proxy_tickers] if proxy_tickers else []
                 if r_from_p:
@@ -1706,7 +1712,10 @@ if sel3 and sel3 != PLACEHOLDER:
         st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
         
         if st.session_state.get('peer_mode') == 'custom':
-            st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
+            if no_proxy:
+                st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 Use <strong>Custom Peer Group Filters</strong> in the sidebar to further refine this peer group.</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
         cur_fp0 = filter_fingerprint(peers_only)
         # Compute custom changes vs proxy for AI context
         custom_removed = sorted(set(proxy_tickers) - set(peer_tks)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
