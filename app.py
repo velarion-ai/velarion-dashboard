@@ -36,7 +36,12 @@ def check_password():
         [data-testid="stToolbar"], [data-testid="stDecoration"],
         #MainMenu, .stDeployButton,
         [data-testid="stStatusWidget"],
-        .viewerBadge_container__r5tak { display: none !important; }
+        .viewerBadge_container__r5tak,
+        footer, .stDeployButton,
+        [data-testid="manage-app-button"],
+        .styles_viewerBadge__CvC9N,
+        ._profileContainer_gzau3_53,
+        [data-testid="stToolbar"] { display: none !important; visibility: hidden !important; }
 
         .stApp, [data-testid="stAppViewContainer"],
         .main .block-container, .main,
