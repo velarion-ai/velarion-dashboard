@@ -145,6 +145,7 @@ SUPABASE_URL = "https://fhnffpgotkxxtwmwbizy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobmZmcGdvdGt4eHR3bXdiaXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwNzAzNTEsImV4cCI6MjA4NjY0NjM1MX0.XU80VORX49loeJlbrq0w9hiGOUAN7fgEH6FPiF1E-GU"
 REIT_INDEX_TICKER = "VNQ"
 FY_YEAR = 2024
+RETURNS_YEAR = 2025  # Stock returns through this year (plus YTD current year)
 POS_ORDER = {'CEO': 0, 'PRESIDENT': 1, 'COO': 2, 'CFO': 3, 'CIO': 4, 'GC': 5, 'CAO': 6, 'OTHER_NEO': 7}
 PROPERTY_TYPE_MAP = {
     'Industrial/Logistics': 'Industrial', 'Self-Storage': 'Self Storage',
@@ -364,10 +365,11 @@ def load_total_returns(tickers):
     except ImportError:
         return {}
     all_t = list(set(tickers + [REIT_INDEX_TICKER]))
-    end_d = datetime(FY_YEAR, 12, 31)
-    start_3y = datetime(FY_YEAR - 3, 1, 1)
+    # Pull data from 3 years before RETURNS_YEAR through today (for YTD)
+    start_3y = datetime(RETURNS_YEAR - 3, 1, 1)
+    today = datetime.now()
     try:
-        data = yf.download(all_t, start=start_3y, end=end_d + timedelta(days=7), progress=False)['Close']
+        data = yf.download(all_t, start=start_3y, end=today + timedelta(days=1), progress=False)['Close']
     except Exception:
         return {}
     if data.empty: return {}
@@ -377,14 +379,20 @@ def load_total_returns(tickers):
         if t not in data.columns: continue
         p = data[t].dropna()
         if len(p) < 20: continue
-        fy_end = p[p.index <= pd.Timestamp(end_d + timedelta(days=7))]
+        # 1-Year return: RETURNS_YEAR (e.g., Jan 1 2025 - Dec 31 2025)
+        fy_end = p[p.index <= pd.Timestamp(datetime(RETURNS_YEAR, 12, 31) + timedelta(days=7))]
         if fy_end.empty: continue
-        cur = fy_end.iloc[-1]
-        s1 = p[p.index >= pd.Timestamp(datetime(FY_YEAR-1, 12, 28))]
-        r1 = ((cur / s1.iloc[0]) - 1) * 100 if len(s1) > 1 else None
-        s3 = p[p.index >= pd.Timestamp(datetime(FY_YEAR-3, 12, 28))]
-        r3 = ((cur / s3.iloc[0]) - 1) * 100 if len(s3) > 1 else None
-        returns[t] = {'return_1y': r1, 'return_3y': r3}
+        cur_fy = fy_end.iloc[-1]
+        s1 = p[p.index >= pd.Timestamp(datetime(RETURNS_YEAR-1, 12, 28))]
+        r1 = ((cur_fy / s1.iloc[0]) - 1) * 100 if len(s1) > 1 else None
+        # 3-Year return: RETURNS_YEAR-2 through RETURNS_YEAR (e.g., 2023-2025)
+        s3 = p[p.index >= pd.Timestamp(datetime(RETURNS_YEAR-3, 12, 28))]
+        r3 = ((cur_fy / s3.iloc[0]) - 1) * 100 if len(s3) > 1 else None
+        # YTD return: Jan 1 of current year through today
+        ytd_start = p[p.index >= pd.Timestamp(datetime(RETURNS_YEAR + 1, 1, 1) - timedelta(days=5))]
+        ytd_cur = p.iloc[-1] if not p.empty else None
+        r_ytd = ((ytd_cur / ytd_start.iloc[0]) - 1) * 100 if ytd_start is not None and len(ytd_start) > 1 and ytd_cur is not None else None
+        returns[t] = {'return_1y': r1, 'return_3y': r3, 'return_ytd': r_ytd}
     return returns
 
 # ============================================================
@@ -687,8 +695,9 @@ def fetch_current_stock(ticker):
         if hist.empty:
             return None
         current_price = hist['Close'].iloc[-1]
-        # YTD: from Jan 1 of current year
-        ytd_start = hist[hist.index >= f'2025-01-01']
+        # YTD: from Jan 1 of current year (RETURNS_YEAR + 1)
+        current_yr = RETURNS_YEAR + 1
+        ytd_start = hist[hist.index >= f'{current_yr}-01-01']
         if not ytd_start.empty and len(hist) > 0:
             jan1_price = ytd_start['Close'].iloc[0]
             ytd_return = (current_price / jan1_price - 1) * 100
@@ -699,7 +708,7 @@ def fetch_current_stock(ticker):
         vnq_hist = vnq.history(period='1y')
         vnq_ytd = None
         if not vnq_hist.empty:
-            vnq_ytd_start = vnq_hist[vnq_hist.index >= f'2025-01-01']
+            vnq_ytd_start = vnq_hist[vnq_hist.index >= f'{current_yr}-01-01']
             if not vnq_ytd_start.empty:
                 vnq_ytd = (vnq_hist['Close'].iloc[-1] / vnq_ytd_start['Close'].iloc[0] - 1) * 100
         return {
@@ -748,7 +757,8 @@ INSTRUCTION: Explicitly note that the peer group was widened beyond {pt_label} t
 Total ${st_d['total_comp']['val']:,.0f} ({ordinal(st_d['total_comp']['pct'])} pctl, {quartile_label(st_d['total_comp']['pct'])}) | Salary ${st_d['base_salary']['val']:,.0f} ({ordinal(st_d['base_salary']['pct'])} pctl) | Bonus ${st_d['cash_bonus_incentive']['val']:,.0f} ({ordinal(st_d['cash_bonus_incentive']['pct'])} pctl) | Stock ${st_d['stock_based_comp']['val']:,.0f} ({ordinal(st_d['stock_based_comp']['pct'])} pctl)
 Comp mix: {mix} | Peer median mix: {peer_mix}
 Peer group: {st_d['total_comp']['n']} {pos}s | Tickers: {', '.join(pp['ticker'].unique())}
-FY{FY_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | {pt_label} avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))}{wider_note}{notes}
+FY{RETURNS_YEAR} Returns: {tk} {fmt_return(co_r1)} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | Peer avg {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | FTSE Nareit {fmt_return(vnq.get('return_1y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
+NOTE: Compensation data is from FY{FY_YEAR} proxy (filed {FY_YEAR+1}). Returns through Dec 31, {RETURNS_YEAR} plus YTD {RETURNS_YEAR+1}. ONLY reference figures provided above. Do NOT invent any data.{wider_note}{notes}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=500, messages=[{"role":"user","content":prompt}])
@@ -804,11 +814,13 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
 {cn} ({tk}) | {pt} | Mkt Cap ${mc/1e9:.2f}B
 TEAM:\n{chr(10).join(elines)}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
-FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl returns, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
-{pt_label} Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
-FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {n_co} {pt_label} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}
-INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond {pt_label} to all REITs in the market cap range due to limited same-sector peers for that position.{en}
+FY{RETURNS_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl returns, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
+Peer Avg ({n_co} cos): 1-Yr {fmt_return(np.mean(peer_r1s) if peer_r1s else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
+FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(vnq.get('return_ytd'))}
+Peers: {n_co} companies | Tickers: {', '.join(tickers)}
+NOTE: Compensation data is from the FY{FY_YEAR} DEF 14A proxy filing (filed in {FY_YEAR+1}). Returns are through Dec 31, {RETURNS_YEAR} (1-yr and 3-yr) plus YTD {RETURNS_YEAR+1}. Frame the analysis as: how has the compensation structure approved by the board performed against {RETURNS_YEAR} shareholder returns?
+CRITICAL: Only reference return figures explicitly provided above. Do NOT invent, estimate, or reference any return data not given. Do NOT reference years or periods for which no data is provided.
+INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond the primary peer set due to limited same-position peers.{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
@@ -892,29 +904,32 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, all_df=None, mcap_min=0, m
         enrichment += f"\n\nRECENT QUARTERLY EARNINGS (use for operational context — FFO/AFFO, revenue, occupancy, same-store NOI):\n{earnings_snippet}"
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
-        enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD 2025: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
-        enrichment += f"\n  VNQ (REIT Index) YTD 2025: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
+        enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
+        enrichment += f"\n  VNQ (REIT Index) YTD {RETURNS_YEAR+1}: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
     
     prompt = f"""REIT compensation analysis (~600-800 words). You are advising this management team — preparing them for what their board and comp committee will ask.
 {cn} ({tk}) | {pt} | {co_d['reit_type'].iloc[0]} | HQ: {hq} | Mkt Cap ${mc/1e9:.2f}B
 EXECUTIVES:\n{chr(10).join(esecs)}
 {rl}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
-FY{FY_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))}
-{pt_label} Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
-FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))}
-Peers: {n_co} {pt_label} REITs, mkt cap {mcr} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
+FY{RETURNS_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
+Peer Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
+FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(vnq.get('return_ytd'))}
+Peers: {n_co} companies | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
+
+NOTE: Compensation data is from the FY{FY_YEAR} DEF 14A proxy filing (filed in {FY_YEAR+1}). Returns are 1-yr and 3-yr through Dec 31, {RETURNS_YEAR}, plus YTD {RETURNS_YEAR+1}. Frame the analysis as: how has the compensation structure approved by the board in the {FY_YEAR} proxy performed against {RETURNS_YEAR} and current shareholder returns?
+CRITICAL: Only reference return figures explicitly provided above. Do NOT invent, estimate, or reference any return data not given. Do NOT reference years or periods for which no data is provided.
 
 CRITICAL FORMAT INSTRUCTIONS: You MUST include the exact section markers shown below on their own line before each section. These markers control chart placement. Do not skip any markers.
 
 [SECTION:POSITIONING]
-Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond {pt_label} to all REITs in the market cap range.
+Opening assessment: Company context, peer group with company names, and overall compensation positioning. Then each exec: positioning, comp mix vs peer mix, assessment (2-3 sent each). If any executive is flagged as [Partial Yr], note their compensation reflects a partial year and should not be compared at face value — do NOT say pay is "low" or "below peers" when it simply reflects incomplete tenure. Focus on comp structure and mix instead. If ALL executives are partial year, lead with that context and frame the analysis around structure, equity alignment, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [WIDENED], note the peer group was widened beyond the primary peer set.
 
 [SECTION:MIX]
 Overall comp mix philosophy and how the company's approach to salary/cash/equity split compares to peers. CEO/CFO ratio analysis. (3-4 sent)
 
 [SECTION:RETURNS]
-PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using BOTH proxy-year returns AND current YTD stock performance. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
+PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using the {RETURNS_YEAR} returns AND YTD {RETURNS_YEAR+1} stock performance provided above. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
 
 [SECTION:WATCH]
 AREAS TO WATCH: Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
@@ -1149,14 +1164,15 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     prs_h = ParagraphStyle('PRH', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#0f172a'), spaceAfter=4, spaceBefore=8)
     story.append(Paragraph("Velarion Company Intelligence", ts))
     story.append(Paragraph(f"REIT Compensation Analysis: {cn} ({tk})", ss))
-    story.append(Paragraph(f"Generated {datetime.now().strftime('%B %d, %Y')} | FY{FY_YEAR} Proxy Data | Returns through Dec 31, {FY_YEAR}", ds))
+    story.append(Paragraph(f"Generated {datetime.now().strftime('%B %d, %Y')} | FY{FY_YEAR} Proxy Data | Returns through Dec 31, {RETURNS_YEAR}", ds))
     story.append(Spacer(1, 8))
     mc = co_d['market_cap'].iloc[0]; pt = co_d['property_type'].iloc[0]; hq = f"{co_d['hq_city'].iloc[0]}, {co_d['hq_state'].iloc[0]}"
     r = ret_data.get(tk, {}); vnq = ret_data.get(REIT_INDEX_TICKER, {})
     info = [['Company', cn, 'Property Type', pt], ['Ticker', tk, 'Market Cap', fmt_mcap(mc)],
             ['HQ', hq, 'REIT Type', co_d['reit_type'].iloc[0]],
-            [f'1-Yr Return (FY{FY_YEAR})', fmt_return(r.get('return_1y')), 'FTSE Nareit 1-Yr', fmt_return(vnq.get('return_1y'))],
-            ['3-Yr Return', fmt_return(r.get('return_3y')), 'FTSE Nareit 3-Yr', fmt_return(vnq.get('return_3y'))]]
+            [f'1-Yr Return (FY{RETURNS_YEAR})', fmt_return(r.get('return_1y')), 'FTSE Nareit 1-Yr', fmt_return(vnq.get('return_1y'))],
+            ['3-Yr Return', fmt_return(r.get('return_3y')), 'FTSE Nareit 3-Yr', fmt_return(vnq.get('return_3y'))],
+            [f'YTD {RETURNS_YEAR+1}', fmt_return(r.get('return_ytd')), f'FTSE Nareit YTD {RETURNS_YEAR+1}', fmt_return(vnq.get('return_ytd'))]]
     it = Table(info, colWidths=[1.3*inch, 2.2*inch, 1.2*inch, 2.2*inch])
     it.setStyle(TableStyle([('FONTNAME',(0,0),(-1,-1),'Helvetica'),('FONTSIZE',(0,0),(-1,-1),8.5),
         ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),
@@ -1585,11 +1601,12 @@ if sel3 and sel3 != PLACEHOLDER:
         c1.metric("HQ", f"{cd3['hq_city'].iloc[0]}, {cd3['hq_state'].iloc[0]}"); c2.metric("Property Type", pt3); c3.metric("Market Cap", fmt_mcap(cd3['market_cap'].iloc[0]))
         cr3 = ret_data.get(stk3, {}); vnq3 = ret_data.get(REIT_INDEX_TICKER, {})
         if cr3:
-            r1,r2,r3,r4 = st.columns(4)
-            r1.metric(f"{stk3} 1-Yr (FY{FY_YEAR})", fmt_return(cr3.get('return_1y')))
+            r1,r2,r3,r4,r5 = st.columns(5)
+            r1.metric(f"{stk3} 1-Yr (FY{RETURNS_YEAR})", fmt_return(cr3.get('return_1y')))
             r2.metric(f"{stk3} 3-Yr", fmt_return(cr3.get('return_3y')))
-            r3.metric("FTSE Nareit 1-Yr", fmt_return(vnq3.get('return_1y')))
-            r4.metric("FTSE Nareit 3-Yr", fmt_return(vnq3.get('return_3y')))
+            r3.metric(f"{stk3} YTD {RETURNS_YEAR+1}", fmt_return(cr3.get('return_ytd')))
+            r4.metric(f"FTSE Nareit 1-Yr", fmt_return(vnq3.get('return_1y')))
+            r5.metric(f"FTSE Nareit 3-Yr", fmt_return(vnq3.get('return_3y')))
         ea3 = is_ext_advised(cd3, df)
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
         components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
@@ -1839,8 +1856,9 @@ Format the addendum in clear HTML paragraphs. Be specific about how the new cont
                 is_combined_lt = filt['property_type'].dropna().nunique() > 1
                 if is_combined_lt:
                     lshow['Prop Type'] = ldf['property_type'].values
-                lshow[f'1-Yr (FY{FY_YEAR})'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_1y'))).values
+                lshow[f'1-Yr (FY{RETURNS_YEAR})'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_1y'))).values
                 lshow['3-Yr'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_3y'))).values
+                lshow[f'YTD {RETURNS_YEAR+1}'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_ytd'))).values
                 if hl_tk and hl_tk in lshow['Ticker'].values:
                     hl_mask = lshow['Ticker'] == hl_tk
                     lshow = pd.concat([lshow[hl_mask], lshow[~hl_mask]]).reset_index(drop=True)
@@ -1999,7 +2017,7 @@ Format the addendum in clear HTML paragraphs. Be specific about how the new cont
                 render_peer_table(er, wide_peers if widened else peers_only, pos)
             st.markdown("")
         
-        st.markdown(f'<div class="source-note">Returns: Yahoo Finance, through Dec 31, {FY_YEAR}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
 
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
 # st.markdown("---")
