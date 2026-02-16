@@ -440,6 +440,11 @@ def detect_partial(row, peers_df):
     total_low = row['total_comp'] < pp.quantile(0.25)
     sal_low = sal > 0 and sal_median > 0 and sal < sal_median * 0.5
     sal_very_low = sal > 0 and sal_median > 0 and sal < sal_median * 0.3
+    # Exclude intentional $1/$0 salary execs (common for founder/CEOs with large equity packages)
+    # A true partial-year hire would still have a meaningful salary, just prorated
+    intentional_low_sal = sal <= 10 and not stock_missing and row['total_comp'] > pp.median() * 0.5
+    if intentional_low_sal:
+        return False
     # Case 1: low total + no equity
     # Case 2: low salary + no equity
     # Case 3: very low salary (< 30% of median) — even with equity (likely mid-year start with sign-on grant)
