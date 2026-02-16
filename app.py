@@ -242,20 +242,20 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
     .stApp { font-family: 'DM Sans', sans-serif; }
-    .main-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); padding: 1.8rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: white; }
-    .main-header h1 { margin: 0; font-size: 1.7rem; font-weight: 700; }
-    .main-header p { margin: 0.2rem 0 0 0; opacity: 0.75; font-size: 0.9rem; }
-    .intro-text { color: #475569; font-size: 0.9rem; line-height: 1.55; padding: 0.4rem 0 0.8rem 0; }
-    .tab-instruction { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #0c4a6e; }
+    .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 50%, #1e3a5f 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: white; box-shadow: 0 4px 20px rgba(15,23,42,0.25); }
+    .main-header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
+    .main-header p { margin: 0.3rem 0 0 0; opacity: 0.8; font-size: 0.92rem; }
+    .intro-text { color: #334155; font-size: 0.9rem; line-height: 1.55; padding: 0.4rem 0 0.8rem 0; }
+    .tab-instruction { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #1e40af; font-weight: 500; }
     .tab-cta { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: white; font-weight: 600; text-align: center; }
-    .metric-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; }
-    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; font-weight: 600; white-space: nowrap; }
+    .metric-card { background: white; border: 1px solid #cbd5e1; border-top: 3px solid #1e3a5f; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 8px rgba(15,23,42,0.06); }
+    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #475569; font-weight: 700; white-space: nowrap; }
     .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
-    .metric-card .sub { font-size: 0.78rem; color: #94a3b8; margin-top: 0.1rem; }
-    .ai-narrative { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border: 1px solid #bae6fd; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; }
-    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #0284c7; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
-    .ai-report { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1px solid #86efac; border-left: 4px solid #16a34a; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; }
-    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #16a34a; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
+    .metric-card .sub { font-size: 0.78rem; color: #64748b; margin-top: 0.1rem; font-weight: 500; }
+    .ai-narrative { background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); border: 1px solid #93c5fd; border-left: 5px solid #2563eb; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+    .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #2563eb; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
+    .ai-report { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1px solid #6ee7b7; border-left: 5px solid #059669; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(5,150,105,0.08); }
+    .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #059669; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
     .lookup-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
     .lookup-box h2 { margin: 0 0 0.3rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; }
     .lookup-box p { margin: 0 0 0.5rem 0; color: #475569; font-size: 0.83rem; }
@@ -269,16 +269,16 @@ st.markdown("""
     .hl-row { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
     .filter-note { font-size: 0.75rem; color: #64748b; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #e2e8f0; margin-top: 0.5rem; }
     .widen-warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #9a3412; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    section[data-testid="stSidebar"] { background: #f0f1f3; }
+    section[data-testid="stSidebar"] { background: #eef2f7; }
     section[data-testid="stSidebar"] .stMarkdown h3 { font-size: 0.83rem; text-transform: uppercase; letter-spacing: 0.07em; color: inherit; margin-top: 0.8rem; }
     span[data-baseweb="tag"] { background-color: #0f766e !important; color: white !important; }
     span[data-baseweb="tag"] span[role="presentation"] { color: white !important; }
-    .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.5rem 1.2rem !important; font-size: 0.85rem !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-    .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; }
+    .stButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.5rem 1.2rem !important; font-size: 0.85rem !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 2px 6px rgba(15,118,110,0.2) !important; }
+    .stButton > button:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; box-shadow: 0 3px 10px rgba(15,118,110,0.3) !important; }
     .stButton > button[kind="secondary"] { font-size: 0.75rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; font-weight: 500 !important; height: 38px !important; }
-    .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; }
+    .stLinkButton > a { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; padding: 0.6rem 1.5rem !important; font-size: 0.95rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; box-shadow: 0 2px 6px rgba(15,118,110,0.2) !important; }
     .stLinkButton > a:hover { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important; color: white !important; }
-    .stDownloadButton > button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; }
+    .stDownloadButton > button { background: linear-gradient(135deg, #b8860b 0%, #daa520 100%) !important; color: white !important; border: none !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 2px 6px rgba(184,134,11,0.25) !important; }
     div[data-baseweb="slider"] div[role="slider"] { background: #0f766e !important; border-color: #0f766e !important; }
     div[data-baseweb="slider"] [data-testid="stThumbValue"] { color: #0f766e !important; }
     .stCheckbox label span { font-weight: 600 !important; font-size: 0.95rem !important; }
@@ -288,13 +288,12 @@ st.markdown("""
     [data-testid="stMetricLabel"] { font-size: 0.9rem !important; }
     /* Context refinement textarea - high contrast */
     [data-testid="stTextArea"] textarea { background-color: #fefefe !important; border: 1px solid #d1d5db !important; }
-    /* Gold sample report button */
-    [data-testid="stDownloadButton"][data-testid-key="sample_report_btn"] button {
-        background: linear-gradient(135deg, #b8860b, #daa520) !important;
-        color: white !important;
-        font-weight: 700 !important;
-        border: none !important;
-    }
+    /* Download button smaller font (gold applied above) */
+    div[data-testid="stDownloadButton"] button { font-size: 0.78rem !important; padding: 0.4rem 0.8rem !important; }
+    /* Proxy peer expander styling */
+    div[data-testid="stExpander"] { max-width: 70%; }
+    div[data-testid="stExpander"] details { border: 2px solid #3b82f6 !important; border-radius: 10px !important; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; }
+    div[data-testid="stExpander"] summary { font-weight: 600 !important; color: #1e3a5f !important; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
     @media print {
         section[data-testid="stSidebar"] { display: none !important; }
@@ -1338,12 +1337,12 @@ def _build_proxy_peer_data(ticker, peer_groups_df, df):
     in_univ_df = df[df['ticker'].isin(in_univ_tickers)].copy()
     return co_peers, in_univ_tickers, in_univ_df
 
-# GOLD SAMPLE REPORT BUTTON
-_btn_col, _spacer = st.columns([1, 4])
+# GOLD SAMPLE REPORT BUTTON (right-aligned)
+_spacer_l, _btn_col = st.columns([4, 1])
 with _btn_col:
     try:
         with open("reit_exec_changes_20260215.pdf", "rb") as _pdf_f:
-            st.download_button("\U0001F4C4 Download Sample Report", data=_pdf_f.read(), file_name="Velarion_REIT_Exec_Changes_Sep2025.pdf", mime="application/pdf",
+            st.download_button("\U0001F4C4 Sample Monthly Report", data=_pdf_f.read(), file_name="Velarion_REIT_Exec_Changes_Sep2025.pdf", mime="application/pdf",
                 key="sample_report_btn")
     except Exception:
         pass
@@ -1400,7 +1399,7 @@ with st.sidebar:
         sel_co_data = df[df['ticker'] == sel_tk]
         sel_pt = sel_co_data['property_type'].iloc[0] if not sel_co_data.empty else ""
         co_peers, proxy_tickers, proxy_peer_df = _build_proxy_peer_data(sel_tk, peer_groups_df, df)
-        has_proxy_peers = len(proxy_tickers) >= 3
+        has_proxy_peers = len(proxy_tickers) >= 1
         # Build proxy peer labels (for pre-populating custom mode)
         proxy_peer_labels = []
         for pt in proxy_tickers:
@@ -1447,7 +1446,7 @@ with st.sidebar:
     elif has_company:
         st.markdown("## Custom Peer Group Filters")
         st.session_state['peer_mode'] = 'custom'
-        st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found for this company. Use custom filters below.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found in {sel_tk}\'s FY{FY_YEAR} DEF 14A filing. Defaulting to {sel_pt} REITs. Use Custom Peer Group Filters to refine.</div>', unsafe_allow_html=True)
     else:
         st.markdown("## Peer Group")
         st.session_state['peer_mode'] = 'proxy'  # No mode selection when no company
@@ -1470,8 +1469,13 @@ with st.sidebar:
         if 'custom_peer_sel' not in st.session_state:
             if has_company and has_proxy_peers:
                 st.session_state['custom_peer_sel'] = proxy_peer_labels
+            elif has_company and sel_pt:
+                # No proxy peers — default to same property type
+                pt_peers = reit_df[(reit_df['property_type'] == sel_pt) & (reit_df['ticker'] != sel_tk)]
+                pt_labels = sorted([clabel(t, pt_peers[pt_peers['ticker']==t]['company_name'].iloc[0]) for t in pt_peers['ticker'].unique() if not pt_peers[pt_peers['ticker']==t].empty])
+                st.session_state['custom_peer_sel'] = pt_labels
             else:
-                st.session_state['custom_peer_sel'] = all_db_label_list
+                st.session_state['custom_peer_sel'] = []
         
         sel_companies = st.multiselect("Peer companies", all_db_label_list, 
                                         label_visibility="collapsed", key="custom_peer_sel")
@@ -1591,7 +1595,7 @@ cv_check = st.session_state.get('cv_co', PLACEHOLDER)
 if not cv_check or cv_check == PLACEHOLDER:
     st.markdown("---")
     st.markdown("#### Monthly Executive Intelligence Report")
-    st.markdown('<div style="background:linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);border:1px solid #bae6fd;border-left:4px solid #0284c7;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;">'
+    st.markdown('<div style="background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);border:2px solid #3b82f6;border-left:5px solid #1d4ed8;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;box-shadow:0 2px 12px rgba(59,130,246,0.1);">'
         '<div style="font-size:0.9rem;color:#1e293b;line-height:1.7;">'
         '\U0001F4E8 <strong>Track C-suite movements across the REIT universe.</strong> Each month, Velarion monitors SEC 8-K filings (Item 5.02) for executive appointments, departures, and employment agreement terms.'
         '<br><br>'
@@ -1621,6 +1625,13 @@ if sel3 and sel3 != PLACEHOLDER:
             del st.session_state['custom_peer_sel']
         if '_custom_mcap_preset' in st.session_state:
             del st.session_state['_custom_mcap_preset']
+        # Clear all toggle states
+        for k in ['show_league', 'show_comp_table', 'lk_rpt', 'lk_tk', 'fp_lk_rpt', 'lk_addendum', 'lk_user_context']:
+            st.session_state.pop(k, None)
+        # Clear per-exec toggle states
+        for k in list(st.session_state.keys()):
+            if k.startswith(('show_peers_', 'cv_peer_', 'exec_analysis_', 'exec_narr_')):
+                del st.session_state[k]
         st.rerun()
     stk3 = co_labels[sel3]; cd3 = df[df['ticker']==stk3]
     if not cd3.empty:
@@ -1630,12 +1641,13 @@ if sel3 and sel3 != PLACEHOLDER:
         c1.metric("HQ", f"{cd3['hq_city'].iloc[0]}, {cd3['hq_state'].iloc[0]}"); c2.metric("Property Type", pt3); c3.metric("Market Cap", fmt_mcap(cd3['market_cap'].iloc[0]))
         cr3 = ret_data.get(stk3, {}); vnq3 = ret_data.get(REIT_INDEX_TICKER, {})
         if cr3:
-            r1,r2,r3,r4,r5 = st.columns(5)
+            r1,r2,r3,r4,r5,r6 = st.columns(6)
             r1.metric(f"{stk3} 1-Yr (FY{RETURNS_YEAR})", fmt_return(cr3.get('return_1y')))
             r2.metric(f"{stk3} 3-Yr", fmt_return(cr3.get('return_3y')))
             r3.metric(f"{stk3} YTD {RETURNS_YEAR+1}", fmt_return(cr3.get('return_ytd')))
             r4.metric(f"FTSE Nareit 1-Yr", fmt_return(vnq3.get('return_1y')))
             r5.metric(f"FTSE Nareit 3-Yr", fmt_return(vnq3.get('return_3y')))
+            r6.metric(f"FTSE Nareit YTD {RETURNS_YEAR+1}", fmt_return(vnq3.get('return_ytd')))
         ea3 = is_ext_advised(cd3, df)
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
         components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
