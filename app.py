@@ -1590,20 +1590,6 @@ else:
     with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
 st.markdown("")
 
-# Monthly Intelligence showcase (only on landing page, no company selected)
-cv_check = st.session_state.get('cv_co', PLACEHOLDER)
-if not cv_check or cv_check == PLACEHOLDER:
-    st.markdown("---")
-    st.markdown("#### Monthly Executive Intelligence Report")
-    st.markdown('<div style="background:linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);border:2px solid #3b82f6;border-left:5px solid #1d4ed8;border-radius:10px;padding:1.2rem 1.5rem;margin:0.5rem 0;box-shadow:0 2px 12px rgba(59,130,246,0.1);">'
-        '<div style="font-size:0.9rem;color:#1e293b;line-height:1.7;">'
-        '\U0001F4E8 <strong>Track C-suite movements across the REIT universe.</strong> Each month, Velarion monitors SEC 8-K filings (Item 5.02) for executive appointments, departures, and employment agreement terms.'
-        '<br><br>'
-        'The September 2025 report covers <strong>4 executive changes across 3 companies</strong> including Crown Castle\'s new CEO appointment with detailed compensation package analysis, two CFO promotions at CareTrust REIT and RLJ Lodging Trust, and a departure.'
-        '<br><br>'
-        '<span style="color:#64748b;font-size:0.82rem;">Monthly reports are included with all Velarion subscriptions. Download the sample above to preview.</span>'
-        '</div></div>', unsafe_allow_html=True)
-
 # COMPANY VIEW
 st.markdown("#### Company Compensation Overview")
 cv_opts = [PLACEHOLDER] + co_opts
