@@ -95,60 +95,63 @@ def check_password():
     left, spacer_col, right = st.columns([1.3, 0.15, 0.85])
 
     with left:
+        # Logo
         st.markdown("""
-        <div style="padding:6vh 0 4vh 2vw;">
+        <div style="padding:6vh 0 0 2vw;margin-bottom:5vh;">
+            <span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#d4a84b;">.</span>
+            <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-left:12px;vertical-align:middle;">Company Intelligence</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-            <div style="margin-bottom:5vh;">
-                <span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">Velarion</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:bold;color:#d4a84b;">.</span>
-                <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-left:12px;vertical-align:middle;">Company Intelligence</span>
+        # Headline + subtext
+        st.markdown("""
+        <div style="padding:0 0 0 2vw;margin-bottom:4vh;">
+            <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,3.2vw,42px);font-weight:bold;color:#ffffff;line-height:1.12;margin:0 0 20px 0;">AI-Powered Executive<br>Compensation <em style="color:#22b89a;font-style:italic;">Intelligence.</em></h1>
+            <p style="font-size:16px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:520px;margin:0;">Structured compensation data from SEC proxy filings. AI-powered peer analysis. Updated quarterly.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Stats
+        st.markdown("""
+        <div style="padding:0 0 0 2vw;display:flex;gap:28px;margin-bottom:5vh;">
+            <div>
+                <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">190+</div>
+                <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Companies</div>
             </div>
-
-            <div style="margin-bottom:4vh;">
-                <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:clamp(28px,3.2vw,42px);font-weight:bold;color:#ffffff;line-height:1.12;margin:0 0 20px 0;">
-                    AI-Powered Executive<br>Compensation <em style="color:#22b89a;font-style:italic;">Intelligence.</em>
-                </h1>
-                <p style="font-size:16px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:520px;margin:0;">
-                    Structured compensation data from SEC proxy filings. AI-powered peer analysis. Updated quarterly.
-                </p>
+            <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+            <div>
+                <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">600+</div>
+                <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Executives</div>
             </div>
-
-            <div style="display:flex;gap:28px;margin-bottom:5vh;">
-                <div>
-                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">190+</div>
-                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Companies</div>
-                </div>
-                <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
-                <div>
-                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">600+</div>
-                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">Executives</div>
-                </div>
-                <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
-                <div>
-                    <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">7</div>
-                    <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">C-Suite Roles</div>
-                </div>
+            <div style="width:1px;background:rgba(255,255,255,0.08);"></div>
+            <div>
+                <div style="font-family:Georgia,serif;font-size:32px;font-weight:bold;color:#ffffff;">7</div>
+                <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:2px;">C-Suite Roles</div>
             </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            <div style="margin-bottom:4vh;">
-                <div style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:16px;">Industry Coverage</div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    <span style="padding:7px 16px;font-size:13px;font-weight:600;background:#1a8c7a;color:#ffffff;border:1px solid #1a8c7a;">Real Estate <span style="font-size:10px;font-weight:700;letter-spacing:0.5px;margin-left:6px;opacity:0.7;">LIVE</span></span>
-                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Banks &amp; Financial <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q2</span></span>
-                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Biotech &amp; Pharma <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
-                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Energy <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
-                    <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Technology <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q4</span></span>
-                </div>
+        # Industry pills
+        st.markdown("""
+        <div style="padding:0 0 0 2vw;margin-bottom:4vh;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:16px;">Industry Coverage</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span style="padding:7px 16px;font-size:13px;font-weight:600;background:#1a8c7a;color:#ffffff;border:1px solid #1a8c7a;">Real Estate <span style="font-size:10px;font-weight:700;letter-spacing:0.5px;margin-left:6px;opacity:0.7;">LIVE</span></span>
+                <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Banks <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q2</span></span>
+                <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Biotech <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
+                <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Energy <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q3</span></span>
+                <span style="padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.08);">Technology <span style="font-size:10px;opacity:0.5;margin-left:4px;">Q4</span></span>
             </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            <div style="display:flex;gap:20px;align-items:flex-start;">
-                <div style="border-left:2px solid #d4a84b;padding-left:16px;">
-                    <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">
-                        "I built this because I knew exactly what data I needed walking into a board meeting."
-                    </p>
-                    <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:0;font-weight:600;">Andy Richardson &mdash; Founder, Former Real Estate Executive</p>
-                </div>
+        # Quote
+        st.markdown("""
+        <div style="padding:0 0 0 2vw;">
+            <div style="border-left:2px solid #d4a84b;padding-left:16px;">
+                <p style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6;font-style:italic;margin:0 0 8px 0;">"I built this because I knew exactly what data I needed walking into a board meeting."</p>
+                <p style="font-size:12px;color:rgba(255,255,255,0.3);margin:0;font-weight:600;">Andy Richardson &mdash; Founder, Former Real Estate Executive</p>
             </div>
-
         </div>
         """, unsafe_allow_html=True)
 
