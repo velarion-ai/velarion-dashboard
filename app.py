@@ -1306,6 +1306,39 @@ st.markdown(f'<div class="intro-text">Explore executive compensation across {len
 if 'peer_mode' not in st.session_state:
     st.session_state['peer_mode'] = 'proxy'
 
+# All available REIT labels for peer selection (used in custom mode)
+all_reit_labels = {clabel(t, reit_df[reit_df['ticker']==t]['company_name'].iloc[0]): t for t in sorted(reit_df['ticker'].unique()) if not reit_df[reit_df['ticker']==t].empty}
+all_reit_label_list = sorted(all_reit_labels.keys())
+
+# Market cap presets
+MCAP_PRESETS = {
+    'All Market Caps': (0, None),
+    'Micro Cap (< $500M)': (0, 0.5),
+    'Small Cap ($500M – $2B)': (0.5, 2.0),
+    'Mid Cap ($2B – $10B)': (2.0, 10.0),
+    'Large Cap ($10B – $50B)': (10.0, 50.0),
+    'Mega Cap (> $50B)': (50.0, None),
+    'Custom Range': (None, None),
+}
+
+def _ticker_in_mcap_range(ticker, mcap_min_b, mcap_max_b):
+    """Check if a ticker falls within market cap range (in billions)."""
+    co = reit_df[reit_df['ticker'] == ticker]
+    if co.empty: 
+        # Non-REIT peers — check in full df
+        co = df[df['ticker'] == ticker]
+    if co.empty: return True  # Unknown — keep
+    mc = co['market_cap'].iloc[0]
+    if pd.isna(mc): return True  # Unknown — keep
+    mc_b = mc / 1e9
+    if mcap_min_b is not None and mc_b < mcap_min_b: return False
+    if mcap_max_b is not None and mc_b > mcap_max_b: return False
+    return True
+
+def _label_to_ticker(label):
+    """Convert a company label back to ticker."""
+    return co_labels.get(label) or all_reit_labels.get(label)
+
 # SIDEBAR
 with st.sidebar:
     # Determine if a company is selected
@@ -1318,26 +1351,46 @@ with st.sidebar:
         sel_pt = sel_co_data['property_type'].iloc[0] if not sel_co_data.empty else ""
         co_peers, proxy_tickers, proxy_peer_df = _build_proxy_peer_data(sel_tk, peer_groups_df, df)
         has_proxy_peers = len(proxy_tickers) >= 3
+        # Build proxy peer labels (for pre-populating custom mode)
+        proxy_peer_labels = []
+        for pt in proxy_tickers:
+            co_data = df[df['ticker'] == pt]
+            if not co_data.empty:
+                lbl = clabel(pt, co_data['company_name'].iloc[0])
+                proxy_peer_labels.append(lbl)
+        proxy_peer_labels = sorted(proxy_peer_labels)
     else:
-        sel_tk = None; sel_pt = ""; co_peers = pd.DataFrame(); proxy_tickers = []; proxy_peer_df = pd.DataFrame(); has_proxy_peers = False
+        sel_tk = None; sel_pt = ""; co_peers = pd.DataFrame(); proxy_tickers = []; proxy_peer_df = pd.DataFrame(); has_proxy_peers = False; proxy_peer_labels = []
     
     # Mode toggle
     if has_company and has_proxy_peers:
         st.markdown("## Peer Group")
-        # Ensure radio key defaults to Proxy Peers for companies with proxy data
         if 'peer_mode_radio' not in st.session_state:
             st.session_state['peer_mode_radio'] = "Proxy Peers"
+        prev_mode = st.session_state.get('peer_mode', 'proxy')
         mode = st.radio("Benchmarking source", ["Proxy Peers", "Custom Peer Group"], 
                        key="peer_mode_radio", label_visibility="collapsed")
-        st.session_state['peer_mode'] = 'proxy' if mode == "Proxy Peers" else 'custom'
+        new_mode = 'proxy' if mode == "Proxy Peers" else 'custom'
         
-        if st.session_state['peer_mode'] == 'proxy':
+        # Detect toggle from proxy to custom — pre-populate with proxy peers
+        if prev_mode == 'proxy' and new_mode == 'custom':
+            st.session_state['custom_peer_sel'] = proxy_peer_labels
+            st.session_state['_custom_mcap_preset'] = 'All Market Caps'
+        # Detect toggle from custom to proxy — reset custom state
+        elif prev_mode == 'custom' and new_mode == 'proxy':
+            if 'custom_peer_sel' in st.session_state:
+                del st.session_state['custom_peer_sel']
+            if '_custom_mcap_preset' in st.session_state:
+                del st.session_state['_custom_mcap_preset']
+        
+        st.session_state['peer_mode'] = new_mode
+        
+        if new_mode == 'proxy':
             co_name_display = sel_co_data["company_name"].iloc[0] if not sel_co_data.empty else sel_tk
             st.markdown(f'<div class="filter-note">\U0001F3AF Benchmarking uses peer group from <strong>{co_name_display}</strong>\'s FY{FY_YEAR} DEF 14A proxy filing ({len(proxy_tickers)} peers in database).</div>', unsafe_allow_html=True)
-            # Show greyed-out custom filters as collapsed info
             st.markdown('<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.8rem;padding:0.5rem;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">\U0001F512 Custom filters available when "Custom Peer Group" is selected above.</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="filter-note">\U0001F527 Build a custom comparison set using the filters below.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="filter-note">\U0001F527 Starting from proxy peers. Edit companies, adjust market cap, or add by property type below.</div>', unsafe_allow_html=True)
     elif has_company:
         st.markdown("## Custom Peer Group Filters")
         st.session_state['peer_mode'] = 'custom'
@@ -1347,61 +1400,98 @@ with st.sidebar:
         st.session_state['peer_mode'] = 'custom'
         st.markdown('<div class="filter-note">\U0001F4A1 Select a company to auto-load its proxy peer group, or customize below.</div>', unsafe_allow_html=True)
 
-    # Custom peer group filters — only show in custom mode or when no company selected
+    # ---- CUSTOM MODE FILTERS ----
     if st.session_state['peer_mode'] == 'custom' or not has_company:
-        # 1. Property Type
-        st.markdown("### Property Type")
-        if 'pt_all' not in st.session_state:
-            st.session_state['pt_all'] = True
-        all_pt = st.checkbox("Select All", key="pt_all")
-        if 'pt_sel' not in st.session_state:
-            st.session_state['pt_sel'] = all_props if all_pt else []
-        sel_prop = st.multiselect("Property type", all_props, label_visibility="collapsed", key="pt_sel")
         
-        # 2. Market Cap Range
-        st.markdown("### Market Cap Range")
-        mcap_breakpoints = [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 25.0, 30.0, 40.0, 50.0]
-        mcap_min, mcap_max = st.select_slider("Mkt cap",
-            options=mcap_breakpoints,
-            value=(0.0, 50.0),
-            format_func=lambda x: ">$50B" if x >= 50.0 else f"${x:.1f}B" if x >= 1.0 else f"${x:.2f}B",
-            label_visibility="collapsed")
-        
-        # 3. Peer Companies
-        eligible = reit_df[reit_df['property_type'].isin(sel_prop)].copy()
-        if mcap_max >= 50.0:
-            eligible = eligible[(eligible['market_cap'] >= mcap_min*1e9) | (eligible['market_cap'].isna())]
-        else:
-            eligible = eligible[((eligible['market_cap'] >= mcap_min*1e9) & (eligible['market_cap'] <= mcap_max*1e9)) | (eligible['market_cap'].isna())]
-        eligible_tickers = sorted(eligible['ticker'].unique())
-        eligible_labels = [clabel(t, reit_df[reit_df['ticker']==t]['company_name'].iloc[0]) for t in eligible_tickers if not reit_df[reit_df['ticker']==t].empty]
-        
+        # === 1. PEER COMPANIES (primary control) ===
         st.markdown("### Peer Companies")
-        st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">All matching companies selected by default. Remove any to exclude from analysis.</div>', unsafe_allow_html=True)
-        prev_eligible_key = '_prev_eligible_labels'
-        if prev_eligible_key not in st.session_state:
-            st.session_state[prev_eligible_key] = eligible_labels
-            st.session_state['co_peer_sel'] = eligible_labels
-        elif st.session_state[prev_eligible_key] != eligible_labels:
-            st.session_state[prev_eligible_key] = eligible_labels
-            st.session_state['co_peer_sel'] = eligible_labels
-        sel_companies = st.multiselect("Peer companies", eligible_labels, label_visibility="collapsed", key="co_peer_sel")
+        if has_company and has_proxy_peers:
+            st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">Starting from proxy peers. Add or remove companies.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">Select companies for comparison.</div>', unsafe_allow_html=True)
         
-        excluded_labels = [c for c in eligible_labels if c not in sel_companies]
-        excluded_tickers = [co_labels.get(c, '') for c in excluded_labels if c in co_labels]
+        # Initialize custom peer selection
+        if 'custom_peer_sel' not in st.session_state:
+            if has_company and has_proxy_peers:
+                st.session_state['custom_peer_sel'] = proxy_peer_labels
+            else:
+                st.session_state['custom_peer_sel'] = all_reit_label_list
         
-        # Region filter — commented out for now, can re-enable later
-        # st.markdown("### Region")
-        # regions = sorted(reit_df['geographic_region'].dropna().unique())
-        # all_reg_chk = st.checkbox("Select All", value=True, key="reg_all")
-        # sel_reg = st.multiselect("Region", regions, default=regions if all_reg_chk else [], label_visibility="collapsed", key="reg_sel")
-        sel_reg = sorted(reit_df['geographic_region'].dropna().unique()) if 'geographic_region' in reit_df.columns else []
+        sel_companies = st.multiselect("Peer companies", all_reit_label_list, 
+                                        label_visibility="collapsed", key="custom_peer_sel")
+        
+        # === 2. MARKET CAP RANGE ===
+        st.markdown("### Market Cap Range")
+        if '_custom_mcap_preset' not in st.session_state:
+            st.session_state['_custom_mcap_preset'] = 'All Market Caps'
+        mcap_choice = st.selectbox("Market cap range", list(MCAP_PRESETS.keys()), 
+                                    label_visibility="collapsed", key="_custom_mcap_preset")
+        
+        mcap_min_b, mcap_max_b = MCAP_PRESETS[mcap_choice]
+        
+        # Custom range inputs
+        if mcap_choice == 'Custom Range':
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                mcap_min_b = st.number_input("Min ($B)", min_value=0.0, value=0.0, step=0.5, key="_custom_mcap_min")
+            with cc2:
+                mcap_max_b = st.number_input("Max ($B)", min_value=0.0, value=50.0, step=0.5, key="_custom_mcap_max")
+                if mcap_max_b == 0: mcap_max_b = None
+        
+        # Convert to raw values for downstream (billions to raw)
+        mcap_min = mcap_min_b if mcap_min_b is not None else 0.0
+        mcap_max = mcap_max_b if mcap_max_b is not None else 50.0
+        
+        # Auto-deselect companies outside market cap range
+        if mcap_choice != 'All Market Caps':
+            current_sel = list(st.session_state.get('custom_peer_sel', []))
+            removed = []
+            kept = []
+            for lbl in current_sel:
+                tk = _label_to_ticker(lbl)
+                if tk and not _ticker_in_mcap_range(tk, mcap_min_b, mcap_max_b):
+                    removed.append(lbl)
+                else:
+                    kept.append(lbl)
+            if removed:
+                st.session_state['custom_peer_sel'] = kept
+                removed_tks = [_label_to_ticker(l) or '?' for l in removed]
+                st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#92400e;margin:0.3rem 0;">\u26A0\uFE0F Removed {len(removed)} companies outside market cap range: {", ".join(removed_tks)}</div>', unsafe_allow_html=True)
+                sel_companies = kept
+        
+        # === 3. ADD BY PROPERTY TYPE (bulk-add tool) ===
+        add_by_pt = st.checkbox("Add companies to peer list by Property Type", key="_add_by_pt")
+        if add_by_pt:
+            pt_options = sorted(reit_df['property_type'].dropna().unique())
+            pt_add = st.multiselect("Select property types to add", pt_options, 
+                                     label_visibility="collapsed", key="_pt_add_sel")
+            if pt_add:
+                # Find all companies matching the selected property types AND within market cap range
+                pt_eligible = reit_df[reit_df['property_type'].isin(pt_add)].copy()
+                new_labels = []
+                for _, row in pt_eligible.drop_duplicates('ticker').iterrows():
+                    tk = row['ticker']
+                    if _ticker_in_mcap_range(tk, mcap_min_b, mcap_max_b):
+                        lbl = clabel(tk, row['company_name'])
+                        if lbl not in sel_companies:
+                            new_labels.append(lbl)
+                if new_labels:
+                    updated = sorted(set(sel_companies + new_labels))
+                    st.session_state['custom_peer_sel'] = updated
+                    st.markdown(f'<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#166534;margin:0.3rem 0;">\u2705 Added {len(new_labels)} companies from {", ".join(pt_add)}</div>', unsafe_allow_html=True)
+                    sel_companies = updated
+        
+        # Build excluded list
+        excluded_labels = [c for c in all_reit_label_list if c not in sel_companies]
+        excluded_tickers = [_label_to_ticker(c) for c in excluded_labels if _label_to_ticker(c)]
+        
+        # Set sel_prop to all (property type no longer used as filter)
+        sel_prop = all_props
     else:
-        # Proxy mode — set default filter values so downstream code works
+        # Proxy mode defaults
         sel_prop = all_props
         mcap_min = 0.0; mcap_max = 50.0
         sel_companies = []; excluded_tickers = []
-        sel_reg = sorted(reit_df['geographic_region'].dropna().unique()) if 'geographic_region' in reit_df.columns else []
 
 # BUILD FILTERED DATASET
 if st.session_state.get('peer_mode') == 'proxy' and has_company and has_proxy_peers:
@@ -1411,21 +1501,10 @@ if st.session_state.get('peer_mode') == 'proxy' and has_company and has_proxy_pe
     filt_no_pos = filt.copy()
     excluded_tickers = []
 else:
-    # Custom mode: use sidebar filters
-    sel_co_tickers = [co_labels.get(c, '') for c in sel_companies if c in co_labels]
-    filt = reit_df.copy()
-    filt = filt[filt['property_type'].isin(sel_prop)]
-    filt = filt[filt['ticker'].isin(sel_co_tickers)]
+    # Custom mode: use selected companies from sidebar
+    sel_co_tickers = [_label_to_ticker(c) for c in sel_companies if _label_to_ticker(c)]
+    filt = df[df['ticker'].isin(sel_co_tickers)].copy()
     filt_no_pos = filt.copy()
-    if mcap_max >= 50.0:
-        filt = filt[(filt['market_cap'] >= mcap_min*1e9) | (filt['market_cap'].isna())]
-        filt_no_pos = filt_no_pos[(filt_no_pos['market_cap'] >= mcap_min*1e9) | (filt_no_pos['market_cap'].isna())]
-    else:
-        filt = filt[((filt['market_cap'] >= mcap_min*1e9) & (filt['market_cap'] <= mcap_max*1e9)) | (filt['market_cap'].isna())]
-        filt_no_pos = filt_no_pos[((filt_no_pos['market_cap'] >= mcap_min*1e9) & (filt_no_pos['market_cap'] <= mcap_max*1e9)) | (filt_no_pos['market_cap'].isna())]
-    # Region filter — commented out for now, can re-enable later
-    # filt = filt[filt['geographic_region'].isin(sel_reg)]
-    # filt_no_pos = filt_no_pos[filt_no_pos['geographic_region'].isin(sel_reg)]
 peer_stats_df = get_peer_stats(filt)
 
 # METRICS — context-aware
@@ -1510,7 +1589,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     reason_col = f'<span style="font-size:0.72rem;color:#991b1b;font-style:italic;">{reason}</span>'
                 peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;">{reason_col}</td></tr>')
             
-            peer_html = f'''<div style="max-height:280px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
+            peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
             <table style="width:100%;border-collapse:collapse;">
             <thead><tr style="background:#f0f9ff;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
             <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
