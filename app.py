@@ -424,10 +424,14 @@ def detect_partial(row, peers_df):
     sal = row.get('base_salary', 0) or 0
     sal_peers = peers_df[peers_df['position'] == row['position']]['base_salary'].dropna()
     sal_median = sal_peers.median() if len(sal_peers) >= 3 else 0
-    # Partial year signals: low total + no equity, OR salary well below median + no equity
+    # Partial year signals:
     total_low = row['total_comp'] < pp.quantile(0.25)
     sal_low = sal > 0 and sal_median > 0 and sal < sal_median * 0.5
-    return bool((total_low and stock_missing) or (sal_low and stock_missing))
+    sal_very_low = sal > 0 and sal_median > 0 and sal < sal_median * 0.3
+    # Case 1: low total + no equity
+    # Case 2: low salary + no equity
+    # Case 3: very low salary (< 30% of median) — even with equity (likely mid-year start with sign-on grant)
+    return bool((total_low and stock_missing) or (sal_low and stock_missing) or sal_very_low)
 
 def get_peer_stats(filt):
     return filt[filt['comp_source'] != 'external_manager']
