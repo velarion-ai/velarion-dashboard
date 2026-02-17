@@ -2113,6 +2113,7 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                 render_peer_table(er, wide_peers if widened else peers_only, pos)
             st.markdown("")
         
+        st.markdown(f'<div class="footnote">\u00B9 Non-cash equity reflects grant date fair value per ASC Topic 718 as reported in the Summary Compensation Table. This represents the probable value at the time of grant, not realized compensation.</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
 
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
