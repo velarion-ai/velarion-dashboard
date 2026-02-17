@@ -1411,7 +1411,7 @@ def _label_to_ticker(label):
 
 # SIDEBAR
 with st.sidebar:
-    st.markdown('<div style="margin-top:28vh;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="margin-top:34vh;"></div>', unsafe_allow_html=True)
     # Determine if a company is selected
     cv_selected = st.session_state.get('cv_co', PLACEHOLDER)
     has_company = cv_selected and cv_selected != PLACEHOLDER and cv_selected in co_labels
