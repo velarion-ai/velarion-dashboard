@@ -262,9 +262,10 @@ st.markdown("""
     .ai-report { background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%); border: 1px solid #d4a017; border-left: 5px solid #b8860b; border-radius: 8px; padding: 1.5rem 2rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.7; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(184,134,11,0.08); }
     .ai-report .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #92400e; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
     .ai-report h4 { color: #1a365d; font-size: 1.15rem; margin: 1.2rem 0 0.3rem 0; padding: 0; text-align: left; }
-    .ai-report p { margin: 0 0 0.6rem 0; }
+    .ai-report p { margin: 0 0 0.8rem 0; text-align: justify; }
+    .ai-report .js-plotly-plot, .ai-report iframe { margin-top: 1rem; }
     .ai-narrative h4 { color: #1a365d; font-size: 1.15rem; margin: 1.2rem 0 0.3rem 0; padding: 0; text-align: left; }
-    .ai-narrative p { margin: 0 0 0.6rem 0; }
+    .ai-narrative p { margin: 0 0 0.8rem 0; text-align: justify; }
     /* UTILITY BOXES */
     .lookup-box { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
     .lookup-box h2 { margin: 0 0 0.3rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; }
@@ -304,6 +305,8 @@ st.markdown("""
     .source-note { font-size: 0.68rem; color: #78716c; margin-top: 0.2rem; }
     [data-testid="stMetricValue"] { font-size: 1.3rem !important; color: #0f172a !important; }
     [data-testid="stMetricLabel"] { font-size: 0.9rem !important; color: #1a365d !important; }
+    /* Chart spacing — more room between text and charts */
+    .stPlotlyChart { margin-top: 0.8rem !important; margin-bottom: 0.5rem !important; }
     /* Context refinement textarea */
     [data-testid="stTextArea"] textarea { background-color: #fefefe !important; border: 1px solid #d6d3d1 !important; }
     /* Download button font */
