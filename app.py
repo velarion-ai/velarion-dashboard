@@ -15,16 +15,22 @@ st.set_page_config(page_title="Velarion Company Intelligence", page_icon="📊",
 # ============================================================
 # AUTH GATE
 # ============================================================
+_LOGIN_SUPA_URL = "https://fhnffpgotkxxtwmwbizy.supabase.co"
+_LOGIN_SUPA_KEY = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+
 def _log_login(email):
     """Log login event to Supabase for tracking."""
     try:
-        sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+        if not _LOGIN_SUPA_KEY:
+            return
+        sb = create_client(_LOGIN_SUPA_URL, _LOGIN_SUPA_KEY)
         sb.table("login_events").insert({
             "email": email.lower().strip(),
             "logged_in_at": datetime.utcnow().isoformat()
         }).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        import sys
+        print(f"Login tracking error: {e}", file=sys.stderr)
 
 def check_password():
     if st.session_state.get('authenticated'):
