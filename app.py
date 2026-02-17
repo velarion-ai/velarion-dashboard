@@ -536,7 +536,7 @@ def lookup_proxy_url(company_name, fy_year):
     try:
         clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
         query = f'%22{clean_name.replace(" ", "+")}%22'
-        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=DEF+14A&dateRange=custom&startdt={fy_year}-01-01&enddt={fy_year+1}-12-31'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=DEF+14A&dateRange=custom&startdt={fy_year+1}-01-01&enddt={fy_year+1}-12-31'
         resp = _req.get(url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=10)
         if resp.status_code != 200:
             return None
