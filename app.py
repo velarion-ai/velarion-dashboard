@@ -2000,8 +2000,10 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
         pt_peers_base = reit_df[reit_df['ticker'] != stk3]
         pt_peers_base = pt_peers_base[pt_peers_base['property_type'] == pt3]
         pt_peers = get_peer_stats(pt_peers_base)
-        # Step 3: All REITs (for both proxy and custom mode)
+        # Step 3: All REITs (for both proxy and custom mode) — exclude cross-sector peers
         wide_peers_base = df[df['ticker'] != stk3].copy()
+        wide_peers_base = wide_peers_base[~wide_peers_base['property_type'].str.startswith('Peer', na=True)]
+        wide_peers_base = wide_peers_base[wide_peers_base['property_type'].notna() & (wide_peers_base['property_type'] != '')]
         if not is_proxy_mode:
             if mcap_max >= 50.0:
                 wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
