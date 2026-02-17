@@ -211,7 +211,7 @@ TICKER_RECLASSIFY = {
     'PW': 'Specialty', 'RYN': 'Timber', 'SQFT': 'Specialty', 'SUI': 'Manufactured Housing',
     'VICI': 'Gaming', 'WY': 'Timber', 'ADAM': 'Specialty',
 }
-POSITION_DISPLAY = {'CEO': 'CEO', 'PRESIDENT': 'Pres', 'COO': 'COO', 'CFO': 'CFO', 'CIO': 'CIO', 'GC': 'GC', 'CAO': 'CAO'}
+POSITION_DISPLAY = {'CEO': 'CEO', 'PRESIDENT': 'President', 'COO': 'COO', 'CFO': 'CFO', 'CIO': 'CIO', 'GC': 'GC', 'CAO': 'CAO'}
 
 # Acquired/merged/delisted companies — for "NOT IN DATABASE" context
 ACQUIRED_COMPANIES = {
