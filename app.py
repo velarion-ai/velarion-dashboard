@@ -2112,7 +2112,7 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                     st.session_state[nk] = None
                     st.rerun()
             if st.session_state.get(peer_key, False):
-                render_peer_table(er, wide_peers if widened else peers_only, pos)
+                render_peer_table(er, peers if widened else peers_only, pos)
             st.markdown("")
         
         st.markdown(f'<div class="footnote">\u00B9 Non-cash equity reflects grant date fair value per ASC Topic 718 as reported in the Summary Compensation Table. This represents the probable value at the time of grant, not realized compensation.</div>', unsafe_allow_html=True)
