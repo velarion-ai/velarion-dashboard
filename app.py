@@ -61,12 +61,29 @@ def check_password():
     if st.session_state.get('authenticated'):
         return True
 
-    # Admin bypass via query param (survives refresh)
+    # Check for auth token in query params (survives refresh)
     params = st.query_params
-    if params.get("key") == "velarion2026":
+    auth_token = params.get("auth")
+    admin_key = params.get("key")
+    
+    # Admin bypass
+    if admin_key == "velarion2026":
         st.session_state['authenticated'] = True
         st.session_state['user_email'] = 'andy@velarion.ai'
         return True
+    
+    # Returning user with auth token
+    if auth_token:
+        # Decode: token is base64 of email
+        try:
+            import base64
+            email = base64.b64decode(auth_token).decode('utf-8')
+            if email and "@" in email:
+                st.session_state['authenticated'] = True
+                st.session_state['user_email'] = email
+                return True
+        except Exception:
+            pass
 
     # Track page view
     _log_page_view()
@@ -165,6 +182,10 @@ def check_password():
                 st.session_state['authenticated'] = True
                 st.session_state['user_email'] = email_clean
                 _log_login(email_clean)
+                # Set auth token in URL so login survives refresh
+                import base64
+                token = base64.b64encode(email_clean.encode('utf-8')).decode('utf-8')
+                st.query_params["auth"] = token
                 st.rerun()
             elif not email_clean or "@" not in email_clean:
                 st.error("Please enter a valid email address.")
