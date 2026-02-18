@@ -32,9 +32,29 @@ def _log_login(email):
         import sys
         print(f"Login tracking error: {e}", file=sys.stderr)
 
+def _log_page_view():
+    """Log a page view event when login page is displayed (once per session)."""
+    if st.session_state.get('_page_view_logged'):
+        return
+    try:
+        if not _LOGIN_SUPA_KEY:
+            return
+        sb = create_client(_LOGIN_SUPA_URL, _LOGIN_SUPA_KEY)
+        sb.table("login_events").insert({
+            "email": "__page_view__",
+            "logged_in_at": datetime.utcnow().isoformat()
+        }).execute()
+        st.session_state['_page_view_logged'] = True
+    except Exception as e:
+        import sys
+        print(f"Page view tracking error: {e}", file=sys.stderr)
+
 def check_password():
     if st.session_state.get('authenticated'):
         return True
+
+    # Track page view
+    _log_page_view()
 
     # Hide everything Streamlit
     st.markdown("""
