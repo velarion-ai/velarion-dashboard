@@ -58,7 +58,7 @@ def _log_page_view():
         // Skip if this looks like a bot
         if (/bot|crawl|spider|prefetch|preview|scan|check/i.test(ua)) return;
         
-        fetch('{SUPA_URL}/rest/v1/login_events', {{
+        fetch('{_LOGIN_SUPA_URL}/rest/v1/login_events', {{
             method: 'POST',
             headers: {{
                 'apikey': '{_LOGIN_SUPA_KEY}',
@@ -77,7 +77,7 @@ def _log_page_view():
             }})
         }}).catch(function() {{
             // Fallback: log without extra columns if schema not updated yet
-            fetch('{SUPA_URL}/rest/v1/login_events', {{
+            fetch('{_LOGIN_SUPA_URL}/rest/v1/login_events', {{
                 method: 'POST',
                 headers: {{
                     'apikey': '{_LOGIN_SUPA_KEY}',
