@@ -631,18 +631,42 @@ def filter_fingerprint(filt_df):
 STALE_WARNING = '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F Peer group filters have changed since this analysis was generated. Click the generate button again to refresh with the updated peer group.</div>'
 
 @st.cache_data(ttl=86400)
-def lookup_proxy_url(company_name, fy_year):
-    """Look up the most recent DEF 14A proxy filing URL on SEC EDGAR."""
+def lookup_proxy_url(company_name, fy_year, cik=None):
+    """Look up the most recent DEF 14A proxy filing URL on SEC EDGAR.
+    Uses CIK-based filing index (fast, reliable) with EFTS full-text fallback."""
     import requests as _req
+    import json as _json
+    _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+    
+    # Method 1: CIK-based filing index (preferred — fast, no rate-limit issues)
+    if cik:
+        try:
+            cik_padded = str(cik).zfill(10)
+            url = f'https://data.sec.gov/submissions/CIK{cik_padded}.json'
+            resp = _req.get(url, headers=_headers, timeout=8)
+            if resp.status_code == 200:
+                filings = resp.json().get('filings', {}).get('recent', {})
+                forms = filings.get('form', [])
+                dates = filings.get('filingDate', [])
+                accessions = filings.get('accessionNumber', [])
+                primary_docs = filings.get('primaryDocument', [])
+                for i, f in enumerate(forms):
+                    if f == 'DEF 14A':
+                        cik_clean = str(cik).lstrip('0')
+                        acc_clean = accessions[i].replace('-', '')
+                        return f'https://www.sec.gov/Archives/edgar/data/{cik_clean}/{acc_clean}/{primary_docs[i]}'
+        except Exception:
+            pass
+    
+    # Method 2: EFTS full-text search fallback
     try:
         clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
         query = f'%22{clean_name.replace(" ", "+")}%22'
         url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=DEF+14A&dateRange=custom&startdt={fy_year+1}-01-01&enddt={fy_year+1}-12-31'
-        resp = _req.get(url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=10)
+        resp = _req.get(url, headers=_headers, timeout=10)
         if resp.status_code != 200:
             return None
-        import json
-        data = json.loads(resp.text)
+        data = _json.loads(resp.text)
         hits = data.get('hits', {}).get('hits', [])
         if not hits:
             return None
@@ -650,8 +674,8 @@ def lookup_proxy_url(company_name, fy_year):
         parts = hit['_id'].split(':')
         accession = parts[0]
         filename = parts[1]
-        cik = hit['_source']['ciks'][0].lstrip('0')
-        return f'https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace("-","")}/{filename}'
+        cik_str = hit['_source']['ciks'][0].lstrip('0')
+        return f'https://www.sec.gov/Archives/edgar/data/{cik_str}/{accession.replace("-","")}/{filename}'
     except Exception:
         return None
 
@@ -1849,7 +1873,7 @@ if sel3 and sel3 != PLACEHOLDER:
             if st.button("\U0001F4CB  Comp Summary Table", key="cv_comp_toggle", use_container_width=True):
                 st.session_state['show_comp_table'] = not st.session_state.get('show_comp_table', False)
         with btn_r2b:
-            proxy_url = lookup_proxy_url(cn3, FY_YEAR)
+            proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=cd3['cik'].iloc[0] if 'cik' in cd3.columns else None)
             if proxy_url:
                 st.link_button("\U0001F4C4  View Proxy", proxy_url, use_container_width=True)
             else:
