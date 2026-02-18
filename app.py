@@ -61,6 +61,13 @@ def check_password():
     if st.session_state.get('authenticated'):
         return True
 
+    # Admin bypass via query param (survives refresh)
+    params = st.query_params
+    if params.get("key") == "velarion2026":
+        st.session_state['authenticated'] = True
+        st.session_state['user_email'] = 'andy@velarion.ai'
+        return True
+
     # Track page view
     _log_page_view()
 
