@@ -368,6 +368,17 @@ st.markdown("""
     .ai-narrative h4 { color: #1a365d; font-size: 1.15rem; margin: 1.2rem 0 0.3rem 0; padding: 0; text-align: left; }
     .ai-narrative p { margin: 0 0 0.8rem 0; text-align: justify; }
     /* UTILITY BOXES */
+    /* Disable Streamlit column resize handles — prevents accidental hiding */
+    [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {
+        resize: none !important;
+    }
+    [data-testid="column-resize-handle"],
+    .stHorizontalBlock [role="separator"],
+    [data-testid="stHorizontalBlock"] > div > div[style*="cursor: col-resize"],
+    [data-testid="stHorizontalBlock"] > div > div[draggable] {
+        display: none !important;
+        pointer-events: none !important;
+    }
     .lookup-box { background: #fafaf9; border: 1px solid #d6d3d1; border-radius: 10px; padding: 1rem 1.5rem 0.3rem 1.5rem; margin-bottom: 0.5rem; text-align: center; }
     .lookup-box h2 { margin: 0 0 0.3rem 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; }
     .lookup-box p { margin: 0 0 0.5rem 0; color: #57534e; font-size: 0.83rem; }
