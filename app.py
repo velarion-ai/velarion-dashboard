@@ -343,6 +343,17 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
     .stApp { font-family: 'DM Sans', sans-serif; background: #f7f8fa; }
+    /* Remove top padding/whitespace */
+    .stMainBlockContainer { padding-top: 1rem !important; }
+    .block-container { padding-top: 1rem !important; }
+    header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; padding: 0 !important; }
+    /* Disable sidebar collapse button */
+    button[data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    /* Force sidebar always visible */
+    section[data-testid="stSidebar"] { min-width: 280px !important; }
     /* HEADER — deep navy */
     .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 60%, #234578 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: white; box-shadow: 0 4px 20px rgba(10,22,40,0.3); }
     .main-header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
