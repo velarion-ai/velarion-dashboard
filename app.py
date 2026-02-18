@@ -33,29 +33,68 @@ def _log_login(email):
         print(f"Login tracking error: {e}", file=sys.stderr)
 
 def _log_page_view():
-    """Log a page view event when login page is displayed (once per session).
-    Filters out Streamlit health checks which create sessions every ~5 min."""
+    """Inject JS beacon to track REAL page views (not bots/prefetchers).
+    JavaScript only executes in actual browsers, not email link scanners or health checks."""
     if st.session_state.get('_page_view_logged'):
         return
-    try:
-        if not _LOGIN_SUPA_KEY:
-            return
-        # Only log if user has interacted (session age > 0 means real user clicked something)
-        # Health checks create ephemeral sessions that never get query params
-        # Use a two-step approach: set flag on first load, log on second render (real users re-render, health checks don't)
-        if not st.session_state.get('_page_view_pending'):
-            st.session_state['_page_view_pending'] = True
-            return  # First render — could be health check, wait for confirmation
-        # Second render means real user interaction (page actually rendered in browser)
-        sb = create_client(_LOGIN_SUPA_URL, _LOGIN_SUPA_KEY)
-        sb.table("login_events").insert({
-            "email": "__page_view__",
-            "logged_in_at": datetime.utcnow().isoformat()
-        }).execute()
-        st.session_state['_page_view_logged'] = True
-    except Exception as e:
-        import sys
-        print(f"Page view tracking error: {e}", file=sys.stderr)
+    st.session_state['_page_view_logged'] = True
+    
+    # JS beacon: fires only in real browsers, captures UTM source and referrer
+    beacon_js = f"""
+    <script>
+    (function() {{
+        if (window._velarionTracked) return;
+        window._velarionTracked = true;
+        
+        var params = new URLSearchParams(window.location.search);
+        var utm_source = params.get('utm_source') || '';
+        var utm_campaign = params.get('utm_campaign') || '';
+        var utm_medium = params.get('utm_medium') || '';
+        var referrer = document.referrer || '';
+        var screen_w = screen.width || 0;
+        var screen_h = screen.height || 0;
+        var ua = navigator.userAgent || '';
+        
+        // Skip if this looks like a bot
+        if (/bot|crawl|spider|prefetch|preview|scan|check/i.test(ua)) return;
+        
+        fetch('{SUPA_URL}/rest/v1/login_events', {{
+            method: 'POST',
+            headers: {{
+                'apikey': '{_LOGIN_SUPA_KEY}',
+                'Authorization': 'Bearer {_LOGIN_SUPA_KEY}',
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            }},
+            body: JSON.stringify({{
+                email: '__real_visit__',
+                logged_in_at: new Date().toISOString(),
+                utm_source: utm_source,
+                utm_campaign: utm_campaign,
+                referrer: referrer,
+                user_agent: ua.substring(0, 200),
+                screen_size: screen_w + 'x' + screen_h
+            }})
+        }}).catch(function() {{
+            // Fallback: log without extra columns if schema not updated yet
+            fetch('{SUPA_URL}/rest/v1/login_events', {{
+                method: 'POST',
+                headers: {{
+                    'apikey': '{_LOGIN_SUPA_KEY}',
+                    'Authorization': 'Bearer {_LOGIN_SUPA_KEY}',
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                }},
+                body: JSON.stringify({{
+                    email: '__real_visit__|' + utm_source + '|' + utm_campaign + '|' + screen_w + 'x' + screen_h,
+                    logged_in_at: new Date().toISOString()
+                }})
+            }}).catch(function() {{}});
+        }});
+    }})();
+    </script>
+    """
+    st.markdown(beacon_js, unsafe_allow_html=True)
 
 def check_password():
     if st.session_state.get('authenticated'):
