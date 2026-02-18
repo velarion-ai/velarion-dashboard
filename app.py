@@ -1,5 +1,5 @@
 """
-Velarion Company Intelligence — REIT Executive Compensation Dashboard
+Velarion Company Intelligence — Real Estate Executive Compensation Dashboard
 Deploy: streamlit run app.py
 """
 import streamlit as st
@@ -644,7 +644,7 @@ def get_client():
         import anthropic; return anthropic.Anthropic()
     except Exception: return None
 
-AI_TONE = """ROLE: You are a seasoned REIT compensation consultant preparing a confidential briefing for a comp committee member — similar to Pearl Meyer or FW Cook. Your audience is management preparing for board meetings and comp committee negotiations.
+AI_TONE = """ROLE: You are a seasoned real estate compensation consultant preparing a confidential briefing for a comp committee member — similar to Pearl Meyer or FW Cook. Your audience is management preparing for board meetings and comp committee negotiations.
 
 APPROACH:
 1. STATE the positioning (data and percentiles)
@@ -805,9 +805,9 @@ def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=No
         n_wide = st_d['total_comp']['n']
         n_wide_cos = pp['ticker'].nunique()
         wider_note = f"""
-NOTE: The {pt_label} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} REITs (all property types) in the same market cap range as the benchmark.
-INSTRUCTION: Explicitly note that the peer group was widened beyond {pt_label} to all REITs in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
-    prompt = f"""REIT compensation analysis. 4-6 sentences.
+NOTE: The {pt_label} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} companies (all property types) in the same market cap range as the benchmark.
+INSTRUCTION: Explicitly note that the peer group was widened beyond {pt_label} to all companies in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
+    prompt = f"""Real estate compensation analysis. 4-6 sentences.
 {row['first_name']} {row['last_name']}, {pos}, {row['company_name']} ({tk}) | {pt} | Mkt Cap ${row['market_cap']/1e9:.2f}B
 Total ${st_d['total_comp']['val']:,.0f} ({ordinal(st_d['total_comp']['pct'])} pctl, {quartile_label(st_d['total_comp']['pct'])}) | Salary ${st_d['base_salary']['val']:,.0f} ({ordinal(st_d['base_salary']['pct'])} pctl) | Bonus ${st_d['cash_bonus_incentive']['val']:,.0f} ({ordinal(st_d['cash_bonus_incentive']['pct'])} pctl) | Stock ${st_d['stock_based_comp']['val']:,.0f} ({ordinal(st_d['stock_based_comp']['pct'])} pctl)
 Comp mix: {mix} | Peer median mix: {peer_mix}
@@ -857,7 +857,7 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
         fl = []
         if ie: fl.append('Ext')
         if ip: fl.append('Partial Yr')
-        if widened: fl.append(f'Widened to {len(pp)} all-REIT peers')
+        if widened: fl.append(f'Widened to {len(pp)} all-sector peers')
         fs = f" [{', '.join(fl)}]" if fl else ""
         elines.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}: ${t:,.0f} ({ordinal(pct)} pctl, {quartile_label(pct)}) | Mix: {mix} | Peer mix: {pm}{fs}")
     tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
@@ -865,7 +865,7 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
     peer_r1s = [ret_data.get(t,{}).get('return_1y') for t in tickers if ret_data.get(t,{}).get('return_1y') is not None]
     p3 = [ret_data.get(t,{}).get('return_3y') for t in tickers if ret_data.get(t,{}).get('return_3y') is not None]
     ret_pct = percentile_rank(r.get('return_1y'), pd.Series(peer_r1s)) if r.get('return_1y') is not None and peer_r1s else None
-    prompt = f"""REIT compensation and performance analysis. 6-8 sentences covering both team compensation positioning and shareholder returns.
+    prompt = f"""Real estate compensation and performance analysis. 6-8 sentences covering both team compensation positioning and shareholder returns.
 {cn} ({tk}) | {pt} | Mkt Cap ${mc/1e9:.2f}B
 TEAM:\n{chr(10).join(elines)}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
@@ -891,7 +891,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     # Peer group descriptor based on mode
     if peer_mode == 'proxy':
-        peer_desc = f"{n_co} companies from {cn}'s proxy-disclosed compensation peer group (cross-sector, not limited to REITs)"
+        peer_desc = f"{n_co} companies from {cn}'s proxy-disclosed compensation peer group (cross-sector, not limited to real estate)"
     else:
         peer_desc = f"{n_co} custom peer companies"
     en = "\nCRITICAL: Externally advised." if ea else ""
@@ -927,7 +927,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         fl = []
         if ie: fl.append('EXT')
         if ip: fl.append('PARTIAL YR')
-        if rw['position'] in widened_positions: fl.append(f'WIDENED TO {len(pp)} ALL-REIT PEERS')
+        if rw['position'] in widened_positions: fl.append(f'WIDENED TO {len(pp)} ALL-SECTOR PEERS')
         fs = f" [{','.join(fl)}]" if fl else ""
         esecs.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}{fs}: Total ${t:,.0f} ({ordinal(tp)} pctl, {quartile_label(tp)}) | Mix: {mix} | Peer mix: {pm}")
     rl = ""
@@ -971,9 +971,9 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
-        enrichment += f"\n  VNQ (REIT Index) YTD {RETURNS_YEAR+1}: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
+        enrichment += f"\n  VNQ (Real Estate Index) YTD {RETURNS_YEAR+1}: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
     
-    prompt = f"""REIT compensation analysis (~600-800 words). You are advising this management team — preparing them for what their board and comp committee will ask.
+    prompt = f"""Real estate compensation analysis (~600-800 words). You are advising this management team — preparing them for what their board and comp committee will ask.
 {cn} ({tk}) | {pt} | {co_d['reit_type'].iloc[0]} | HQ: {hq} | Mkt Cap ${mc/1e9:.2f}B
 EXECUTIVES:\n{chr(10).join(esecs)}
 {rl}
@@ -1203,7 +1203,7 @@ def chart_exec_positioning(co_d, peers, all_df=None, mcap_min=0, mcap_max=50.0):
     fig.add_vline(x=50, line_dash='dot', line_color='#dc2626', line_width=1, annotation_text='50th pctl', annotation_position='top')
     fig.add_vline(x=25, line_dash='dot', line_color='#cbd5e1', line_width=1)
     fig.add_vline(x=75, line_dash='dot', line_color='#cbd5e1', line_width=1)
-    footnote = '  * = widened to all REITs in market cap range' if any(annotations) else ''
+    footnote = '  * = widened to all companies in market cap range' if any(annotations) else ''
     fig.update_layout(height=max(200, len(labels)*50), margin=dict(l=10, r=40, t=40, b=30),
         title=dict(text='Executive Compensation Positioning (Total Comp Percentile)', font=dict(size=14, color=CHART_COLORS['text'])),
         xaxis=dict(title='Percentile vs Peers', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
@@ -1233,7 +1233,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     hs = ParagraphStyle('H', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#1a365d'), spaceAfter=4, spaceBefore=10)
     prs_h = ParagraphStyle('PRH', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#0f172a'), spaceAfter=4, spaceBefore=8)
     story.append(Paragraph("Velarion Company Intelligence", ts))
-    story.append(Paragraph(f"REIT Compensation Analysis: {cn} ({tk})", ss))
+    story.append(Paragraph(f"Real Estate Compensation Analysis: {cn} ({tk})", ss))
     story.append(Paragraph(f"Generated {datetime.now().strftime('%B %d, %Y')} | FY{FY_YEAR} Proxy Data | Returns through Dec 31, {RETURNS_YEAR}", ds))
     story.append(Spacer(1, 8))
     mc = co_d['market_cap'].iloc[0]; pt = co_d['property_type'].iloc[0]; hq = f"{co_d['hq_city'].iloc[0]}, {co_d['hq_state'].iloc[0]}"
@@ -1253,7 +1253,7 @@ def make_pdf(cn, tk, report_text, co_d, ret_data, filt):
     ps = get_peer_stats(filt); prp = ps[ps['property_type'] == pt]
     n_co, mcr, peer_tickers, _ = peer_context_str(filt, pt)
     story.append(Paragraph("PEER GROUP BENCHMARKS", hs))
-    story.append(Paragraph(f"Peer group: {n_co} {pt} REITs, market cap {mcr}", ds))
+    story.append(Paragraph(f"Peer group: {n_co} {pt} companies, market cap {mcr}", ds))
     for pos in ['CEO','CFO','CIO','GC']:
         pps = prp[prp['position']==pos]['total_comp'].dropna()
         if len(pps) >= 2:
@@ -1395,8 +1395,8 @@ with _btn_col:
         pass
 
 # HEADER
-st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>REIT Executive Compensation Benchmarking \u2014 FY2024 Proxy Data</p></div>', unsafe_allow_html=True)
-st.markdown(f'<div class="intro-text">Explore executive compensation across {len(reit_tickers)} publicly traded REITs. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>Real Estate Executive Compensation Benchmarking \u2014 FY2024 Proxy Data</p></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="intro-text">Explore executive compensation across {len(reit_tickers)} publicly traded real estate companies. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
 
 # Track peer group mode: 'proxy' (default) or 'custom'
 if 'peer_mode' not in st.session_state:
@@ -1494,7 +1494,7 @@ with st.sidebar:
     elif has_company:
         st.markdown("## Custom Peer Group Filters")
         st.session_state['peer_mode'] = 'custom'
-        st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found in {sel_tk}\'s FY{FY_YEAR} DEF 14A filing. Defaulting to {sel_pt} REITs. Use Custom Peer Group Filters to refine.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="filter-note">\u26A0\uFE0F No proxy peer group found in {sel_tk}\'s FY{FY_YEAR} DEF 14A filing. Defaulting to {sel_pt} companies. Use Custom Peer Group Filters to refine.</div>', unsafe_allow_html=True)
     else:
         st.markdown("## Peer Group")
         st.session_state['peer_mode'] = 'proxy'  # No mode selection when no company
@@ -1633,9 +1633,9 @@ else:
     reit_stats = get_peer_stats(reit_df)
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Companies</div><div class="value">{reit_df["ticker"].nunique()}</div><div class="sub">in universe</div></div>', unsafe_allow_html=True)
     with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(reit_stats)}</div><div class="sub">all positions</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(reit_stats["base_salary"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(reit_stats["total_comp"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all REITs</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(reit_stats["base_salary"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(reit_stats["total_comp"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
 st.markdown("")
 
 # COMPANY VIEW
@@ -1729,7 +1729,7 @@ if sel3 and sel3 != PLACEHOLDER:
         else:
             # Check if this is a no-proxy-peer company defaulting to property type
             if no_proxy:
-                peer_line = f'<div style="background:#fffbeb;border:1px solid #d4a017;border-radius:6px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#92400e;">\u26A0\uFE0F <strong>No proxy-defined compensation peer group found</strong> in {cn3}\'s FY{FY_YEAR} DEF 14A filing. Defaulted to {pt3} REITs.</div>'
+                peer_line = f'<div style="background:#fffbeb;border:1px solid #d4a017;border-radius:6px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#92400e;">\u26A0\uFE0F <strong>No proxy-defined compensation peer group found</strong> in {cn3}\'s FY{FY_YEAR} DEF 14A filing. Defaulted to {pt3} companies.</div>'
                 peer_line += f"Compared to <strong>{n_co} {pt3} peer companies</strong> ({', '.join(peer_tks)})"
             else:
                 peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> ({', '.join(peer_tks)})"
@@ -2087,7 +2087,7 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                 if n_pt >= MIN_PEERS:
                     peers = pt_pos_peers
                     widened = True
-                    widen_desc = f"Widened to <strong>{n_pt} {pd2 if pd2 else 'NEO'}s across {pt_pos_peers['ticker'].nunique()} {pt3} REITs</strong> (only {n_narrow} in proxy peer group)."
+                    widen_desc = f"Widened to <strong>{n_pt} {pd2 if pd2 else 'NEO'}s across {pt_pos_peers['ticker'].nunique()} {pt3} companies</strong> (only {n_narrow} in proxy peer group)."
                 else:
                     # Step 3 — all REITs
                     all_pos_peers = wide_peers[wide_peers['position']==pos]
@@ -2095,13 +2095,13 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                     if n_all >= MIN_PEERS:
                         peers = all_pos_peers
                         widened = True
-                        widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} REITs</strong> (only {n_narrow} in proxy peers, {n_pt} in {pt3})."
+                        widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} companies</strong> (only {n_narrow} in proxy peers, {n_pt} in {pt3})."
                     else:
                         peers = narrow_peers  # Use what we have
                         if n_narrow > 0:
                             st.markdown(f'<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#78350f;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s available.</div>', unsafe_allow_html=True)
             else:
-                # Custom mode — widen to all REITs in market cap range
+                # Custom mode — widen to all companies in market cap range
                 all_pos_peers = wide_peers[wide_peers['position']==pos]
                 n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
                 if n_all >= MIN_PEERS:
