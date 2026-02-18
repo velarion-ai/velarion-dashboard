@@ -566,20 +566,32 @@ def fmt_return(v):
     if v is None: return "N/A"
     return f"{'+' if v >= 0 else ''}{v:.1f}%"
 
-def build_mcap_wide_base(all_df, tk, co_d):
-    """Build widened peer set filtered to 0.33x-3x of the subject company's market cap.
-    This ensures thin-position widening compares against similarly-sized companies,
-    not the entire 200+ company universe."""
-    wide_base = all_df[all_df['ticker'] != tk].copy()
+def build_mcap_wide_peers(all_df, tk, co_d, position, min_peers=5):
+    """Find the tightest market-cap band that yields at least min_peers for a given position.
+    Starts at 0.5x-2x and widens in steps until enough peers are found or 10x is reached.
+    Returns (peer_stats_df, n_companies, multiplier_used)."""
     mc = co_d['market_cap'].iloc[0] if 'market_cap' in co_d.columns and pd.notna(co_d['market_cap'].iloc[0]) else None
-    if mc and mc > 0:
-        mc_low = mc * 0.33
-        mc_high = mc * 3.0
-        wide_base = wide_base[
-            ((wide_base['market_cap'] >= mc_low) & (wide_base['market_cap'] <= mc_high)) |
-            (wide_base['market_cap'].isna())
+    base = all_df[all_df['ticker'] != tk].copy()
+    if not mc or mc <= 0:
+        ps = get_peer_stats(base)
+        pp = ps[ps['position'] == position]
+        return ps, len(pp['ticker'].unique()), None
+    # Widen from tight to broad
+    for mult in [0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
+        mc_low = mc / (1 + mult)    # e.g. mult=1.0 → 0.5x to 2x
+        mc_high = mc * (1 + mult)
+        filt = base[
+            ((base['market_cap'] >= mc_low) & (base['market_cap'] <= mc_high)) |
+            (base['market_cap'].isna())
         ]
-    return wide_base
+        ps = get_peer_stats(filt)
+        pp = ps[ps['position'] == position]
+        n = len(pp[pp['total_comp'].notna()])
+        if n >= min_peers:
+            return ps, len(filt['ticker'].unique()), mult
+    # Fallback: use everything
+    ps = get_peer_stats(base)
+    return ps, len(base['ticker'].unique()), None
 
 def percentile_rank(value, series):
     if pd.isna(value) or len(series.dropna()) == 0: return None
@@ -964,12 +976,8 @@ def gen_analysis(co_d, filt, ret_data, all_df=None):
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
     n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     en = "\nNOTE: Externally advised." if ea else ""
-    # Build widened peer set for thin positions (0.33x-3x market cap range)
+    # Widen thin positions adaptively by market cap proximity
     MIN_PEERS = 5
-    wide_ps = None
-    if all_df is not None:
-        wide_base = build_mcap_wide_base(all_df, tk, co_d)
-        wide_ps = get_peer_stats(wide_base)
     elines = []
     for _, rw in sort_by_position(co_d).iterrows():
         ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
@@ -977,7 +985,8 @@ def gen_analysis(co_d, filt, ret_data, all_df=None):
         n_pos = len(pp[pp['total_comp'].notna()])
         widened = False
         use_ps = ps
-        if n_pos < MIN_PEERS and wide_ps is not None:
+        if n_pos < MIN_PEERS and all_df is not None:
+            wide_ps, n_wide_cos, mult = build_mcap_wide_peers(all_df, tk, co_d, rw['position'], MIN_PEERS)
             pp_wide = wide_ps[wide_ps['position']==rw['position']]
             if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
                 pp = pp_wide
@@ -1027,29 +1036,23 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     else:
         peer_desc = f"{n_co} custom peer companies"
     en = "\nCRITICAL: Externally advised." if ea else ""
-    # Build widened peer set for thin positions (0.33x-3x market cap range)
+    # Widen thin positions adaptively by market cap proximity
     MIN_PEERS = 5
-    wide_ps = None
-    if all_df is not None:
-        wide_base = build_mcap_wide_base(all_df, tk, co_d)
-        wide_ps = get_peer_stats(wide_base)
     esecs = []
     widened_positions = []
     for _, rw in sort_by_position(co_d).iterrows():
         ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
         pp = ps[ps['position']==rw['position']]
         n_pos = len(pp[pp['total_comp'].notna()])
+        use_ps = ps
         # Auto-widen if thin
-        if n_pos < MIN_PEERS and wide_ps is not None:
+        if n_pos < MIN_PEERS and all_df is not None:
+            wide_ps, n_wide_cos, mult = build_mcap_wide_peers(all_df, tk, co_d, rw['position'], MIN_PEERS)
             pp_wide = wide_ps[wide_ps['position']==rw['position']]
             if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
                 pp = pp_wide
                 widened_positions.append(rw['position'])
                 use_ps = wide_ps
-            else:
-                use_ps = ps
-        else:
-            use_ps = ps
         t = rw['total_comp'] if pd.notna(rw['total_comp']) else 0
         tp = percentile_rank(rw['total_comp'], pp['total_comp']); mix = comp_mix_str(rw); pm = peer_mix_median(use_ps, rw['position'])
         fl = []
@@ -1166,10 +1169,6 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 5
-    wide_ps = None
-    if all_df is not None:
-        wide_base = build_mcap_wide_base(all_df, tk, co_d)
-        wide_ps = get_peer_stats(wide_base)
     fig = go.Figure()
     labels = []
     sal_pcts = []; cash_pcts = []; eq_pcts = []
@@ -1188,7 +1187,8 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
         pp = ps[ps['position']==pos]
         use_pp = pp
         suffix = ''
-        if len(pp) < MIN_PEERS and wide_ps is not None:
+        if len(pp) < MIN_PEERS and all_df is not None:
+            wide_ps, _, _ = build_mcap_wide_peers(all_df, tk, co_d, pos, MIN_PEERS)
             pp_wide = wide_ps[wide_ps['position']==pos]
             if len(pp_wide) >= len(pp):
                 use_pp = pp_wide
@@ -1295,16 +1295,14 @@ def chart_exec_positioning(co_d, peers, all_df=None):
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 5
     wide_ps = None
-    if all_df is not None:
-        wide_base = build_mcap_wide_base(all_df, tk, co_d)
-        wide_ps = get_peer_stats(wide_base)
     labels = []; pcts = []; colors = []; annotations = []
     for _, rw in sort_by_position(co_d).iterrows():
         if rw['comp_source'] == 'external_manager': continue
         pp = ps[ps['position']==rw['position']]
         n_pos = len(pp[pp['total_comp'].notna()])
         widened = False
-        if n_pos < MIN_PEERS and wide_ps is not None:
+        if n_pos < MIN_PEERS and all_df is not None:
+            wide_ps, _, _ = build_mcap_wide_peers(all_df, tk, co_d, rw['position'], MIN_PEERS)
             pp_wide = wide_ps[wide_ps['position']==rw['position']]
             if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
                 pp = pp_wide
@@ -2145,18 +2143,8 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
         pt_peers_base = reit_df[reit_df['ticker'] != stk3]
         pt_peers_base = pt_peers_base[pt_peers_base['property_type'] == pt3]
         pt_peers = get_peer_stats(pt_peers_base)
-        # Step 3: All REITs (for both proxy and custom mode) — exclude cross-sector peers
-        wide_peers_base = df[df['ticker'] != stk3].copy()
-        wide_peers_base = wide_peers_base[~wide_peers_base['property_type'].str.startswith('Peer', na=True)]
-        wide_peers_base = wide_peers_base[wide_peers_base['property_type'].notna() & (wide_peers_base['property_type'] != '')]
-        if not is_proxy_mode:
-            mc_val = cd3['market_cap'].iloc[0] if 'market_cap' in cd3.columns and pd.notna(cd3['market_cap'].iloc[0]) else None
-            if mc_val and mc_val > 0:
-                wide_peers_base = wide_peers_base[
-                    ((wide_peers_base['market_cap'] >= mc_val * 0.33) & (wide_peers_base['market_cap'] <= mc_val * 3.0)) |
-                    (wide_peers_base['market_cap'].isna())
-                ]
-        wide_peers = get_peer_stats(wide_peers_base)
+        # Step 3: Adaptive market-cap-relative peers (for widening thin positions)
+        # Built per-position below, not pre-computed
         MIN_PEERS = 4
         for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
             if 'former' in str(er.get('title', '')).lower():
@@ -2210,25 +2198,27 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
                     widened = True
                     widen_desc = f"Widened to <strong>{n_pt} {pd2 if pd2 else 'NEO'}s across {pt_pos_peers['ticker'].nunique()} {pt3} companies</strong> (only {n_narrow} in proxy peer group)."
                 else:
-                    # Step 3 — all REITs
-                    all_pos_peers = wide_peers[wide_peers['position']==pos]
+                    # Step 3 — adaptive market-cap-relative peers
+                    wide_ps_3, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                    all_pos_peers = wide_ps_3[wide_ps_3['position']==pos]
                     n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
                     if n_all >= MIN_PEERS:
                         peers = all_pos_peers
                         widened = True
-                        widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} companies</strong> (only {n_narrow} in proxy peers, {n_pt} in {pt3})."
+                        widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong> (only {n_narrow} in proxy peers, {n_pt} in {pt3})."
                     else:
                         peers = narrow_peers  # Use what we have
                         if n_narrow > 0:
                             st.markdown(f'<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#78350f;margin:0.3rem 0;">\u2139\uFE0F Limited peer data: {n_narrow} {pd2 if pd2 else "NEO"}s available.</div>', unsafe_allow_html=True)
             else:
-                # Custom mode — widen to all companies in market cap range
-                all_pos_peers = wide_peers[wide_peers['position']==pos]
+                # Custom mode — widen to similarly-sized companies
+                wide_ps_c, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                all_pos_peers = wide_ps_c[wide_ps_c['position']==pos]
                 n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
                 if n_all >= MIN_PEERS:
                     peers = all_pos_peers
                     widened = True
-                    widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} companies</strong> (only {n_narrow} in custom peer group)."
+                    widen_desc = f"Widened to <strong>{n_all} {pd2 if pd2 else 'NEO'}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong> (only {n_narrow} in custom peer group)."
                 else:
                     peers = narrow_peers
             n_pos = len(peers[peers['total_comp'].notna()])
@@ -2246,7 +2236,10 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
             with eb1:
                 if st.button(f"Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True, type="secondary"):
                     with st.spinner("Generating..."):
-                        st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=wide_peers if widened else None)
+                        _wide_df = None
+                        if widened:
+                            _wide_df, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                        st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=_wide_df)
                         st.session_state[f"fp_{nk}"] = cur_fp0
             with eb2:
                 if st.button(f"View {pos_btn_label} Peers", key=f"cv_peer_{pos}_{idx}", use_container_width=True, type="secondary"):
