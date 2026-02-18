@@ -33,12 +33,20 @@ def _log_login(email):
         print(f"Login tracking error: {e}", file=sys.stderr)
 
 def _log_page_view():
-    """Log a page view event when login page is displayed (once per session)."""
+    """Log a page view event when login page is displayed (once per session).
+    Filters out Streamlit health checks which create sessions every ~5 min."""
     if st.session_state.get('_page_view_logged'):
         return
     try:
         if not _LOGIN_SUPA_KEY:
             return
+        # Only log if user has interacted (session age > 0 means real user clicked something)
+        # Health checks create ephemeral sessions that never get query params
+        # Use a two-step approach: set flag on first load, log on second render (real users re-render, health checks don't)
+        if not st.session_state.get('_page_view_pending'):
+            st.session_state['_page_view_pending'] = True
+            return  # First render — could be health check, wait for confirmation
+        # Second render means real user interaction (page actually rendered in browser)
         sb = create_client(_LOGIN_SUPA_URL, _LOGIN_SUPA_KEY)
         sb.table("login_events").insert({
             "email": "__page_view__",
