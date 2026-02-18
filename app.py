@@ -566,6 +566,21 @@ def fmt_return(v):
     if v is None: return "N/A"
     return f"{'+' if v >= 0 else ''}{v:.1f}%"
 
+def build_mcap_wide_base(all_df, tk, co_d):
+    """Build widened peer set filtered to 0.33x-3x of the subject company's market cap.
+    This ensures thin-position widening compares against similarly-sized companies,
+    not the entire 200+ company universe."""
+    wide_base = all_df[all_df['ticker'] != tk].copy()
+    mc = co_d['market_cap'].iloc[0] if 'market_cap' in co_d.columns and pd.notna(co_d['market_cap'].iloc[0]) else None
+    if mc and mc > 0:
+        mc_low = mc * 0.33
+        mc_high = mc * 3.0
+        wide_base = wide_base[
+            ((wide_base['market_cap'] >= mc_low) & (wide_base['market_cap'] <= mc_high)) |
+            (wide_base['market_cap'].isna())
+        ]
+    return wide_base
+
 def percentile_rank(value, series):
     if pd.isna(value) or len(series.dropna()) == 0: return None
     if len(series.dropna()) <= 1: return None
@@ -926,8 +941,8 @@ def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=No
         n_wide = st_d['total_comp']['n']
         n_wide_cos = pp['ticker'].nunique()
         wider_note = f"""
-NOTE: The {pt_label} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} companies (all property types) in the same market cap range as the benchmark.
-INSTRUCTION: Explicitly note that the peer group was widened beyond {pt_label} to all companies in the market cap range due to limited same-sector peers. Use the widened data as primary benchmark."""
+NOTE: The {pt_label} peer group had fewer than 5 {pos}s, so this analysis uses {n_wide} {pos}s across {n_wide_cos} similarly-sized companies (0.33x-3x market cap, all property types) as the benchmark.
+INSTRUCTION: Explicitly note that the peer group was widened to similarly-sized companies due to limited same-sector peers. Use the widened data as primary benchmark."""
     prompt = f"""Real estate compensation analysis. 4-6 sentences.
 {row['first_name']} {row['last_name']}, {pos}, {row['company_name']} ({tk}) | {pt} | Mkt Cap ${row['market_cap']/1e9:.2f}B
 Total ${st_d['total_comp']['val']:,.0f} ({ordinal(st_d['total_comp']['pct'])} pctl, {quartile_label(st_d['total_comp']['pct'])}) | Salary ${st_d['base_salary']['val']:,.0f} ({ordinal(st_d['base_salary']['pct'])} pctl) | Bonus ${st_d['cash_bonus_incentive']['val']:,.0f} ({ordinal(st_d['cash_bonus_incentive']['pct'])} pctl) | Stock ${st_d['stock_based_comp']['val']:,.0f} ({ordinal(st_d['stock_based_comp']['pct'])} pctl)
@@ -941,7 +956,7 @@ NOTE: Compensation data is from FY{FY_YEAR} proxy (filed {FY_YEAR+1}). Returns t
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
+def gen_analysis(co_d, filt, ret_data, all_df=None):
     """Combined company + returns analysis for Company View tab."""
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
@@ -949,15 +964,11 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
     ea = is_ext_advised(co_d, filt); ps = get_peer_stats(filt)
     n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     en = "\nNOTE: Externally advised." if ea else ""
-    # Build widened peer set for thin positions
+    # Build widened peer set for thin positions (0.33x-3x market cap range)
     MIN_PEERS = 5
     wide_ps = None
     if all_df is not None:
-        wide_base = all_df[all_df['ticker'] != tk].copy()
-        if mcap_max >= 50.0:
-            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
-        else:
-            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_base = build_mcap_wide_base(all_df, tk, co_d)
         wide_ps = get_peer_stats(wide_base)
     elines = []
     for _, rw in sort_by_position(co_d).iterrows():
@@ -978,7 +989,7 @@ def gen_analysis(co_d, filt, ret_data, all_df=None, mcap_min=0, mcap_max=50.0):
         fl = []
         if ie: fl.append('Ext')
         if ip: fl.append('Partial Yr')
-        if widened: fl.append(f'Widened to {len(pp)} all-sector peers')
+        if widened: fl.append(f'Widened to {len(pp)} similar market cap peers')
         fs = f" [{', '.join(fl)}]" if fl else ""
         elines.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}: ${t:,.0f} ({ordinal(pct)} pctl, {quartile_label(pct)}) | Mix: {mix} | Peer mix: {pm}{fs}")
     tb = co_d['total_comp'].sum(); pcos = ps.groupby('ticker')['total_comp'].sum(); bp = percentile_rank(tb, pcos)
@@ -1003,7 +1014,7 @@ INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs pee
         return clean_ai(resp.content[0].text)
     except Exception as e: return f"Error: {e}"
 
-def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=None, mcap_min=0, mcap_max=50.0, peer_mode='proxy'):
+def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=None, peer_mode='proxy'):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
     cn = co_d['company_name'].iloc[0]; tk = co_d['ticker'].iloc[0]; pt = co_d['property_type'].iloc[0]; mc = co_d['market_cap'].iloc[0]
@@ -1016,15 +1027,11 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     else:
         peer_desc = f"{n_co} custom peer companies"
     en = "\nCRITICAL: Externally advised." if ea else ""
-    # Build widened peer set for thin positions
+    # Build widened peer set for thin positions (0.33x-3x market cap range)
     MIN_PEERS = 5
     wide_ps = None
     if all_df is not None:
-        wide_base = all_df[all_df['ticker'] != tk].copy()
-        if mcap_max >= 50.0:
-            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
-        else:
-            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_base = build_mcap_wide_base(all_df, tk, co_d)
         wide_ps = get_peer_stats(wide_base)
     esecs = []
     widened_positions = []
@@ -1048,7 +1055,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         fl = []
         if ie: fl.append('EXT')
         if ip: fl.append('PARTIAL YR')
-        if rw['position'] in widened_positions: fl.append(f'WIDENED TO {len(pp)} ALL-SECTOR PEERS')
+        if rw['position'] in widened_positions: fl.append(f'WIDENED TO {len(pp)} SIMILAR MARKET CAP PEERS')
         fs = f" [{','.join(fl)}]" if fl else ""
         esecs.append(f"  {rw['first_name']} {rw['last_name']}, {POSITION_DISPLAY.get(rw['position'],rw['position'])}{fs}: Total ${t:,.0f} ({ordinal(tp)} pctl, {quartile_label(tp)}) | Mix: {mix} | Peer mix: {pm}")
     rl = ""
@@ -1154,18 +1161,14 @@ CHART_COLORS = {
     'equity': '#8b5cf6',
 }
 
-def chart_comp_mix(co_d, peers, pt, all_df=None, mcap_min=0, mcap_max=50.0):
+def chart_comp_mix(co_d, peers, pt, all_df=None):
     """Stacked horizontal bar: company comp mix vs peer median."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 5
     wide_ps = None
     if all_df is not None:
-        wide_base = all_df[all_df['ticker'] != tk].copy()
-        if mcap_max >= 50.0:
-            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
-        else:
-            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_base = build_mcap_wide_base(all_df, tk, co_d)
         wide_ps = get_peer_stats(wide_base)
     fig = go.Figure()
     labels = []
@@ -1286,18 +1289,14 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
         font=dict(family='Inter, Helvetica, Arial, sans-serif'))
     return fig
 
-def chart_exec_positioning(co_d, peers, all_df=None, mcap_min=0, mcap_max=50.0):
+def chart_exec_positioning(co_d, peers, all_df=None):
     """Horizontal bar: each exec's total comp percentile vs peers. Auto-widens thin positions."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 5
     wide_ps = None
     if all_df is not None:
-        wide_base = all_df[all_df['ticker'] != tk].copy()
-        if mcap_max >= 50.0:
-            wide_base = wide_base[(wide_base['market_cap'] >= mcap_min*1e9) | (wide_base['market_cap'].isna())]
-        else:
-            wide_base = wide_base[((wide_base['market_cap'] >= mcap_min*1e9) & (wide_base['market_cap'] <= mcap_max*1e9)) | (wide_base['market_cap'].isna())]
+        wide_base = build_mcap_wide_base(all_df, tk, co_d)
         wide_ps = get_peer_stats(wide_base)
     labels = []; pcts = []; colors = []; annotations = []
     for _, rw in sort_by_position(co_d).iterrows():
@@ -1718,7 +1717,6 @@ with st.sidebar:
     else:
         # Proxy mode defaults
         sel_prop = all_props
-        mcap_min = 0.0; mcap_max = 50.0
         sel_companies = []; excluded_tickers = []
 
 # BUILD FILTERED DATASET
@@ -1881,7 +1879,7 @@ if sel3 and sel3 != PLACEHOLDER:
         with btn_r1a:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                 with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
-                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max, peer_mode=st.session_state.get('peer_mode', 'proxy'))
+                    st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, peer_mode=st.session_state.get('peer_mode', 'proxy'))
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
                     # Clear any previous addendum
@@ -1929,7 +1927,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
                         i += 1
                     try:
-                        fig_pos = chart_exec_positioning(cd3, peers_only, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
+                        fig_pos = chart_exec_positioning(cd3, peers_only, all_df=df)
                         st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
                     except Exception: pass
                 elif text == 'MIX':
@@ -1937,7 +1935,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
                         i += 1
                     try:
-                        fig_mix = chart_comp_mix(cd3, peers_only, pt3, all_df=df, mcap_min=mcap_min, mcap_max=mcap_max)
+                        fig_mix = chart_comp_mix(cd3, peers_only, pt3, all_df=df)
                         st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
                     except Exception: pass
                 elif text == 'RETURNS':
@@ -2152,10 +2150,12 @@ Use section headers: <h4>Executive Compensation Overview</h4>, <h4>Compensation 
         wide_peers_base = wide_peers_base[~wide_peers_base['property_type'].str.startswith('Peer', na=True)]
         wide_peers_base = wide_peers_base[wide_peers_base['property_type'].notna() & (wide_peers_base['property_type'] != '')]
         if not is_proxy_mode:
-            if mcap_max >= 50.0:
-                wide_peers_base = wide_peers_base[(wide_peers_base['market_cap'] >= mcap_min*1e9) | (wide_peers_base['market_cap'].isna())]
-            else:
-                wide_peers_base = wide_peers_base[((wide_peers_base['market_cap'] >= mcap_min*1e9) & (wide_peers_base['market_cap'] <= mcap_max*1e9)) | (wide_peers_base['market_cap'].isna())]
+            mc_val = cd3['market_cap'].iloc[0] if 'market_cap' in cd3.columns and pd.notna(cd3['market_cap'].iloc[0]) else None
+            if mc_val and mc_val > 0:
+                wide_peers_base = wide_peers_base[
+                    ((wide_peers_base['market_cap'] >= mc_val * 0.33) & (wide_peers_base['market_cap'] <= mc_val * 3.0)) |
+                    (wide_peers_base['market_cap'].isna())
+                ]
         wide_peers = get_peer_stats(wide_peers_base)
         MIN_PEERS = 4
         for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
