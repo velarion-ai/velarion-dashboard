@@ -2692,9 +2692,12 @@ if sel3 and sel3 != PLACEHOLDER:
                         _co_fs[_k] = int(_v)
                 
                 if _co_fs and any(_co_fs.get(k) for k in ['cash_retainer','equity_retainer','total_retainer']):
-                    # Get peer fee schedules for comparison
-                    _peer_tickers_board = list(filt_no_pos['ticker'].unique()) if 'filt_no_pos' in dir() else []
-                    _peer_fs = _fs_df[_fs_df['ticker'].isin(_peer_tickers_board)] if _peer_tickers_board and not _fs_df.empty else pd.DataFrame()
+                    # Get peer fee schedules: all companies with fee data (exclude self)
+                    _peer_fs = _fs_df[_fs_df['ticker'] != stk3].copy() if not _fs_df.empty else pd.DataFrame()
+                    # Clean NaN from peer data too
+                    for _col in ['cash_retainer','equity_retainer','total_retainer','lead_director_premium','chair_premium','audit_chair','comp_chair','nomgov_chair']:
+                        if _col in _peer_fs.columns:
+                            _peer_fs[_col] = pd.to_numeric(_peer_fs[_col], errors='coerce')
                     
                     def _fs_val(d, key):
                         v = d.get(key)
@@ -2831,16 +2834,16 @@ if sel3 and sel3 != PLACEHOLDER:
                     # Peer comparison bar below if we have both committee data and peer stats
                     if peer_stats_html and (premium_html or comm_chair_html):
                         peer_bar_html = f"""
-                        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin-top:0.5rem;">
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin-top:-0.5rem;">
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peer_fs)} companies)</div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.8rem;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1.5rem;">
                             {peer_stats_html}
                             </div>
                         </div>
                         </div>
                         """
-                        components.html(peer_bar_html, height=120, scrolling=False)
+                        components.html(peer_bar_html, height=110, scrolling=False)
                 
                 elif n_with_comp > 0:
                     # Fallback: show averages from director comp data (no fee schedule in DB)
