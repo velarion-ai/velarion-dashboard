@@ -2762,11 +2762,11 @@ if sel3 and sel3 != PLACEHOLDER:
                             if len(vals) >= 2:
                                 peer_stats_html += f"""
                                 <div style="margin-bottom:4px;">
-                                    <div style="font-size:0.75rem;font-weight:600;color:#475569;margin-bottom:3px;">{label}</div>
-                                    <div style="display:flex;font-size:0.8rem;gap:0.3rem;">
-                                        <span style="color:#94a3b8;">25th</span><span style="font-weight:600;color:#64748b;margin-right:0.6rem;">${vals.quantile(0.25):,.0f}</span>
-                                        <span style="color:#94a3b8;">Med</span><span style="font-weight:700;color:#1e293b;margin-right:0.6rem;">${vals.median():,.0f}</span>
-                                        <span style="color:#94a3b8;">75th</span><span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
+                                    <div style="font-size:0.75rem;font-weight:600;color:#475569;margin-bottom:4px;">{label}</div>
+                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                        <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
                                     </div>
                                 </div>"""
                     
@@ -2803,7 +2803,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         peer_bar_html = f"""
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:1.5rem;">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
                             {peer_stats_html}
                             </div>
                             {footnote}
