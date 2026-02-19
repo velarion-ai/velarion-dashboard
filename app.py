@@ -1880,9 +1880,9 @@ if sel3 and sel3 != PLACEHOLDER:
                 </table>
             </div>"""
         
-        # Company profile card
-        st.markdown(f"""
-        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:1.2rem 1.5rem;margin:0 0 0.5rem 0;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+        # Company profile card — use components.html because st.markdown strips <table>
+        _profile_html = f"""
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border:1px solid #e2e8f0;border-radius:10px;padding:1.2rem 1.5rem;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;">
                 <div style="font-size:1.3rem;font-weight:700;color:#1e293b;font-family:Georgia,serif;">{cn3} ({stk3})</div>
                 <div style="font-size:0.9rem;font-weight:600;color:#1e293b;">{_mcap}</div>
@@ -1894,7 +1894,9 @@ if sel3 and sel3 != PLACEHOLDER:
             </div>
             {_ret_html}
         </div>
-        """, unsafe_allow_html=True)
+        """
+        _profile_h = 155 if cr3 else 100
+        components.html(_profile_html, height=_profile_h, scrolling=False)
         
         ea3 = is_ext_advised(cd3, df)
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
