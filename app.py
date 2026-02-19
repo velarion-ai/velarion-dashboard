@@ -1882,9 +1882,9 @@ if sel3 and sel3 != PLACEHOLDER:
         
         # Company profile card — use components.html because st.markdown strips <table>
         _profile_html = f"""
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border:1px solid #e2e8f0;border-radius:10px;padding:1.2rem 1.5rem;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+        <div style="font-family:'Source Sans Pro','Segoe UI',Roboto,sans-serif;border:1px solid #e2e8f0;border-radius:10px;padding:1.2rem 1.5rem;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;">
-                <div style="font-size:1.3rem;font-weight:700;color:#1e293b;font-family:Georgia,serif;">{cn3} ({stk3})</div>
+                <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{cn3} ({stk3})</div>
                 <div style="font-size:0.9rem;font-weight:600;color:#1e293b;">{_mcap}</div>
             </div>
             <div style="display:flex;gap:2rem;font-size:0.85rem;color:#475569;">
