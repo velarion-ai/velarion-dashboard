@@ -2341,16 +2341,18 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # Collect unique committees (exclude management directors from independence-required committees)
                 _INDEP_ONLY_COMMS = {'Audit', 'Compensation', 'Nominating/Governance'}
-                all_comms = {}
+                # First pass: count committee members across all directors
+                _raw_comm_counts = {}
                 for _, d in co_dirs.iterrows():
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
                     is_ind = d.get('is_independent', False)
                     for c in comms:
                         if not is_ind and c in _INDEP_ONLY_COMMS:
-                            continue  # Management cannot serve on Audit/Comp/Nom-Gov
-                        if c not in all_comms:
-                            all_comms[c] = {'members': 0, 'chair': None}
-                        all_comms[c]['members'] += 1
+                            continue
+                        _raw_comm_counts[c] = _raw_comm_counts.get(c, 0) + 1
+                # Only show committees with 2+ members (filter scraper noise)
+                _valid_comms = {c for c, n in _raw_comm_counts.items() if n >= 2}
+                all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
                 
                 # ---- SECTION 1: BOARD SNAPSHOT (6 metrics) ----
                 st.markdown(f"""
@@ -2428,6 +2430,8 @@ if sel3 and sel3 != PLACEHOLDER:
                     # Management directors cannot serve on Audit/Comp/Nom-Gov (NYSE/NASDAQ rules)
                     if is_mgmt:
                         comms = [c for c in comms if c not in _INDEP_ONLY_COMMS]
+                    # Only show committees with 2+ members (filter scraper noise)
+                    comms = [c for c in comms if c in _valid_comms]
                     comm_chips = []
                     for c in comms:
                         abbrev = c.replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
