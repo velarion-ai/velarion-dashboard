@@ -2408,7 +2408,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 <div style="font-size:1.2rem;font-weight:700;color:#1a365d;margin-bottom:0.5rem;">Board of Directors Intelligence</div>
                 <div style="font-size:0.92rem;color:#475569;line-height:1.7;max-width:520px;margin:0 auto 1.5rem auto;">
                     Director compensation benchmarking, board composition analysis, committee assignments, 
-                    tenure mapping, and independence metrics — powered by the same SEC proxy data driving 
+                    tenure mapping, and independence metrics — powered by the same SEC and other market data driving 
                     the executive module.
                 </div>
                 <div style="display:inline-block;background:#1a365d;color:white;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:0.4rem 1.2rem;border-radius:20px;">
