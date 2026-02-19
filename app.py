@@ -2683,6 +2683,14 @@ if sel3 and sel3 != PLACEHOLDER:
                 _fs_df = load_fee_schedule()
                 _co_fs = _fs_df[_fs_df['ticker'] == stk3].iloc[0].to_dict() if not _fs_df.empty and stk3 in _fs_df['ticker'].values else {}
                 
+                # Clean NaN/None values from fee schedule
+                import math
+                for _k, _v in list(_co_fs.items()):
+                    if isinstance(_v, float) and (math.isnan(_v) or _v == 0):
+                        _co_fs[_k] = None
+                    elif isinstance(_v, float):
+                        _co_fs[_k] = int(_v)
+                
                 if _co_fs and any(_co_fs.get(k) for k in ['cash_retainer','equity_retainer','total_retainer']):
                     # Get peer fee schedules for comparison
                     _peer_tickers_board = list(filt_no_pos['ticker'].unique()) if 'filt_no_pos' in dir() else []
