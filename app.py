@@ -2847,7 +2847,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     """
                 
                 # Single combined render for sections 3+4
-                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.3rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR}</div>'
+                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.3rem;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR}</div>'
                 combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
                 _h34 = 10
                 if comm_section_html: _h34 += 85
