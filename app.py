@@ -1821,7 +1821,7 @@ if not cv_selected_val or cv_selected_val == PLACEHOLDER:
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.5rem;">\U0001F3DB\uFE0F Board of Directors</div>
                 <div style="font-size:1.5rem;font-weight:700;">{_n_dirs:,} Directors</div>
                 <div style="font-size:0.8rem;opacity:0.7;">{_n_dir_cos} companies</div>
-                <div style="font-size:0.75rem;opacity:0.5;margin-top:0.5rem;">Cash &amp; equity retainers, committee structure<br>AI-powered analysis &bull; Independence &bull; Aggregate board cost</div>
+                <div style="font-size:0.75rem;opacity:0.5;margin-top:0.5rem;">Component &amp; aggregate board compensation<br>Peer benchmarking &bull; AI-powered analysis</div>
             </div>
         </div>
     </div>
