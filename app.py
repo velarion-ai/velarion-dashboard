@@ -377,8 +377,8 @@ st.markdown("""
     .ai-report h4 { color: #1a365d; font-size: 1.15rem; margin: 1.2rem 0 0.3rem 0; padding: 0; text-align: left; }
     .ai-report p { margin: 0 0 0.8rem 0; text-align: justify; }
     .ai-report .js-plotly-plot, .ai-report iframe { margin-top: 1rem; }
-    .ai-narrative h4 { color: #1a365d; font-size: 1.15rem; margin: 1.2rem 0 0.3rem 0; padding: 0; text-align: left; }
-    .ai-narrative p { margin: 0 0 0.8rem 0; text-align: justify; }
+    .ai-narrative h4 { color: #1a365d; font-size: 1.15rem; margin: 0.6rem 0 0.15rem 0; padding: 0; text-align: left; }
+    .ai-narrative p { margin: 0 0 0.5rem 0; text-align: justify; }
     /* UTILITY BOXES */
     /* Disable Streamlit column resize handles — prevents accidental hiding */
     [data-testid="stHorizontalBlock"] [data-testid="stVerticalBlockBorderWrapper"] {
