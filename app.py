@@ -2499,9 +2499,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # ---- SECTION 3: COMMITTEE STRUCTURE (Ferguson Exhibit 6 style cards) ----
                 if all_comms:
-                    st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Committee Structure</div>", unsafe_allow_html=True)
-                    
-                    # Show top 3 committees as cards
+                    # Show top 4 committees as cards
                     top_comms = sorted(all_comms.items(), key=lambda x: x[1]['members'], reverse=True)[:4]
                     n_comm_cols = min(len(top_comms), 4)
                     comm_cards = []
@@ -2517,22 +2515,29 @@ if sel3 and sel3 != PLACEHOLDER:
                         </div>""")
                     
                     grid_cols = f"repeat({n_comm_cols},1fr)"
-                    st.markdown(f"""
-                    <div style="display:grid;grid-template-columns:{grid_cols};gap:0.75rem;margin-bottom:1rem;">
+                    comm_html = f"""
+                    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                    <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Committee Structure</div>
+                    <div style="display:grid;grid-template-columns:{grid_cols};gap:0.75rem;margin-bottom:0.5rem;">
                         {"".join(comm_cards)}
                     </div>
-                    """, unsafe_allow_html=True)
+                    </div>
+                    """
+                    components.html(comm_html, height=max(100, 30 + 90), scrolling=False)
                 
-                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">', unsafe_allow_html=True)
+                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:0.5rem 0;">', unsafe_allow_html=True)
                 
                 # ---- SECTION 4: COMP PROGRAM SUMMARY (Ferguson Exhibit 3 style) ----
                 if n_with_comp > 0:
                     pct_cash = (avg_cash / avg_total * 100) if avg_total and avg_total > 0 else 0
                     pct_stock = (avg_stock / avg_total * 100) if avg_total and avg_total > 0 else 0
                     
-                    st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Director Compensation Program</div>", unsafe_allow_html=True)
+                    chair_row = f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Board Chair</span><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">{chair_name.split()[-1]}</span></div>' if chair_name else ""
+                    lead_row = f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Lead Independent</span><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">{lead_ind_name.split()[-1]}</span></div>' if lead_ind_name else ""
                     
-                    st.markdown(f"""
+                    comp_prog_html = f"""
+                    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                    <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Director Compensation Program</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers (Avg)</div>
@@ -2562,11 +2567,13 @@ if sel3 and sel3 != PLACEHOLDER:
                                 <span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span>
                                 <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span>
                             </div>
-                            {"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'><span style=font-size:0.85rem;color:#475569;>Board Chair</span><span style=font-size:0.85rem;font-weight:600;color:#1e293b;>" + chair_name.split()[-1] + "</span></div>" if chair_name else ""}
-                            {"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'><span style=font-size:0.85rem;color:#475569;>Lead Independent</span><span style=font-size:0.85rem;font-weight:600;color:#1e293b;>" + lead_ind_name.split()[-1] + "</span></div>" if lead_ind_name else ""}
+                            {chair_row}
+                            {lead_row}
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    </div>
+                    """
+                    components.html(comp_prog_html, height=220, scrolling=False)
                 
                 # Source note
                 st.markdown(f'<div style="font-size:0.7rem;color:#94a3b8;margin-top:1rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>', unsafe_allow_html=True)
