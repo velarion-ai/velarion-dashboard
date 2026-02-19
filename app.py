@@ -2692,9 +2692,10 @@ if sel3 and sel3 != PLACEHOLDER:
                         _co_fs[_k] = int(_v)
                 
                 if _co_fs and any(_co_fs.get(k) for k in ['cash_retainer','equity_retainer','total_retainer']):
-                    # Get peer fee schedules: all companies with fee data (exclude self)
-                    _peer_fs = _fs_df[_fs_df['ticker'] != stk3].copy() if not _fs_df.empty else pd.DataFrame()
-                    # Clean NaN from peer data too
+                    # Get peer fee schedules: use proxy-disclosed peer group
+                    _board_peer_tks = set(proxy_tickers) if proxy_tickers else set()
+                    _peer_fs = _fs_df[_fs_df['ticker'].isin(_board_peer_tks)] if _board_peer_tks and not _fs_df.empty else pd.DataFrame()
+                    # Clean numeric columns
                     for _col in ['cash_retainer','equity_retainer','total_retainer','lead_director_premium','chair_premium','audit_chair','comp_chair','nomgov_chair']:
                         if _col in _peer_fs.columns:
                             _peer_fs[_col] = pd.to_numeric(_peer_fs[_col], errors='coerce')
