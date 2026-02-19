@@ -461,8 +461,19 @@ st.markdown("""
 @st.cache_data(ttl=300)
 def load_data():
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-    result = sb.table('exec_comp').select('*').execute()
-    df = pd.DataFrame(result.data)
+    # Supabase default limit is 1000 rows — paginate to get all records
+    all_rows = []
+    page_size = 1000
+    offset = 0
+    while True:
+        result = sb.table('exec_comp').select('*').range(offset, offset + page_size - 1).execute()
+        if not result.data:
+            break
+        all_rows.extend(result.data)
+        if len(result.data) < page_size:
+            break
+        offset += page_size
+    df = pd.DataFrame(all_rows)
     for c in ['base_salary','cash_bonus_incentive','stock_based_comp','total_comp','market_cap']:
         if c in df.columns: df[c] = pd.to_numeric(df[c], errors='coerce')
     df['fiscal_year'] = pd.to_numeric(df['fiscal_year'], errors='coerce').astype('Int64')
