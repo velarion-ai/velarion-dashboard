@@ -516,6 +516,34 @@ def load_peer_groups():
         pass
     return pd.DataFrame()
 
+@st.cache_data(ttl=300)
+def load_director_comp():
+    """Load director compensation data from Supabase."""
+    try:
+        sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+        all_data = []
+        offset = 0
+        batch = 1000
+        while True:
+            result = sb.table('director_comp').select('*').range(offset, offset + batch - 1).execute()
+            if result.data:
+                all_data.extend(result.data)
+            if not result.data or len(result.data) < batch:
+                break
+            offset += batch
+        if all_data:
+            ddf = pd.DataFrame(all_data)
+            for c in ['fees_earned_cash','stock_awards','option_awards','all_other_comp','total_comp','change_in_pension','non_equity_incentive']:
+                if c in ddf.columns: ddf[c] = pd.to_numeric(ddf[c], errors='coerce')
+            # Parse committees from JSON string
+            if 'committees' in ddf.columns:
+                import json as _json
+                ddf['committees_list'] = ddf['committees'].apply(lambda x: _json.loads(x) if isinstance(x, str) and x.startswith('[') else (x if isinstance(x, list) else []))
+            return ddf
+    except Exception:
+        pass
+    return pd.DataFrame()
+
 @st.cache_data(ttl=3600)
 def load_total_returns(tickers):
     try:
@@ -2271,15 +2299,153 @@ if sel3 and sel3 != PLACEHOLDER:
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
 
         with tab_board:
-            st.markdown(f"""
-            <div style="background:#f8f6f3;border:1px solid #e2e8f0;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
-                <div style="font-size:1.5rem;margin-bottom:0.5rem;">\U0001F3DB\uFE0F</div>
-                <div style="font-size:1.1rem;font-weight:600;color:#1a365d;margin-bottom:0.5rem;">Board of Directors Compensation</div>
-                <div style="font-size:0.9rem;color:#475569;line-height:1.6;max-width:500px;margin:0 auto;">
-                    Director compensation, board composition, committee structure, and stock ownership guidelines for <strong>{cn3}</strong>. Coming soon.
+            # Load director comp data
+            dir_df = load_director_comp()
+            
+            if dir_df.empty or stk3 not in dir_df['ticker'].values:
+                st.markdown(f"""
+                <div style="background:#f8f6f3;border:1px solid #e2e8f0;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
+                    <div style="font-size:1.5rem;margin-bottom:0.5rem;">\U0001F3DB\uFE0F</div>
+                    <div style="font-size:1.1rem;font-weight:600;color:#1a365d;margin-bottom:0.5rem;">Board of Directors Compensation</div>
+                    <div style="font-size:0.9rem;color:#475569;line-height:1.6;max-width:500px;margin:0 auto;">
+                        Director compensation data for <strong>{cn3}</strong> is being processed. Check back soon.
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            else:
+                co_dirs = dir_df[dir_df['ticker'] == stk3].copy()
+                
+                # Board Snapshot metrics
+                n_dirs = len(co_dirs)
+                n_independent = co_dirs['is_independent'].sum() if 'is_independent' in co_dirs.columns else 0
+                n_with_comp = co_dirs['total_comp'].notna().sum()
+                avg_total = co_dirs['total_comp'].dropna().mean()
+                median_total = co_dirs['total_comp'].dropna().median()
+                avg_cash = co_dirs['fees_earned_cash'].dropna().mean()
+                avg_stock = co_dirs['stock_awards'].dropna().mean()
+                
+                # Find chair and lead independent
+                chair_name = ""
+                lead_ind_name = ""
+                for _, d in co_dirs.iterrows():
+                    if d.get('is_board_chair'): chair_name = d['director_name']
+                    if d.get('is_lead_independent'): lead_ind_name = d['director_name']
+                
+                # ---- BOARD SNAPSHOT ----
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:1.5rem 2rem;margin:0.5rem 0 1rem 0;color:white;">
+                    <div style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">\U0001F3DB\uFE0F Board Snapshot — {cn3}</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+                        <div style="text-align:center;">
+                            <div style="font-size:1.8rem;font-weight:700;">{n_dirs}</div>
+                            <div style="font-size:0.75rem;opacity:0.8;">Directors</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.8rem;font-weight:700;">{int(n_independent)}</div>
+                            <div style="font-size:0.75rem;opacity:0.8;">Independent</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.8rem;font-weight:700;">${median_total:,.0f}</div>
+                            <div style="font-size:0.75rem;opacity:0.8;">Median Total Comp</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.8rem;font-weight:700;">${avg_total:,.0f}</div>
+                            <div style="font-size:0.75rem;opacity:0.8;">Avg Total Comp</div>
+                        </div>
+                    </div>
+                    {"<div style='font-size:0.8rem;margin-top:0.8rem;opacity:0.7;'>Board Chair: " + chair_name + "</div>" if chair_name else ""}
+                    {"<div style='font-size:0.8rem;opacity:0.7;'>Lead Independent: " + lead_ind_name + "</div>" if lead_ind_name else ""}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # ---- DIRECTOR ROSTER ----
+                st.markdown("<div style='font-size:1rem;font-weight:600;color:#1a365d;margin:1.5rem 0 0.5rem 0;'>Director Roster & Compensation</div>", unsafe_allow_html=True)
+                
+                # Build roster table
+                roster_rows = []
+                for _, d in co_dirs.sort_values('total_comp', ascending=False, na_position='last').iterrows():
+                    name = d['director_name']
+                    age_str = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
+                    since_str = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
+                    
+                    # Independence badge
+                    if d.get('is_board_chair'):
+                        badge = '<span style="background:#7c3aed;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">CHAIR</span>'
+                    elif d.get('is_lead_independent'):
+                        badge = '<span style="background:#0369a1;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">LEAD IND</span>'
+                    elif d.get('is_independent'):
+                        badge = '<span style="background:#16a34a;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">IND</span>'
+                    else:
+                        badge = '<span style="background:#94a3b8;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">MGMT</span>'
+                    
+                    cash = f"${d['fees_earned_cash']:,.0f}" if pd.notna(d.get('fees_earned_cash')) else "—"
+                    stock = f"${d['stock_awards']:,.0f}" if pd.notna(d.get('stock_awards')) else "—"
+                    total = f"${d['total_comp']:,.0f}" if pd.notna(d.get('total_comp')) else "—"
+                    total_style = "font-weight:600;" if pd.notna(d.get('total_comp')) else "color:#94a3b8;"
+                    
+                    # Committees
+                    comms = d.get('committees_list', []) if 'committees_list' in d.index else []
+                    comm_str = ", ".join(comms) if comms else "—"
+                    
+                    roster_rows.append(f"""
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:8px 10px;font-weight:500;">{name} {badge}</td>
+                        <td style="padding:8px 6px;text-align:center;color:#64748b;">{age_str}</td>
+                        <td style="padding:8px 6px;text-align:center;color:#64748b;">{since_str}</td>
+                        <td style="padding:8px 10px;text-align:right;">{cash}</td>
+                        <td style="padding:8px 10px;text-align:right;">{stock}</td>
+                        <td style="padding:8px 10px;text-align:right;{total_style}">{total}</td>
+                        <td style="padding:8px 10px;font-size:0.8rem;color:#64748b;">{comm_str}</td>
+                    </tr>""")
+                
+                st.markdown(f"""
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                    <thead>
+                        <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
+                            <th style="padding:10px;text-align:left;color:#475569;font-weight:600;">Director</th>
+                            <th style="padding:10px;text-align:center;color:#475569;font-weight:600;">Age</th>
+                            <th style="padding:10px;text-align:center;color:#475569;font-weight:600;">Since</th>
+                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Cash</th>
+                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Stock</th>
+                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Total</th>
+                            <th style="padding:10px;text-align:left;color:#475569;font-weight:600;">Committees</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {"".join(roster_rows)}
+                    </tbody>
+                </table>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # ---- COMP MIX SUMMARY ----
+                if n_with_comp > 0:
+                    pct_cash = (avg_cash / avg_total * 100) if avg_total > 0 else 0
+                    pct_stock = (avg_stock / avg_total * 100) if avg_total > 0 else 0
+                    
+                    st.markdown(f"""
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1.2rem 1.5rem;margin:1.5rem 0;">
+                        <div style="font-size:0.9rem;font-weight:600;color:#166534;margin-bottom:0.5rem;">Compensation Mix</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;font-size:0.85rem;">
+                            <div>
+                                <div style="color:#64748b;">Avg Cash Retainer</div>
+                                <div style="font-weight:600;color:#1a365d;">${avg_cash:,.0f} ({pct_cash:.0f}%)</div>
+                            </div>
+                            <div>
+                                <div style="color:#64748b;">Avg Stock Awards</div>
+                                <div style="font-weight:600;color:#1a365d;">${avg_stock:,.0f} ({pct_stock:.0f}%)</div>
+                            </div>
+                            <div>
+                                <div style="color:#64748b;">Directors with Comp Data</div>
+                                <div style="font-weight:600;color:#1a365d;">{n_with_comp} of {n_dirs}</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Source note
+                st.markdown(f'<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem;">Source: {cn3} DEF 14A proxy filing | FY{FY_YEAR} director compensation</div>', unsafe_allow_html=True)
 
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
 # st.markdown("---")
