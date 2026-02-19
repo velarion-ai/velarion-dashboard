@@ -1849,24 +1849,58 @@ if sel3 and sel3 != PLACEHOLDER:
     stk3 = co_labels[sel3]; cd3 = df[df['ticker']==stk3]
     if not cd3.empty:
         cn3 = cd3['company_name'].iloc[0]; pt3 = cd3['property_type'].iloc[0]
-        st.markdown(f"### {cn3} ({stk3})")
-        c1,c2,c3 = st.columns(3)
-        c1.metric("HQ", f"{cd3['hq_city'].iloc[0]}, {cd3['hq_state'].iloc[0]}"); c2.metric("Property Type", pt3); c3.metric("Market Cap", fmt_mcap(cd3['market_cap'].iloc[0]))
+        _hq = f"{cd3['hq_city'].iloc[0]}, {cd3['hq_state'].iloc[0]}"
+        _mcap = fmt_mcap(cd3['market_cap'].iloc[0])
         cr3 = ret_data.get(stk3, {}); vnq3 = ret_data.get(REIT_INDEX_TICKER, {})
+        
+        # Build returns HTML if available
+        _ret_html = ""
         if cr3:
-            r1,r2,r3,r4,r5,r6 = st.columns(6)
-            r1.metric(f"{stk3} 1-Yr (FY{RETURNS_YEAR})", fmt_return(cr3.get('return_1y')))
-            r2.metric(f"{stk3} 3-Yr", fmt_return(cr3.get('return_3y')))
-            r3.metric(f"{stk3} YTD {RETURNS_YEAR+1}", fmt_return(cr3.get('return_ytd')))
-            r4.metric(f"FTSE Nareit 1-Yr", fmt_return(vnq3.get('return_1y')))
-            r5.metric(f"FTSE Nareit 3-Yr", fmt_return(vnq3.get('return_3y')))
-            r6.metric(f"FTSE Nareit YTD {RETURNS_YEAR+1}", fmt_return(vnq3.get('return_ytd')))
+            _r1y = fmt_return(cr3.get('return_1y')); _r3y = fmt_return(cr3.get('return_3y')); _rytd = fmt_return(cr3.get('return_ytd'))
+            _v1y = fmt_return(vnq3.get('return_1y')); _v3y = fmt_return(vnq3.get('return_3y')); _vytd = fmt_return(vnq3.get('return_ytd'))
+            _ret_html = f"""
+            <div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;">
+                <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+                    <tr style="color:#64748b;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;">
+                        <td style="padding:2px 0;width:16%;">1-Yr (FY{RETURNS_YEAR})</td>
+                        <td style="padding:2px 0;width:16%;">3-Year</td>
+                        <td style="padding:2px 0;width:18%;">YTD {RETURNS_YEAR+1}</td>
+                        <td style="padding:2px 0;width:16%;">FTSE Nareit 1-Yr</td>
+                        <td style="padding:2px 0;width:16%;">FTSE Nareit 3-Yr</td>
+                        <td style="padding:2px 0;width:18%;">FTSE Nareit YTD</td>
+                    </tr>
+                    <tr style="font-weight:700;color:#1e293b;">
+                        <td style="padding:2px 0;">{_r1y}</td>
+                        <td style="padding:2px 0;">{_r3y}</td>
+                        <td style="padding:2px 0;">{_rytd}</td>
+                        <td style="padding:2px 0;color:#64748b;">{_v1y}</td>
+                        <td style="padding:2px 0;color:#64748b;">{_v3y}</td>
+                        <td style="padding:2px 0;color:#64748b;">{_vytd}</td>
+                    </tr>
+                </table>
+            </div>"""
+        
+        # Company profile card
+        st.markdown(f"""
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:1.2rem 1.5rem;margin:0 0 0.5rem 0;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;">
+                <div style="font-size:1.3rem;font-weight:700;color:#1e293b;font-family:Georgia,serif;">{cn3} ({stk3})</div>
+                <div style="font-size:0.9rem;font-weight:600;color:#1e293b;">{_mcap}</div>
+            </div>
+            <div style="display:flex;gap:2rem;font-size:0.85rem;color:#475569;">
+                <div><span style="color:#94a3b8;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">HQ</span><br><span style="font-weight:600;color:#1e293b;">{_hq}</span></div>
+                <div><span style="color:#94a3b8;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">Property Type</span><br><span style="font-weight:600;color:#1e293b;">{pt3}</span></div>
+                <div><span style="color:#94a3b8;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">Market Cap</span><br><span style="font-weight:600;color:#1e293b;">{_mcap}</span></div>
+            </div>
+            {_ret_html}
+        </div>
+        """, unsafe_allow_html=True)
+        
         ea3 = is_ext_advised(cd3, df)
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
         components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
         
-        # ---- PEER BENCHMARKING (lead with this) ----
-        st.markdown("---")
+        # ---- PEER BENCHMARKING ----
         st.markdown("#### Compensation Benchmarking")
         
         tab_exec, tab_board = st.tabs(["\U0001F4BC Executive", "\U0001F3DB\uFE0F Board"])
