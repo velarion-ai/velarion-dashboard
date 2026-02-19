@@ -1863,7 +1863,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
                     <tr style="color:#64748b;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;">
                         <td style="padding:2px 0;width:16%;">1-Yr (FY{RETURNS_YEAR})</td>
-                        <td style="padding:2px 0;width:16%;">3-Year</td>
+                        <td style="padding:2px 0;width:16%;">3-Year (FY{RETURNS_YEAR})</td>
                         <td style="padding:2px 0;width:18%;">YTD {RETURNS_YEAR+1}</td>
                         <td style="padding:2px 0;width:16%;">FTSE Nareit 1-Yr</td>
                         <td style="padding:2px 0;width:16%;">FTSE Nareit 3-Yr</td>
@@ -1895,7 +1895,7 @@ if sel3 and sel3 != PLACEHOLDER:
             {_ret_html}
         </div>
         """
-        _profile_h = 155 if cr3 else 100
+        _profile_h = 175 if cr3 else 110
         components.html(_profile_html, height=_profile_h, scrolling=False)
         
         ea3 = is_ext_advised(cd3, df)
