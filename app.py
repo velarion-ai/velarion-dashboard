@@ -2457,11 +2457,11 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # Aggregate footer row
                 agg_row = f"""
-                <tr style="border-top:2px solid #cbd5e1;background:#f8fafc;">
-                    <td style="padding:8px 10px;font-weight:700;color:#475569;font-size:0.85rem;" colspan="5">Aggregate Board Compensation</td>
-                    <td style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;font-size:0.85rem;">${agg_cash:,.0f}</td>
-                    <td style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;font-size:0.85rem;">${agg_stock:,.0f}</td>
-                    <td style="padding:8px 10px;text-align:right;font-weight:800;color:#1e293b;font-size:0.85rem;">${agg_total:,.0f}</td>
+                <tr style="border-top:2px solid #1e293b;background:#1e293b;">
+                    <td style="padding:10px 10px;font-weight:700;color:white;font-size:0.85rem;" colspan="5">Aggregate Board Compensation</td>
+                    <td style="padding:10px 10px;text-align:right;font-weight:700;color:white;font-size:0.85rem;">${agg_cash:,.0f}</td>
+                    <td style="padding:10px 10px;text-align:right;font-weight:700;color:white;font-size:0.85rem;">${agg_stock:,.0f}</td>
+                    <td style="padding:10px 10px;text-align:right;font-weight:800;color:white;font-size:0.9rem;">${agg_total:,.0f}</td>
                 </tr>"""
                 
                 hdr_style = "padding:8px 10px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
@@ -2495,8 +2495,6 @@ if sel3 and sel3 != PLACEHOLDER:
                 table_height = max(250, 80 + (len(roster_rows) + 1) * 40)
                 components.html(roster_table_html, height=table_height, scrolling=True)
                 
-                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">', unsafe_allow_html=True)
-                
                 # ---- SECTION 3: COMMITTEE STRUCTURE (Ferguson Exhibit 6 style cards) ----
                 if all_comms:
                     # Show top 4 committees as cards
@@ -2524,8 +2522,6 @@ if sel3 and sel3 != PLACEHOLDER:
                     </div>
                     """
                     components.html(comm_html, height=max(100, 30 + 90), scrolling=False)
-                
-                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:0.5rem 0;">', unsafe_allow_html=True)
                 
                 # ---- SECTION 4: COMP PROGRAM SUMMARY (Ferguson Exhibit 3 style) ----
                 if n_with_comp > 0:
