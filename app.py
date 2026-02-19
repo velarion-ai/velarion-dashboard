@@ -2790,7 +2790,8 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                     # Peer bar with footnote
                     if peer_stats_html:
-                        _peers_with = sorted(_peer_fs['ticker'].tolist()) if not _peer_fs.empty else []
+                        _peers_with_data = _peer_fs[_peer_fs['total_retainer'].notna() & (_peer_fs['total_retainer'] > 0)]['ticker'].tolist() if not _peer_fs.empty else []
+                        _peers_with = sorted(_peers_with_data)
                         _peers_without = sorted(_board_peer_tks - set(_peers_with))
                         fn_parts = []
                         if _peers_with:
