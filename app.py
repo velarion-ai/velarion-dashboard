@@ -2716,6 +2716,211 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # Source note
                 st.markdown(f'<div style="font-size:0.7rem;color:#94a3b8;margin-top:1rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>', unsafe_allow_html=True)
+                
+                # ---- SECTION 5: ACTION BUTTONS (matches Executive tab pattern) ----
+                st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:1rem 0;'>", unsafe_allow_html=True)
+                btn_col1, btn_col2 = st.columns(2)
+                with btn_col1:
+                    board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
+                    board_proxy_btn = st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", use_container_width=True)
+                with btn_col2:
+                    board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
+                    board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
+                
+                # ---- View Proxy Filing handler ----
+                if board_proxy_btn:
+                    _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else ""
+                    _cik_str = str(_cik_val).zfill(10) if _cik_val else ""
+                    proxy_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={_cik_str}&type=DEF+14A&dateb=&owner=include&count=5"
+                    st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1rem;margin:0.5rem 0;font-size:0.85rem;color:#0c4a6e;">📄 <a href="{proxy_url}" target="_blank" style="color:#1e40af;font-weight:600;">View {cn3} DEF 14A Proxy Filings on SEC EDGAR →</a></div>', unsafe_allow_html=True)
+                
+                # ---- Board League Tables handler ----
+                if board_league_btn:
+                    # Build league table from director_comp across peer group
+                    _league_dirs = dir_df.copy()
+                    if peer_tickers:
+                        _league_dirs = _league_dirs[_league_dirs['ticker'].isin(list(peer_tickers) + [stk3])]
+                    else:
+                        _league_dirs = _league_dirs[_league_dirs['property_type'] == pt3] if 'property_type' in _league_dirs.columns else _league_dirs
+                    
+                    if not _league_dirs.empty:
+                        # Aggregate by company: avg total director comp
+                        _board_agg = _league_dirs[_league_dirs['is_independent'] == True].groupby(['ticker', 'company_name']).agg(
+                            n_directors=('director_name', 'count'),
+                            avg_comp=('total_comp', 'mean'),
+                            median_comp=('total_comp', 'median'),
+                            total_board_cost=('total_comp', 'sum'),
+                        ).reset_index().dropna(subset=['avg_comp'])
+                        _board_agg = _board_agg.sort_values('avg_comp', ascending=False)
+                        
+                        league_rows = []
+                        for rank, (_, row) in enumerate(_board_agg.iterrows(), 1):
+                            is_target = row['ticker'] == stk3
+                            bg = "background:#fffbeb;font-weight:700;" if is_target else ("background:#f8fafc;" if rank % 2 == 0 else "")
+                            marker = " ◄" if is_target else ""
+                            league_rows.append(f"""
+                            <tr style="border-bottom:1px solid #f1f5f9;{bg}">
+                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{rank}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;font-weight:{'700' if is_target else '500'};color:#1e293b;">{row['company_name']}{marker}</td>
+                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{row['ticker']}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:center;color:#334155;">{int(row['n_directors'])}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;color:#334155;">${row['avg_comp']:,.0f}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;font-weight:600;color:#1e293b;">${row['total_board_cost']:,.0f}</td>
+                            </tr>""")
+                        
+                        lhdr = "padding:8px 10px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
+                        league_html = f"""
+                        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                        <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🏆 Board Compensation League Tables</div>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                            <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                <th style="{lhdr}text-align:center;width:40px;">Rank</th>
+                                <th style="{lhdr}text-align:left;">Company</th>
+                                <th style="{lhdr}text-align:center;">Ticker</th>
+                                <th style="{lhdr}text-align:center;">Indep. Dirs</th>
+                                <th style="{lhdr}text-align:right;">Avg Comp</th>
+                                <th style="{lhdr}text-align:right;">Total Board Cost</th>
+                            </tr></thead>
+                            <tbody>{"".join(league_rows)}</tbody>
+                        </table>
+                        </div>
+                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">Independent directors only | ◄ = selected company</div>
+                        </div>"""
+                        league_height = max(300, 80 + len(league_rows) * 36)
+                        components.html(league_html, height=league_height, scrolling=True)
+                    else:
+                        st.info("No peer director compensation data available for league table.")
+                
+                # ---- Peer Board Comparison handler ----
+                if board_peer_btn:
+                    _peer_dirs = dir_df.copy()
+                    if peer_tickers:
+                        _peer_dirs = _peer_dirs[_peer_dirs['ticker'].isin(list(peer_tickers) + [stk3])]
+                    else:
+                        _peer_dirs = _peer_dirs[_peer_dirs['property_type'] == pt3] if 'property_type' in _peer_dirs.columns else _peer_dirs
+                    
+                    _indep_only = _peer_dirs[_peer_dirs['is_independent'] == True]
+                    if not _indep_only.empty:
+                        _peer_board_stats = _indep_only.groupby('ticker').agg(
+                            board_size=('director_name', 'count'),
+                            avg_age=('age', 'mean'),
+                            avg_tenure_since=('director_since', 'mean'),
+                            avg_comp=('total_comp', 'mean'),
+                            total_cost=('total_comp', 'sum'),
+                        ).reset_index()
+                        _peer_board_stats['avg_tenure'] = 2025 - _peer_board_stats['avg_tenure_since']
+                        
+                        # Target company stats
+                        _target = _peer_board_stats[_peer_board_stats['ticker'] == stk3]
+                        _peers = _peer_board_stats[_peer_board_stats['ticker'] != stk3]
+                        
+                        if not _target.empty and not _peers.empty:
+                            t = _target.iloc[0]
+                            
+                            def pctile_str(val, series):
+                                if pd.isna(val) or series.dropna().empty: return "—"
+                                rank = (series.dropna() < val).sum() / len(series.dropna()) * 100
+                                return f"P{int(rank)}"
+                            
+                            comp_items = [
+                                ("Board Size", f"{int(t['board_size'])}", pctile_str(t['board_size'], _peers['board_size'])),
+                                ("Avg Director Age", f"{int(t['avg_age'])}" if pd.notna(t['avg_age']) else "—", pctile_str(t['avg_age'], _peers['avg_age'])),
+                                ("Avg Tenure", f"{int(t['avg_tenure'])} yrs" if pd.notna(t['avg_tenure']) else "—", pctile_str(t['avg_tenure'], _peers['avg_tenure'])),
+                                ("Avg Director Comp", f"${t['avg_comp']:,.0f}" if pd.notna(t['avg_comp']) else "—", pctile_str(t['avg_comp'], _peers['avg_comp'])),
+                                ("Total Board Cost", f"${t['total_cost']:,.0f}" if pd.notna(t['total_cost']) else "—", pctile_str(t['total_cost'], _peers['total_cost'])),
+                            ]
+                            
+                            comp_rows = ""
+                            for label, val, pct in comp_items:
+                                comp_rows += f"""
+                                <tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:8px 12px;font-size:0.85rem;color:#475569;">{label}</td>
+                                    <td style="padding:8px 12px;font-size:0.85rem;font-weight:700;color:#1e293b;text-align:right;">{val}</td>
+                                    <td style="padding:8px 12px;font-size:0.8rem;font-weight:600;color:#64748b;text-align:center;">{pct}</td>
+                                </tr>"""
+                            
+                            peer_html = f"""
+                            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                            <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">📊 {cn3} vs. Peer Boards</div>
+                            <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:0.5rem;">{len(_peers)} peer companies | Independent directors only</div>
+                            <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                                <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                    <th style="padding:8px 12px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Metric</th>
+                                    <th style="padding:8px 12px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:right;">{stk3}</th>
+                                    <th style="padding:8px 12px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:center;">Percentile</th>
+                                </tr></thead>
+                                <tbody>{comp_rows}</tbody>
+                            </table>
+                            </div>"""
+                            components.html(peer_html, height=300, scrolling=False)
+                        else:
+                            st.info("Insufficient peer data for board comparison.")
+                    else:
+                        st.info("No independent director data available for peer comparison.")
+                
+                # ---- SECTION 6: AI BOARD ANALYSIS ----
+                if board_ai_btn:
+                    with st.spinner("Generating board compensation analysis..."):
+                        # Build context for AI
+                        _ai_dirs_info = []
+                        for _, d in co_dirs.iterrows():
+                            _ai_dirs_info.append({
+                                'name': d['director_name'],
+                                'age': int(d['age']) if pd.notna(d.get('age')) else None,
+                                'since': int(d['director_since']) if pd.notna(d.get('director_since')) else None,
+                                'independent': bool(d.get('is_independent', False)),
+                                'is_chair': bool(d.get('is_board_chair', False)),
+                                'is_lead': bool(d.get('is_lead_independent', False)),
+                                'cash': d.get('fees_earned_cash'),
+                                'equity': d.get('stock_awards'),
+                                'total': d.get('total_comp'),
+                            })
+                        
+                        _ai_context = f"""Company: {cn3} ({stk3}) | Property Type: {pt3}
+Board Size: {n_dirs} directors | Independent: {n_independent} ({indep_pct}%)
+Avg Age: {avg_age} | Avg Tenure: {avg_tenure} yrs
+Median Director Comp: {"${:,.0f}".format(median_total) if pd.notna(median_total) else "N/A"}
+Aggregate Board Cost: ${agg_total:,.0f}
+Chair: {chair_name or "N/A"} | Lead Independent: {lead_ind_name or "N/A"}
+Committees: {len(all_comms)}
+
+Directors:
+"""
+                        for di in _ai_dirs_info:
+                            _ai_context += f"  {di['name']}: age={di['age']}, since={di['since']}, {'Independent' if di['independent'] else 'Management'}"
+                            if di['is_chair']: _ai_context += " [CHAIR]"
+                            if di['is_lead']: _ai_context += " [LEAD IND]"
+                            _ai_context += f", total=${di['total']:,.0f}\n" if di['total'] else ", no comp\n"
+                        
+                        try:
+                            import anthropic
+                            client = anthropic.Anthropic()
+                            _board_prompt = f"""You are an expert executive compensation consultant analyzing board of directors compensation for a public company. 
+Provide a comprehensive board compensation analysis in 3-4 paragraphs covering:
+1. Board composition and governance structure (size, independence ratio, average age/tenure, leadership)
+2. Director compensation program (pay levels, cash/equity mix, how it compares to typical programs for this property type/industry)
+3. Key observations and areas of note (unusual patterns, governance strengths/concerns, tenure concentration, age diversity)
+
+Be specific with numbers. Write in a professional consulting report style. Do not use bullet points or headers.
+
+{_ai_context}"""
+                            
+                            response = client.messages.create(
+                                model="claude-sonnet-4-20250514",
+                                max_tokens=1000,
+                                messages=[{"role": "user", "content": _board_prompt}]
+                            )
+                            analysis_text = response.content[0].text
+                            
+                            st.markdown(f"""
+                            <div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">
+                                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">📋 Board Compensation Analysis — {cn3}</div>
+                                <div style="font-size:0.88rem;color:#334155;line-height:1.7;">{analysis_text}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        except Exception as e:
+                            st.error(f"AI analysis error: {str(e)[:200]}")
 
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
 # st.markdown("---")
