@@ -1146,14 +1146,25 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
         enrichment += f"\n  VNQ (Real Estate Index) YTD {RETURNS_YEAR+1}: {current_stock['vnq_ytd']:+.1f}%" if current_stock.get('vnq_ytd') is not None else ""
     
+    # Per-peer returns for richer analysis
+    peer_ret_lines = []
+    for pt_tk in tickers:
+        pr = ret_data.get(pt_tk, {})
+        if pr.get('return_1y') is not None:
+            peer_ret_lines.append(f"  {pt_tk}: 1-Yr {fmt_return(pr.get('return_1y'))} | 3-Yr {fmt_return(pr.get('return_3y'))}")
+    peer_ret_str = chr(10).join(peer_ret_lines) if peer_ret_lines else "  No peer return data available"
+    
     prompt = f"""Real estate compensation analysis (~600-800 words). You are advising this management team — preparing them for what their board and comp committee will ask.
 {cn} ({tk}) | {pt} | {co_d['reit_type'].iloc[0]} | HQ: {hq} | Mkt Cap ${mc/1e9:.2f}B
 EXECUTIVES:\n{chr(10).join(esecs)}
 {rl}
 Budget: ${tb:,.0f} ({ordinal(bp)} pctl vs {len(pcos)} peers)
-FY{RETURNS_YEAR} Returns: {tk} 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
-Peer Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
-FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(vnq.get('return_ytd'))}
+SHAREHOLDER RETURNS:
+  {tk}: 1-Yr {fmt_return(r.get('return_1y'))} ({ordinal(ret_pct)} pctl, {quartile_label(ret_pct)}) | 3-Yr {fmt_return(r.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(r.get('return_ytd'))}
+  FTSE Nareit Index: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get('return_3y'))} | YTD {RETURNS_YEAR+1} {fmt_return(vnq.get('return_ytd'))}
+  Peer Avg: 1-Yr {fmt_return(np.mean(p1) if p1 else None)} | 3-Yr {fmt_return(np.mean(p3) if p3 else None)}
+INDIVIDUAL PEER RETURNS:
+{peer_ret_str}
 Peers: {peer_desc} | Tickers: {', '.join(tickers)}{excl_note}{enrichment}
 
 NOTE: Compensation data is from the FY{FY_YEAR} DEF 14A proxy filing (filed in {FY_YEAR+1}). Returns are 1-yr and 3-yr through Dec 31, {RETURNS_YEAR}, plus YTD {RETURNS_YEAR+1}. Frame the analysis as: how has the compensation structure approved by the board in the {FY_YEAR} proxy performed against {RETURNS_YEAR} and current shareholder returns?
@@ -1171,7 +1182,8 @@ Overall comp mix philosophy and how the company's approach to salary/cash/equity
 
 [SECTION:RETURNS]
 <h4>FY{RETURNS_YEAR} Performance & Pay Alignment</h4>
-PAY-FOR-PERFORMANCE: Compare comp quartile vs returns quartile using the {RETURNS_YEAR} returns AND YTD {RETURNS_YEAR+1} stock performance provided above. If CD&A data is available, reference the company's stated performance metrics (AFFO targets, same-store NOI, etc.) and whether recent earnings suggest they are tracking. Advocate for management where data supports it. (3-4 sent)
+PAY-FOR-PERFORMANCE ANALYSIS (THIS IS THE MOST IMPORTANT SECTION):
+You MUST explicitly state and compare these three return figures: (1) {tk}'s 1-yr return, (2) FTSE Nareit 1-yr return, and (3) peer average 1-yr return. State whether {tk} outperformed or underperformed vs EACH benchmark and by how much. Then compare: if comp is below median but returns are above average, that's a clear case for upward adjustment — say so directly with the numbers. If comp is above median but returns lag, flag the misalignment. Include 3-yr returns for trend context. Reference CD&A performance metrics if available. (4-5 sent, with specific return numbers)
 
 [SECTION:WATCH]
 <h4>Board Considerations</h4>
