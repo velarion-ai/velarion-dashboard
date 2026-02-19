@@ -2412,7 +2412,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     the executive module.
                 </div>
                 <div style="display:inline-block;background:#1a365d;color:white;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:0.4rem 1.2rem;border-radius:20px;">
-                    Coming Q2 2025
+                    Coming Soon
                 </div>
             </div>
             """, unsafe_allow_html=True)
