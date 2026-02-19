@@ -1823,7 +1823,11 @@ if sel3 and sel3 != PLACEHOLDER:
             # Show peer source context
             no_proxy = not proxy_tickers or len(proxy_tickers) == 0
             if st.session_state.get('peer_mode') == 'proxy':
-                peer_line = f"Compared to <strong>{n_co} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
+                n_proxy_total = len(proxy_tickers) if proxy_tickers else 0
+                if n_co < n_proxy_total:
+                    peer_line = f"Compared to <strong>{n_co} of {n_proxy_total} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
+                else:
+                    peer_line = f"Compared to <strong>{n_co} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
             else:
                 # Check if this is a no-proxy-peer company defaulting to property type
                 if no_proxy:
