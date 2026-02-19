@@ -1944,7 +1944,7 @@ if sel3 and sel3 != PLACEHOLDER:
         # ---- PEER BENCHMARKING ----
         st.markdown("#### Compensation Benchmarking")
         
-        tab_exec, tab_board = st.tabs(["\U0001F4BC Executive", "\U0001F3DB\uFE0F Board"])
+        tab_exec, tab_board = st.tabs(["\U0001F4BC Executive", "\U0001F3DB\uFE0F Board  ·  Under Development"])
         
         with tab_exec:
             peers_only = filt_no_pos[filt_no_pos['ticker'] != stk3]
@@ -2402,10 +2402,24 @@ if sel3 and sel3 != PLACEHOLDER:
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
 
         with tab_board:
-            # Load director comp data
-            dir_df = load_director_comp()
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#f8f6f3 0%,#eef2f7 100%);border:1px solid #e2e8f0;border-radius:12px;padding:3rem 2.5rem;margin:1.5rem 0;text-align:center;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">\U0001F3DB\uFE0F</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#1a365d;margin-bottom:0.5rem;">Board of Directors Intelligence</div>
+                <div style="font-size:0.92rem;color:#475569;line-height:1.7;max-width:520px;margin:0 auto 1.5rem auto;">
+                    Director compensation benchmarking, board composition analysis, committee assignments, 
+                    tenure mapping, and independence metrics — powered by the same SEC proxy data driving 
+                    the executive module.
+                </div>
+                <div style="display:inline-block;background:#1a365d;color:white;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:0.4rem 1.2rem;border-radius:20px;">
+                    Coming Q2 2025
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            if dir_df.empty or stk3 not in dir_df['ticker'].values:
+            if False:  # === BOARD TAB CONTENT DISABLED — re-enable when director data is complete ===
+              dir_df = load_director_comp()
+              if dir_df.empty or stk3 not in dir_df['ticker'].values:
                 st.markdown(f"""
                 <div style="background:#f8f6f3;border:1px solid #e2e8f0;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
                     <div style="font-size:1.5rem;margin-bottom:0.5rem;">\U0001F3DB\uFE0F</div>
