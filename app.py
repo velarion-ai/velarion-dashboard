@@ -1790,11 +1790,35 @@ else:
 st.markdown("")
 
 # COMPANY VIEW
-st.markdown("#### Company Compensation Overview")
+st.markdown("#### Company Compensation Intelligence")
 cv_opts = [PLACEHOLDER] + co_opts
 cv_selected_val = st.session_state.get('cv_co', PLACEHOLDER)
 if not cv_selected_val or cv_selected_val == PLACEHOLDER:
-    st.markdown('<div class="tab-instruction">\U0001F4A1 Select a company to view executive compensation and generate AI-powered analysis.</div>', unsafe_allow_html=True)
+    # Engaging pre-select state highlighting Board + Management coverage
+    dir_df_preview = load_director_comp()
+    _n_dir_cos = dir_df_preview['ticker'].nunique() if not dir_df_preview.empty else 0
+    _n_dirs = len(dir_df_preview) if not dir_df_preview.empty else 0
+    _n_execs = len(df) if not df.empty else 0
+    _n_exec_cos = df['ticker'].nunique() if not df.empty else 0
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:2rem 2.5rem;margin:0.5rem 0 1.5rem 0;color:white;">
+        <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company to access full compensation intelligence</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.5rem;">\U0001F4BC Executive Compensation</div>
+                <div style="font-size:1.5rem;font-weight:700;">{_n_execs:,} Executives</div>
+                <div style="font-size:0.8rem;opacity:0.7;">{_n_exec_cos} companies</div>
+                <div style="font-size:0.75rem;opacity:0.5;margin-top:0.5rem;">Base salary, cash bonus, equity awards, total comp<br>Peer benchmarking &bull; AI-powered analysis &bull; League tables</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.5rem;">\U0001F3DB\uFE0F Board of Directors</div>
+                <div style="font-size:1.5rem;font-weight:700;">{_n_dirs:,} Directors</div>
+                <div style="font-size:0.8rem;opacity:0.7;">{_n_dir_cos} companies</div>
+                <div style="font-size:0.75rem;opacity:0.5;margin-top:0.5rem;">Cash &amp; equity retainers, committee structure<br>Independence &bull; Tenure &bull; Aggregate board cost</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 _dd_col, _ = st.columns([1, 1])
 with _dd_col:
     sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
