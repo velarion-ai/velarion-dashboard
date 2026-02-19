@@ -2761,9 +2761,9 @@ if sel3 and sel3 != PLACEHOLDER:
                                 peer_stats_html += f"""
                                 <div style="margin-bottom:4px;">
                                     <div style="font-size:0.75rem;font-weight:600;color:#475569;margin-bottom:3px;">{label}</div>
-                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;">
-                                        <span style="color:#94a3b8;">25th</span><span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
-                                        <span style="color:#94a3b8;">Med</span><span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
+                                    <div style="display:flex;font-size:0.8rem;gap:0.3rem;">
+                                        <span style="color:#94a3b8;">25th</span><span style="font-weight:600;color:#64748b;margin-right:0.6rem;">${vals.quantile(0.25):,.0f}</span>
+                                        <span style="color:#94a3b8;">Med</span><span style="font-weight:700;color:#1e293b;margin-right:0.6rem;">${vals.median():,.0f}</span>
                                         <span style="color:#94a3b8;">75th</span><span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
                                     </div>
                                 </div>"""
@@ -2845,19 +2845,19 @@ if sel3 and sel3 != PLACEHOLDER:
                     """
                 
                 # Single combined render for sections 3+4
-                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:1rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>'
+                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.5rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>'
                 combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
-                _h34 = 40
-                if comm_section_html: _h34 += 95
-                if fee_section_html: _h34 += 210
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 80
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 60
-                if peer_bar_html: _h34 += 140
-                _h34 += 30  # source note
+                _h34 = 20
+                if comm_section_html: _h34 += 90
+                if fee_section_html: _h34 += 200
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 75
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 55
+                if peer_bar_html: _h34 += 130
+                _h34 += 25  # source note
                 components.html(combined_34, height=_h34, scrolling=False)
                 
                 # ---- SECTION 5: ACTION BUTTONS (matches Executive tab pattern) ----
-                st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:1rem 0;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:0.3rem 0;'>", unsafe_allow_html=True)
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
                     board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
