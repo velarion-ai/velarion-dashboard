@@ -1548,7 +1548,7 @@ with _btn_col:
 
 # HEADER
 st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>Real Estate Executive Compensation Benchmarking \u2014 FY2024 Proxy Data</p></div>', unsafe_allow_html=True)
-st.markdown(f'<div class="intro-text">Explore executive compensation across {len(reit_tickers)} publicly traded real estate companies. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="intro-text">Explore executive and board compensation across {len(reit_tickers)} publicly traded real estate companies. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
 
 # Track peer group mode: 'proxy' (default) or 'custom'
 if 'peer_mode' not in st.session_state:
@@ -1808,7 +1808,7 @@ if not cv_selected_val or cv_selected_val == PLACEHOLDER:
     _n_execs = len(df) if not df.empty else 0
     _n_exec_cos = df['ticker'].nunique() if not df.empty else 0
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:2rem 2.5rem;margin:0.5rem 0 1.5rem 0;color:white;">
+    <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:2rem 2.5rem;margin:0.5rem 0 1.5rem 0;color:white;border:2px solid #b8860b;box-shadow:0 4px 12px rgba(184,134,11,0.15);">
         <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company to access full compensation intelligence</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
             <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:1.2rem;">
