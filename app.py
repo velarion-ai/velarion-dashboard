@@ -2859,10 +2859,10 @@ if sel3 and sel3 != PLACEHOLDER:
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
                     board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
-                    board_proxy_btn = st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", use_container_width=True)
+                    board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
                 with btn_col2:
                     board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
-                    board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
+                    board_proxy_btn = st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", use_container_width=True)
                 
                 # ---- View Proxy Filing handler ----
                 if board_proxy_btn:
