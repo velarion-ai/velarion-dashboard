@@ -2414,6 +2414,16 @@ if sel3 and sel3 != PLACEHOLDER:
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
 
         with tab_board:
+            # Reduce spacing between components.html iframes in the board tab
+            st.markdown("""<style>
+                [data-testid="stHorizontalBlock"] + iframe,
+                iframe + [data-testid="stMarkdownContainer"],
+                [data-testid="stMarkdownContainer"] + iframe {
+                    margin-top: -1rem !important;
+                }
+                .stHtml { margin-bottom: -1rem !important; }
+            </style>""", unsafe_allow_html=True)
+            
             # Load director comp data
             dir_df = load_director_comp()
             
@@ -2770,11 +2780,11 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                     # Build right panel: Peer comparison stats
                     peer_stats_html = ""
-                    if not _peer_fs.empty and len(_peer_fs) >= 3:
+                    if not _peer_fs.empty and len(_peer_fs) >= 2:
                         for label, key in [('Total Retainer', 'total_retainer'), ('Cash Retainer', 'cash_retainer'), ('Equity Retainer', 'equity_retainer'), ('Lead Director Premium', 'lead_director_premium')]:
                             vals = _peer_fs[key].dropna()
                             vals = vals[vals > 0]
-                            if len(vals) >= 3:
+                            if len(vals) >= 2:
                                 p25 = vals.quantile(0.25)
                                 p50 = vals.median()
                                 p75 = vals.quantile(0.75)
