@@ -2317,12 +2317,20 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # Board Snapshot metrics
                 n_dirs = len(co_dirs)
-                n_independent = co_dirs['is_independent'].sum() if 'is_independent' in co_dirs.columns else 0
-                n_with_comp = co_dirs['total_comp'].notna().sum()
+                n_independent = int(co_dirs['is_independent'].sum()) if 'is_independent' in co_dirs.columns else 0
+                indep_pct = round(n_independent / n_dirs * 100) if n_dirs > 0 else 0
+                n_with_comp = int(co_dirs['total_comp'].notna().sum())
                 avg_total = co_dirs['total_comp'].dropna().mean()
                 median_total = co_dirs['total_comp'].dropna().median()
                 avg_cash = co_dirs['fees_earned_cash'].dropna().mean()
                 avg_stock = co_dirs['stock_awards'].dropna().mean()
+                total_board_comp = co_dirs['total_comp'].dropna().sum()
+                
+                # Avg age and tenure
+                ages = co_dirs['age'].dropna()
+                avg_age = int(ages.mean()) if len(ages) > 0 else "—"
+                tenures = co_dirs['director_since'].dropna()
+                avg_tenure = int(2025 - tenures.mean()) if len(tenures) > 0 else "—"
                 
                 # Find chair and lead independent
                 chair_name = ""
@@ -2331,124 +2339,230 @@ if sel3 and sel3 != PLACEHOLDER:
                     if d.get('is_board_chair'): chair_name = d['director_name']
                     if d.get('is_lead_independent'): lead_ind_name = d['director_name']
                 
-                # ---- BOARD SNAPSHOT ----
+                # Collect unique committees
+                all_comms = {}
+                for _, d in co_dirs.iterrows():
+                    comms = d.get('committees_list', []) if 'committees_list' in d.index else []
+                    for c in comms:
+                        if c not in all_comms:
+                            all_comms[c] = {'members': 0, 'chair': None}
+                        all_comms[c]['members'] += 1
+                
+                # ---- SECTION 1: BOARD SNAPSHOT (6 metrics) ----
                 st.markdown(f"""
-                <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:1.5rem 2rem;margin:0.5rem 0 1rem 0;color:white;">
-                    <div style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">\U0001F3DB\uFE0F Board Snapshot — {cn3}</div>
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
-                        <div style="text-align:center;">
-                            <div style="font-size:1.8rem;font-weight:700;">{n_dirs}</div>
-                            <div style="font-size:0.75rem;opacity:0.8;">Directors</div>
+                <div style="margin:0.5rem 0 0.5rem 0;">
+                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.8rem;">
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Board Size</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_dirs}</div>
                         </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.8rem;font-weight:700;">{int(n_independent)}</div>
-                            <div style="font-size:0.75rem;opacity:0.8;">Independent</div>
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Independent</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_independent} of {n_dirs}</div>
+                            <div style="font-size:0.7rem;color:#94a3b8;">{indep_pct}%</div>
                         </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.8rem;font-weight:700;">${median_total:,.0f}</div>
-                            <div style="font-size:0.75rem;opacity:0.8;">Median Total Comp</div>
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Age</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_age}</div>
                         </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.8rem;font-weight:700;">${avg_total:,.0f}</div>
-                            <div style="font-size:0.75rem;opacity:0.8;">Avg Total Comp</div>
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Tenure</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_tenure} yrs</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Median Total Comp</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">${median_total:,.0f}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Committees</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{len(all_comms)}</div>
                         </div>
                     </div>
-                    {"<div style='font-size:0.8rem;margin-top:0.8rem;opacity:0.7;'>Board Chair: " + chair_name + "</div>" if chair_name else ""}
-                    {"<div style='font-size:0.8rem;opacity:0.7;'>Lead Independent: " + lead_ind_name + "</div>" if lead_ind_name else ""}
                 </div>
+                <hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">
                 """, unsafe_allow_html=True)
                 
-                # ---- DIRECTOR ROSTER ----
-                st.markdown("<div style='font-size:1rem;font-weight:600;color:#1a365d;margin:1.5rem 0 0.5rem 0;'>Director Roster & Compensation</div>", unsafe_allow_html=True)
+                # ---- SECTION 2: DIRECTOR ROSTER (prototype style) ----
+                st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Board of Directors</div>", unsafe_allow_html=True)
                 
-                # Build roster table
+                # Build roster rows with committee chips and alternating shading
                 roster_rows = []
-                for _, d in co_dirs.sort_values('total_comp', ascending=False, na_position='last').iterrows():
+                agg_cash = 0
+                agg_stock = 0
+                agg_total = 0
+                
+                sorted_dirs = co_dirs.sort_values('total_comp', ascending=False, na_position='last')
+                for row_idx, (_, d) in enumerate(sorted_dirs.iterrows()):
                     name = d['director_name']
                     age_str = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
                     since_str = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
+                    is_mgmt = not d.get('is_independent', False)
                     
-                    # Independence badge
-                    if d.get('is_board_chair'):
-                        badge = '<span style="background:#7c3aed;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">CHAIR</span>'
-                    elif d.get('is_lead_independent'):
-                        badge = '<span style="background:#0369a1;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">LEAD IND</span>'
-                    elif d.get('is_independent'):
-                        badge = '<span style="background:#16a34a;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">IND</span>'
+                    # Badge HTML
+                    badges = []
+                    if is_mgmt:
+                        badges.append('<span style="background:#fef3c7;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">MGMT</span>')
                     else:
-                        badge = '<span style="background:#94a3b8;color:white;font-size:0.65rem;padding:2px 6px;border-radius:3px;">MGMT</span>'
+                        badges.append('<span style="background:#ecfdf5;color:#065f46;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">INDEP</span>')
+                    if d.get('is_lead_independent'):
+                        badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">LEAD</span>')
+                    if d.get('is_board_chair'):
+                        badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">CHAIR</span>')
+                    badge_html = " ".join(badges)
                     
                     cash = f"${d['fees_earned_cash']:,.0f}" if pd.notna(d.get('fees_earned_cash')) else "—"
                     stock = f"${d['stock_awards']:,.0f}" if pd.notna(d.get('stock_awards')) else "—"
                     total = f"${d['total_comp']:,.0f}" if pd.notna(d.get('total_comp')) else "—"
-                    total_style = "font-weight:600;" if pd.notna(d.get('total_comp')) else "color:#94a3b8;"
+                    total_weight = "font-weight:700;" if pd.notna(d.get('total_comp')) else "color:#cbd5e1;"
                     
-                    # Committees
+                    if pd.notna(d.get('fees_earned_cash')): agg_cash += d['fees_earned_cash']
+                    if pd.notna(d.get('stock_awards')): agg_stock += d['stock_awards']
+                    if pd.notna(d.get('total_comp')): agg_total += d['total_comp']
+                    
+                    # Committee chips with ★ for chairs
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
-                    comm_str = ", ".join(comms) if comms else "—"
+                    comm_chips = []
+                    for c in comms:
+                        abbrev = c.replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
+                        # TODO: chair detection per committee (need committee_chairs in DB)
+                        comm_chips.append(f'<span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:0.65rem;padding:1px 5px;border-radius:3px;margin:1px 2px;">{abbrev}</span>')
+                    comm_html = "".join(comm_chips) if comm_chips else '<span style="color:#cbd5e1;">—</span>'
+                    
+                    # Row background: amber tint for management, alternating for others
+                    if is_mgmt:
+                        bg = "background:rgba(254,243,199,0.3);"
+                    elif row_idx % 2 == 0:
+                        bg = "background:white;"
+                    else:
+                        bg = "background:rgba(248,250,252,0.5);"
                     
                     roster_rows.append(f"""
-                    <tr style="border-bottom:1px solid #e2e8f0;">
-                        <td style="padding:8px 10px;font-weight:500;">{name} {badge}</td>
-                        <td style="padding:8px 6px;text-align:center;color:#64748b;">{age_str}</td>
-                        <td style="padding:8px 6px;text-align:center;color:#64748b;">{since_str}</td>
-                        <td style="padding:8px 10px;text-align:right;">{cash}</td>
-                        <td style="padding:8px 10px;text-align:right;">{stock}</td>
-                        <td style="padding:8px 10px;text-align:right;{total_style}">{total}</td>
-                        <td style="padding:8px 10px;font-size:0.8rem;color:#64748b;">{comm_str}</td>
+                    <tr style="border-bottom:1px solid #f1f5f9;{bg}">
+                        <td style="padding:7px 10px;"><div style="font-weight:600;color:#1e293b;font-size:0.85rem;">{name}</div></td>
+                        <td style="padding:7px 6px;">{badge_html}</td>
+                        <td style="padding:7px 6px;text-align:center;color:#64748b;font-size:0.85rem;">{age_str}</td>
+                        <td style="padding:7px 6px;text-align:center;color:#64748b;font-size:0.85rem;">{since_str}</td>
+                        <td style="padding:7px 8px;">{comm_html}</td>
+                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;color:#334155;">{cash}</td>
+                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;color:#334155;">{stock}</td>
+                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;{total_weight}color:#1e293b;">{total}</td>
                     </tr>""")
                 
+                # Aggregate footer row
+                agg_row = f"""
+                <tr style="border-top:2px solid #cbd5e1;background:#f8fafc;">
+                    <td style="padding:8px 10px;font-weight:700;color:#475569;font-size:0.85rem;" colspan="5">Aggregate Board Compensation</td>
+                    <td style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;font-size:0.85rem;">${agg_cash:,.0f}</td>
+                    <td style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;font-size:0.85rem;">${agg_stock:,.0f}</td>
+                    <td style="padding:8px 10px;text-align:right;font-weight:800;color:#1e293b;font-size:0.85rem;">${agg_total:,.0f}</td>
+                </tr>"""
+                
+                hdr_style = "padding:8px 10px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
                 roster_table_html = f"""
                 <div style="overflow-x:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
                     <thead>
-                        <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
-                            <th style="padding:10px;text-align:left;color:#475569;font-weight:600;">Director</th>
-                            <th style="padding:10px;text-align:center;color:#475569;font-weight:600;">Age</th>
-                            <th style="padding:10px;text-align:center;color:#475569;font-weight:600;">Since</th>
-                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Cash</th>
-                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Stock</th>
-                            <th style="padding:10px;text-align:right;color:#475569;font-weight:600;">Total</th>
-                            <th style="padding:10px;text-align:left;color:#475569;font-weight:600;">Committees</th>
+                        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                            <th style="{hdr_style}text-align:left;">Director</th>
+                            <th style="{hdr_style}text-align:left;">Role</th>
+                            <th style="{hdr_style}text-align:center;">Age</th>
+                            <th style="{hdr_style}text-align:center;">Since</th>
+                            <th style="{hdr_style}text-align:left;">Committees</th>
+                            <th style="{hdr_style}text-align:right;">Cash</th>
+                            <th style="{hdr_style}text-align:right;">Equity</th>
+                            <th style="{hdr_style}text-align:right;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {"".join(roster_rows)}
                     </tbody>
+                    <tfoot>
+                        {agg_row}
+                    </tfoot>
                 </table>
                 </div>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">
+                    Source: FY{FY_YEAR} DEF 14A proxy filing
+                </div>
                 """
-                # Use components.html since st.markdown strips <table> tags
-                table_height = max(200, 50 + len(roster_rows) * 42)
+                table_height = max(250, 80 + (len(roster_rows) + 1) * 40)
                 components.html(roster_table_html, height=table_height, scrolling=True)
                 
-                # ---- COMP MIX SUMMARY ----
+                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">', unsafe_allow_html=True)
+                
+                # ---- SECTION 3: COMMITTEE STRUCTURE (Ferguson Exhibit 6 style cards) ----
+                if all_comms:
+                    st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Committee Structure</div>", unsafe_allow_html=True)
+                    
+                    # Show top 3 committees as cards
+                    top_comms = sorted(all_comms.items(), key=lambda x: x[1]['members'], reverse=True)[:4]
+                    n_comm_cols = min(len(top_comms), 4)
+                    comm_cards = []
+                    for comm_name, comm_data in top_comms:
+                        abbrev = comm_name.replace("Nominating/Governance", "Nom/Gov")
+                        comm_cards.append(f"""
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                            <div style="font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:0.5rem;">{abbrev} Committee</div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                <span style="font-size:0.75rem;color:#64748b;">Members</span>
+                                <span style="font-size:0.85rem;font-weight:600;color:#334155;">{comm_data['members']}</span>
+                            </div>
+                        </div>""")
+                    
+                    grid_cols = f"repeat({n_comm_cols},1fr)"
+                    st.markdown(f"""
+                    <div style="display:grid;grid-template-columns:{grid_cols};gap:0.75rem;margin-bottom:1rem;">
+                        {"".join(comm_cards)}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">', unsafe_allow_html=True)
+                
+                # ---- SECTION 4: COMP PROGRAM SUMMARY (Ferguson Exhibit 3 style) ----
                 if n_with_comp > 0:
-                    pct_cash = (avg_cash / avg_total * 100) if avg_total > 0 else 0
-                    pct_stock = (avg_stock / avg_total * 100) if avg_total > 0 else 0
+                    pct_cash = (avg_cash / avg_total * 100) if avg_total and avg_total > 0 else 0
+                    pct_stock = (avg_stock / avg_total * 100) if avg_total and avg_total > 0 else 0
+                    
+                    st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Director Compensation Program</div>", unsafe_allow_html=True)
                     
                     st.markdown(f"""
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1.2rem 1.5rem;margin:1.5rem 0;">
-                        <div style="font-size:0.9rem;font-weight:600;color:#166534;margin-bottom:0.5rem;">Compensation Mix</div>
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;font-size:0.85rem;">
-                            <div>
-                                <div style="color:#64748b;">Avg Cash Retainer</div>
-                                <div style="font-weight:600;color:#1a365d;">${avg_cash:,.0f} ({pct_cash:.0f}%)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers (Avg)</div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-size:0.85rem;color:#475569;">Cash Retainer</span>
+                                <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_cash:,.0f}</span>
                             </div>
-                            <div>
-                                <div style="color:#64748b;">Avg Stock Awards</div>
-                                <div style="font-weight:600;color:#1a365d;">${avg_stock:,.0f} ({pct_stock:.0f}%)</div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-size:0.85rem;color:#475569;">Equity Retainer</span>
+                                <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_stock:,.0f}</span>
                             </div>
-                            <div>
-                                <div style="color:#64748b;">Directors with Comp Data</div>
-                                <div style="font-weight:600;color:#1a365d;">{n_with_comp} of {n_dirs}</div>
+                            <div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;">
+                                <span style="font-size:0.85rem;font-weight:600;color:#1e293b;">Total Retainer</span>
+                                <span style="font-size:0.85rem;font-weight:800;color:#1e293b;">${avg_total:,.0f}</span>
                             </div>
+                            <div style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">
+                                Cash: {pct_cash:.0f}% &nbsp;|&nbsp; Equity: {pct_stock:.0f}%
+                            </div>
+                        </div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-size:0.85rem;color:#475569;">Directors with Comp</span>
+                                <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">{n_with_comp} of {n_dirs}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span>
+                                <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span>
+                            </div>
+                            {"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'><span style=font-size:0.85rem;color:#475569;>Board Chair</span><span style=font-size:0.85rem;font-weight:600;color:#1e293b;>" + chair_name.split()[-1] + "</span></div>" if chair_name else ""}
+                            {"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'><span style=font-size:0.85rem;color:#475569;>Lead Independent</span><span style=font-size:0.85rem;font-weight:600;color:#1e293b;>" + lead_ind_name.split()[-1] + "</span></div>" if lead_ind_name else ""}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
                 
                 # Source note
-                st.markdown(f'<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem;">Source: {cn3} DEF 14A proxy filing | FY{FY_YEAR} director compensation</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="font-size:0.7rem;color:#94a3b8;margin-top:1rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>', unsafe_allow_html=True)
 
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
 # st.markdown("---")
