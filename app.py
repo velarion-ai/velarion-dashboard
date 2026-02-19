@@ -628,10 +628,18 @@ def build_mcap_wide_peers(all_df, tk, co_d, position, min_peers=5):
     return ps, len(base['ticker'].unique()), None
 
 def percentile_rank(value, series):
+    """Compute percentile rank of value within peer series.
+    Uses (values_below + 0.5 * values_equal) / n formula for proper mid-rank positioning.
+    """
     if pd.isna(value) or len(series.dropna()) == 0: return None
-    if len(series.dropna()) <= 1: return None
-    rank = int((series.dropna() < value).sum() / len(series.dropna()) * 100)
-    if rank == 0 and len(series.dropna()) > 1: rank = 1
+    s = series.dropna()
+    if len(s) <= 1: return None
+    below = (s < value).sum()
+    equal = (s == value).sum()
+    rank = int((below + 0.5 * equal) / len(s) * 100)
+    # Clamp to 1-99 range
+    if rank < 1: rank = 1
+    if rank > 99: rank = 99
     return rank
 
 def quartile_label(pct):
