@@ -364,10 +364,10 @@ st.markdown("""
     .tab-instruction { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #d4a017; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #78350f; font-weight: 500; }
     .tab-cta { background: linear-gradient(135deg, #b8860b 0%, #d4a017 100%); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: white; font-weight: 600; text-align: center; }
     /* KPI CARDS — white with gold top accent */
-    .metric-card { background: white; border: 1px solid #d6d3d1; border-top: 3px solid #b8860b; border-radius: 10px; padding: 1rem 1.2rem; text-align: center; height: 130px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 8px rgba(10,22,40,0.06); }
-    .metric-card .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: #57534e; font-weight: 700; white-space: nowrap; }
-    .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
-    .metric-card .sub { font-size: 0.78rem; color: #78716c; margin-top: 0.1rem; font-weight: 500; }
+    .metric-card { background: white; border: 1px solid #d6d3d1; border-top: 3px solid #b8860b; border-radius: 10px; padding: 0.8rem 0.6rem; text-align: center; height: 120px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 8px rgba(10,22,40,0.06); }
+    .metric-card .label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: #57534e; font-weight: 700; white-space: nowrap; }
+    .metric-card .value { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
+    .metric-card .sub { font-size: 0.72rem; color: #78716c; margin-top: 0.1rem; font-weight: 500; }
     /* AI NARRATIVE — navy accent */
     .ai-narrative { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #94a3b8; border-left: 5px solid #1a365d; border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; font-size: 0.9rem; line-height: 1.65; color: #1e293b; text-align: justify; box-shadow: 0 2px 8px rgba(26,54,93,0.06); }
     .ai-narrative .ai-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #1a365d; font-weight: 700; margin-bottom: 0.5rem; text-align: left; }
@@ -1766,27 +1766,34 @@ else:
 peer_stats_df = get_peer_stats(filt)
 
 # METRICS — context-aware
-c1,c2,c3,c4,c5 = st.columns(5)
+c1,c2,c3,c4,c5,c6 = st.columns(6)
 cv_selected = st.session_state.get('cv_co', PLACEHOLDER)
+_dir_kpi_df = load_director_comp()
 if cv_selected and cv_selected != PLACEHOLDER and cv_selected in co_labels:
     cv_tk = co_labels[cv_selected]
     peers_in_filt = filt[filt['ticker'] != cv_tk]
     n_peer_cos = peers_in_filt['ticker'].nunique()
     peer_stats_for_kpi = get_peer_stats(peers_in_filt)
     mode_label = "proxy peers" if st.session_state.get('peer_mode') == 'proxy' else "custom peers"
+    _dir_peer = _dir_kpi_df[_dir_kpi_df['ticker'].isin(peers_in_filt['ticker'].unique())] if not _dir_kpi_df.empty else pd.DataFrame()
+    _med_dir = _dir_peer['total_comp'].dropna().median() if not _dir_peer.empty else 0
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Peer Companies</div><div class="value">{n_peer_cos}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
     with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(peer_stats_for_kpi)}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(peer_stats_for_kpi["base_salary"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(peer_stats_for_kpi["total_comp"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(peers_in_filt["market_cap"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Exec Salary</div><div class="value">{fmt_dollars(peer_stats_for_kpi["base_salary"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Exec Total</div><div class="value">{fmt_dollars(peer_stats_for_kpi["total_comp"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Director Comp</div><div class="value">{fmt_dollars(_med_dir)}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
+    with c6: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(peers_in_filt["market_cap"].median())}</div><div class="sub">{mode_label}</div></div>', unsafe_allow_html=True)
 else:
     # No company selected — show full REIT universe
     reit_stats = get_peer_stats(reit_df)
+    _n_dir_total = len(_dir_kpi_df) if not _dir_kpi_df.empty else 0
+    _med_dir_all = _dir_kpi_df['total_comp'].dropna().median() if not _dir_kpi_df.empty else 0
     with c1: st.markdown(f'<div class="metric-card"><div class="label">Companies</div><div class="value">{reit_df["ticker"].nunique()}</div><div class="sub">in universe</div></div>', unsafe_allow_html=True)
-    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(reit_stats)}</div><div class="sub">all positions</div></div>', unsafe_allow_html=True)
-    with c3: st.markdown(f'<div class="metric-card"><div class="label">Med. Salary</div><div class="value">{fmt_dollars(reit_stats["base_salary"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
-    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Total Comp</div><div class="value">{fmt_dollars(reit_stats["total_comp"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
-    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
+    with c2: st.markdown(f'<div class="metric-card"><div class="label">Executives</div><div class="value">{len(reit_stats)}</div><div class="sub">{reit_df["ticker"].nunique()} companies</div></div>', unsafe_allow_html=True)
+    with c3: st.markdown(f'<div class="metric-card"><div class="label">Directors</div><div class="value">{_n_dir_total:,}</div><div class="sub">{_dir_kpi_df["ticker"].nunique() if not _dir_kpi_df.empty else 0} companies</div></div>', unsafe_allow_html=True)
+    with c4: st.markdown(f'<div class="metric-card"><div class="label">Med. Exec Total</div><div class="value">{fmt_dollars(reit_stats["total_comp"].median())}</div><div class="sub">all executives</div></div>', unsafe_allow_html=True)
+    with c5: st.markdown(f'<div class="metric-card"><div class="label">Med. Director Comp</div><div class="value">{fmt_dollars(_med_dir_all)}</div><div class="sub">all directors</div></div>', unsafe_allow_html=True)
+    with c6: st.markdown(f'<div class="metric-card"><div class="label">Med. Mkt Cap</div><div class="value">{fmt_mcap(reit_df["market_cap"].median())}</div><div class="sub">all companies</div></div>', unsafe_allow_html=True)
 st.markdown("")
 
 # COMPANY VIEW
