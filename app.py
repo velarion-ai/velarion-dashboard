@@ -1011,7 +1011,7 @@ def gen_analysis(co_d, filt, ret_data, all_df=None):
     n_co, mcr, tickers, pt_label = peer_context_str(filt, pt)
     en = "\nNOTE: Externally advised." if ea else ""
     # Widen thin positions adaptively by market cap proximity
-    MIN_PEERS = 5
+    MIN_PEERS = 3
     elines = []
     for _, rw in sort_by_position(co_d).iterrows():
         ie = rw['comp_source']=='external_manager'; ip = detect_partial(rw, filt)
@@ -1071,7 +1071,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         peer_desc = f"{n_co} custom peer companies"
     en = "\nCRITICAL: Externally advised." if ea else ""
     # Widen thin positions adaptively by market cap proximity
-    MIN_PEERS = 5
+    MIN_PEERS = 3
     esecs = []
     widened_positions = []
     for _, rw in sort_by_position(co_d).iterrows():
@@ -1079,8 +1079,8 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         pp = ps[ps['position']==rw['position']]
         n_pos = len(pp[pp['total_comp'].notna()])
         use_ps = ps
-        # Auto-widen if thin
-        if n_pos < MIN_PEERS and all_df is not None:
+        # Auto-widen if thin — but NOT in proxy mode (proxy peers are the intended comp group)
+        if n_pos < MIN_PEERS and all_df is not None and peer_mode != 'proxy':
             wide_ps, n_wide_cos, mult = build_mcap_wide_peers(all_df, tk, co_d, rw['position'], MIN_PEERS)
             pp_wide = wide_ps[wide_ps['position']==rw['position']]
             if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
@@ -1202,7 +1202,7 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
     """Stacked horizontal bar: company comp mix vs peer median."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
-    MIN_PEERS = 5
+    MIN_PEERS = 3
     fig = go.Figure()
     labels = []
     sal_pcts = []; cash_pcts = []; eq_pcts = []
@@ -1327,7 +1327,7 @@ def chart_exec_positioning(co_d, peers, all_df=None):
     """Horizontal bar: each exec's total comp percentile vs peers. Auto-widens thin positions."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
-    MIN_PEERS = 5
+    MIN_PEERS = 3
     wide_ps = None
     labels = []; pcts = []; colors = []; annotations = []
     for _, rw in sort_by_position(co_d).iterrows():
@@ -2246,7 +2246,7 @@ if sel3 and sel3 != PLACEHOLDER:
             pt_peers = get_peer_stats(pt_peers_base)
             # Step 3: Adaptive market-cap-relative peers (for widening thin positions)
             # Built per-position below, not pre-computed
-            MIN_PEERS = 4
+            MIN_PEERS = 4 if not is_proxy_mode else 3
             for idx, (_, er) in enumerate(sort_by_position(cd3).iterrows()):
                 if 'former' in str(er.get('title', '')).lower():
                     continue
