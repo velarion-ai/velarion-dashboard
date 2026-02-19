@@ -1809,7 +1809,7 @@ if not cv_selected_val or cv_selected_val == PLACEHOLDER:
     _n_exec_cos = df['ticker'].nunique() if not df.empty else 0
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:2rem 2.5rem;margin:0.5rem 0 1.5rem 0;color:white;border:2px solid #b8860b;box-shadow:0 4px 12px rgba(184,134,11,0.15);">
-        <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company to access full compensation intelligence</div>
+        <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company to access full compensation intelligence with AI</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
             <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:1.2rem;">
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.5rem;">\U0001F4BC Executive Compensation</div>
