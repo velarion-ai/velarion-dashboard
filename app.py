@@ -1804,35 +1804,6 @@ if sel3 and sel3 != PLACEHOLDER:
         if ea3: st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:0.6rem 1rem;font-size:0.83rem;color:#92400e;margin:0.5rem 0;">\u26A0\uFE0F {get_ext_note(cd3)}</div>', unsafe_allow_html=True)
         components.html('<button onclick="window.parent.print()" style="background:#475569;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:0.75rem;font-weight:600;cursor:pointer;float:right;">\U0001F5A8 Print This Page</button>', height=35)
         
-        # ---- PROXY-DISCLOSED PEER GROUP ----
-        co_peers_display, proxy_tks_display, _ = _build_proxy_peer_data(stk3, peer_groups_df, df)
-        if not co_peers_display.empty:
-            st.markdown("---")
-            is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
-            in_univ = co_peers_display[co_peers_display['in_universe'] == True]
-            out_univ = co_peers_display[co_peers_display['in_universe'] == False]
-            active_tag = " \u2705 ACTIVE" if is_proxy_mode else ""
-            with st.expander(f"Proxy-Disclosed Compensation Peer Group ({len(in_univ)} of {len(co_peers_display)} in database){active_tag}", expanded=False):
-                st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing \u2014 the companies their compensation committee benchmarks against.</div>', unsafe_allow_html=True)
-                
-                peer_html_rows = []
-                for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
-                    tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
-                    if pr.get('in_universe'):
-                        badge = '<span style="background:#e8edf5;color:#1a365d;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
-                        reason_col = ""
-                    else:
-                        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
-                        reason = _get_not_in_db_reason(pr['peer_name_as_disclosed'])
-                        reason_col = f'<span style="font-size:0.72rem;color:#991b1b;font-style:italic;">{reason}</span>'
-                    peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;">{reason_col}</td></tr>')
-                
-                peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
-                <table style="width:100%;border-collapse:collapse;">
-                <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
-                <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
-                st.markdown(peer_html, unsafe_allow_html=True)
-        
         # ---- PEER BENCHMARKING (lead with this) ----
         st.markdown("---")
         st.markdown("#### Peer Compensation Benchmarking")
@@ -1877,7 +1848,7 @@ if sel3 and sel3 != PLACEHOLDER:
         btn_r1a, btn_r1b = st.columns(2)
         with btn_r1a:
             if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
-                with st.spinner("Generating full analysis (fetching CD&A, earnings, stock data)..."):
+                with st.spinner("\u23F3 Report generating — pulling CD&A, earnings, and stock data. This takes 10-15 seconds..."):
                     st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, peer_mode=st.session_state.get('peer_mode', 'proxy'))
                     st.session_state['lk_tk'] = stk3
                     st.session_state['fp_lk_rpt'] = cur_fp0
@@ -1897,6 +1868,35 @@ if sel3 and sel3 != PLACEHOLDER:
                 st.link_button("\U0001F4C4  View Proxy", proxy_url, use_container_width=True)
             else:
                 st.button("\U0001F4C4  View Proxy", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
+        # ---- PROXY-DISCLOSED PEER GROUP (moved below buttons) ----
+        co_peers_display, proxy_tks_display, _ = _build_proxy_peer_data(stk3, peer_groups_df, df)
+        if not co_peers_display.empty:
+            is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
+            in_univ = co_peers_display[co_peers_display['in_universe'] == True]
+            out_univ = co_peers_display[co_peers_display['in_universe'] == False]
+            active_tag = " \u2705 ACTIVE" if is_proxy_mode else ""
+            with st.expander(f"Proxy-Disclosed Compensation Peer Group ({len(in_univ)} of {len(co_peers_display)} in database){active_tag}", expanded=False):
+                st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing \u2014 the companies their compensation committee benchmarks against.</div>', unsafe_allow_html=True)
+                
+                peer_html_rows = []
+                for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
+                    tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
+                    if pr.get('in_universe'):
+                        badge = '<span style="background:#e8edf5;color:#1a365d;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
+                        reason_col = ""
+                    else:
+                        badge = '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
+                        reason = _get_not_in_db_reason(pr['peer_name_as_disclosed'])
+                        reason_col = f'<span style="font-size:0.72rem;color:#991b1b;font-style:italic;">{reason}</span>'
+                    peer_html_rows.append(f'<tr><td style="padding:4px 8px;font-size:0.82rem;">{pr["peer_name_as_disclosed"]}{tk_display}</td><td style="padding:4px 8px;">{badge}</td><td style="padding:4px 8px;">{reason_col}</td></tr>')
+                
+                peer_html = f'''<div style="max-height:500px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
+                <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
+                <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
+                st.markdown(peer_html, unsafe_allow_html=True)
+        st.markdown("---")
+
         # Display Full Report
         if st.session_state.get('lk_tk') == stk3 and st.session_state.get('lk_rpt'):
             if st.session_state.get('fp_lk_rpt') != cur_fp0:
