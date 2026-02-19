@@ -2315,6 +2315,37 @@ if sel3 and sel3 != PLACEHOLDER:
             else:
                 co_dirs = dir_df[dir_df['ticker'] == stk3].copy()
                 
+                # ============================================================
+                # QC RULES — Management Director Validation
+                # ============================================================
+                # Rule 1: Build set of executive last names from exec_comp for this ticker
+                _exec_last_names = set()
+                if not df.empty:
+                    _tk_execs = df[df['ticker'] == stk3]
+                    for _, ex in _tk_execs.iterrows():
+                        ln = (ex.get('last_name') or '').strip().lower()
+                        if ln:
+                            _exec_last_names.add(ln)
+                
+                # Rule 2: If director is flagged MGMT but their last name is NOT in exec_comp → reclassify as INDEP
+                for idx, d in co_dirs.iterrows():
+                    if not d.get('is_independent', True):  # is MGMT
+                        dir_last = d['director_name'].split()[-1].lower()
+                        if dir_last not in _exec_last_names:
+                            co_dirs.at[idx, 'is_independent'] = True
+                
+                # Rule 3: MGMT directors get zero board comp (executives don't receive separate board pay)
+                for idx, d in co_dirs.iterrows():
+                    if not d.get('is_independent', True):  # is MGMT
+                        co_dirs.at[idx, 'fees_earned_cash'] = None
+                        co_dirs.at[idx, 'stock_awards'] = None
+                        co_dirs.at[idx, 'option_awards'] = None
+                        co_dirs.at[idx, 'all_other_comp'] = None
+                        co_dirs.at[idx, 'total_comp'] = None
+                
+                # Rule 4: MGMT directors cannot serve on Audit/Comp/Nom-Gov (enforced in chip rendering below)
+                # ============================================================
+                
                 # Board Snapshot metrics
                 n_dirs = len(co_dirs)
                 n_independent = int(co_dirs['is_independent'].sum()) if 'is_independent' in co_dirs.columns else 0
