@@ -1332,11 +1332,11 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
     return fig
 
 def chart_exec_positioning(co_d, peers, all_df=None):
-    """Horizontal bar: each exec's total comp vs peer median ($ deviation). Auto-widens thin positions."""
+    """Grouped horizontal bar: exec total comp vs peer median side by side."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 3
-    labels = []; deviations = []; colors = []; hover_texts = []
+    labels = []; exec_vals = []; median_vals = []; hover_exec = []; hover_med = []
     for _, rw in sort_by_position(co_d).iterrows():
         if rw['comp_source'] == 'external_manager': continue
         if pd.isna(rw['total_comp']): continue
@@ -1352,39 +1352,43 @@ def chart_exec_positioning(co_d, peers, all_df=None):
         med = pp['total_comp'].dropna().median()
         if pd.isna(med) or med == 0: continue
         val = rw['total_comp']
-        dev = val - med  # Dollar deviation from median
         pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
         suffix = ' *' if widened else ''
         labels.append(f"{rw['last_name']} ({pos_d}){suffix}")
-        deviations.append(dev / 1e6)  # Convert to millions for display
-        colors.append(CHART_COLORS['accent'] if dev >= 0 else CHART_COLORS['primary'])
-        hover_texts.append(f"${val:,.0f} vs median ${med:,.0f}")
+        exec_vals.append(val / 1e6)
+        median_vals.append(med / 1e6)
+        hover_exec.append(f"${val:,.0f}")
+        hover_med.append(f"${med:,.0f} (n={n_pos})")
     if not labels: return None
-    # Format annotations: +$1.2M or -$0.8M
-    bar_texts = [f"{'+' if d >= 0 else ''}${d:.1f}M" for d in deviations]
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        y=labels, x=deviations, orientation='h', marker_color=colors,
-        text=bar_texts, textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text']),
-        hovertext=hover_texts, hoverinfo='text'
+        y=labels, x=exec_vals, orientation='h', name='Actual',
+        marker_color=CHART_COLORS['primary'],
+        text=[f'${v:.1f}M' for v in exec_vals], textposition='outside',
+        textfont=dict(size=11, color=CHART_COLORS['text']),
+        hovertext=hover_exec, hoverinfo='text'
     ))
-    fig.add_vline(x=0, line_color='#94a3b8', line_width=2)
-    # Range: symmetric around 0
-    max_dev = max(abs(d) for d in deviations) if deviations else 2
-    x_range = max(2, max_dev * 1.4)
+    fig.add_trace(go.Bar(
+        y=labels, x=median_vals, orientation='h', name='Peer Median',
+        marker_color='#d4a84b', marker_opacity=0.6,
+        text=[f'${v:.1f}M' for v in median_vals], textposition='outside',
+        textfont=dict(size=11, color='#92400e'),
+        hovertext=hover_med, hoverinfo='text'
+    ))
     footnote = '  * = widened to similarly-sized companies' if any('*' in l for l in labels) else ''
     fig.update_layout(
-        height=max(200, len(labels)*55),
+        barmode='group', bargroupgap=0.15,
+        height=max(220, len(labels)*70),
         margin=dict(l=10, r=60, t=40, b=30),
         title=dict(text='Executive Total Comp vs Peer Median', font=dict(size=14, color=CHART_COLORS['text'])),
-        xaxis=dict(title='$ Above / Below Peer Median (Millions)', range=[-x_range, x_range], showgrid=True, gridcolor='#f1f5f9',
-                   zeroline=False, tickprefix='$', ticksuffix='M'),
+        xaxis=dict(title='Total Compensation ($M)', showgrid=True, gridcolor='#f1f5f9', tickprefix='$', ticksuffix='M'),
         yaxis=dict(autorange='reversed'),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1, font=dict(size=11)),
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(family='Inter, Helvetica, Arial, sans-serif')
     )
     if footnote:
-        fig.add_annotation(text=footnote, xref='paper', yref='paper', x=0, y=-0.15, showarrow=False, font=dict(size=10, color='#94a3b8'))
+        fig.add_annotation(text=footnote, xref='paper', yref='paper', x=0, y=-0.12, showarrow=False, font=dict(size=10, color='#94a3b8'))
     return fig
 
 # ============================================================
