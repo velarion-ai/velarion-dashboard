@@ -2091,9 +2091,9 @@ if sel3 and sel3 != PLACEHOLDER:
                 # Context refinement input
                 st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#fffbeb;border:1px solid #d4a017;border-left:4px solid #b8860b;border-radius:8px;">'
                     '<div style="font-size:0.9rem;font-weight:700;color:#92400e;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div>'
-                    '<div style="font-size:0.8rem;color:#475569;margin-bottom:0.5rem;">Add information the AI should consider \u2014 pending transactions, employment agreements, recruiting context, strategic plans. The analysis will be regenerated incorporating your context, with a footnote disclosing what was provided.</div>'
+                    '<div style="font-size:0.8rem;color:#475569;margin-bottom:0.5rem;">Add information the AI should consider \u2014 executive accomplishments during the year, important transactions, strategic initiatives, recruiting context, employment agreements. The analysis will be regenerated incorporating your context, with a footnote disclosing what was provided.</div>'
                     '</div>', unsafe_allow_html=True)
-                user_context = st.text_area("Additional context", placeholder="e.g., 'The company is in active negotiations for a $2B portfolio acquisition' or 'The CEO has a verbal agreement for a 3-year extension with a $1.5M base'", 
+                user_context = st.text_area("Additional context", placeholder="e.g., 'The CEO led a $2B portfolio acquisition and expanded into 3 new markets' or 'The CFO negotiated a $500M credit facility at favorable terms'", 
                                              label_visibility="collapsed", key="user_analysis_context", height=100)
                 ctx_col1, ctx_col2 = st.columns([1, 4])
                 with ctx_col1:
