@@ -2508,7 +2508,8 @@ if sel3 and sel3 != PLACEHOLDER:
                 all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
                 
                 # ---- SECTION 1: BOARD SNAPSHOT (6 metrics) ----
-                st.markdown(f"""
+                # Built as HTML string, rendered together with roster below
+                snapshot_html = f"""
                 <div style="margin:0.5rem 0 0.5rem 0;">
                     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.8rem;">
                         <div>
@@ -2538,11 +2539,11 @@ if sel3 and sel3 != PLACEHOLDER:
                         </div>
                     </div>
                 </div>
-                <hr style="border:none;border-top:1px solid #e2e8f0;margin:1rem 0;">
-                """, unsafe_allow_html=True)
+                <hr style="border:none;border-top:1px solid #e2e8f0;margin:0.8rem 0;">
+                <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Board of Directors</div>
+                """
                 
-                # ---- SECTION 2: DIRECTOR ROSTER (prototype style) ----
-                st.markdown("<div style='font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;'>Board of Directors</div>", unsafe_allow_html=True)
+                # ---- SECTION 2: DIRECTOR ROSTER ----
                 
                 # Build roster rows with committee chips and alternating shading
                 roster_rows = []
@@ -2654,7 +2655,8 @@ if sel3 and sel3 != PLACEHOLDER:
                     Source: FY{FY_YEAR} DEF 14A proxy filing
                 </div>
                 """
-                table_height = max(250, 70 + (len(roster_rows) + 1) * 40)
+                roster_table_html = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{snapshot_html}{roster_table_html}</div>"""
+                table_height = max(250, 150 + (len(roster_rows) + 1) * 40)
                 components.html(roster_table_html, height=table_height, scrolling=True)
                 
                 # ---- SECTIONS 3+4 COMBINED: COMMITTEE + FEE SCHEDULE ----
