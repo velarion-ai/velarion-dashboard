@@ -535,6 +535,11 @@ def load_director_comp():
             ddf = pd.DataFrame(all_data)
             for c in ['fees_earned_cash','stock_awards','option_awards','all_other_comp','total_comp','change_in_pension','non_equity_incentive']:
                 if c in ddf.columns: ddf[c] = pd.to_numeric(ddf[c], errors='coerce')
+            # Compute total_comp if missing: sum of all comp components
+            comp_cols = [c for c in ['fees_earned_cash','stock_awards','option_awards','non_equity_incentive','change_in_pension','all_other_comp'] if c in ddf.columns]
+            if comp_cols:
+                mask = ddf['total_comp'].isna() & ddf[comp_cols].notna().any(axis=1)
+                ddf.loc[mask, 'total_comp'] = ddf.loc[mask, comp_cols].sum(axis=1)
             # Parse committees from JSON string
             if 'committees' in ddf.columns:
                 import json as _json
@@ -2506,7 +2511,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         </div>
                         <div>
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Median Total Comp</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">${median_total:,.0f}</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{"${:,.0f}".format(median_total) if pd.notna(median_total) else "—"}</div>
                         </div>
                         <div>
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Committees</div>
@@ -2552,7 +2557,12 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                     if pd.notna(d.get('fees_earned_cash')): agg_cash += d['fees_earned_cash']
                     if pd.notna(d.get('stock_awards')): agg_stock += d['stock_awards']
-                    if pd.notna(d.get('total_comp')): agg_total += d['total_comp']
+                    # Use total_comp if available, otherwise sum components
+                    if pd.notna(d.get('total_comp')):
+                        agg_total += d['total_comp']
+                    else:
+                        row_total = sum(v for v in [d.get('fees_earned_cash'), d.get('stock_awards'), d.get('option_awards'), d.get('all_other_comp')] if pd.notna(v))
+                        if row_total > 0: agg_total += row_total
                     
                     # Committee chips with ★ for chairs
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
