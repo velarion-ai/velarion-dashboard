@@ -2416,9 +2416,11 @@ if sel3 and sel3 != PLACEHOLDER:
         with tab_board:
             # Reduce spacing between components.html iframes in the board tab
             st.markdown("""<style>
-                .stHtml { margin-bottom: -1.5rem !important; padding-bottom: 0 !important; }
-                .stHtml + .stHtml { margin-top: -1rem !important; }
-                .stMarkdown + .stHtml { margin-top: -0.5rem !important; }
+                .stHtml { margin-bottom: -2rem !important; padding-bottom: 0 !important; }
+                .stHtml + .stHtml { margin-top: -1.5rem !important; }
+                .stMarkdown + .stHtml { margin-top: -1rem !important; }
+                .stHtml + .stMarkdown { margin-top: -1.5rem !important; }
+                .stHtml + .stHorizontalBlock { margin-top: -1.5rem !important; }
             </style>""", unsafe_allow_html=True)
             
             # Load director comp data
@@ -2845,19 +2847,18 @@ if sel3 and sel3 != PLACEHOLDER:
                     """
                 
                 # Single combined render for sections 3+4
-                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.5rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>'
+                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.3rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR}</div>'
                 combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
-                _h34 = 20
-                if comm_section_html: _h34 += 90
-                if fee_section_html: _h34 += 200
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 75
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 55
-                if peer_bar_html: _h34 += 130
-                _h34 += 25  # source note
+                _h34 = 10
+                if comm_section_html: _h34 += 85
+                if fee_section_html: _h34 += 190
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 70
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 50
+                if peer_bar_html: _h34 += 120
+                _h34 += 20  # source note
                 components.html(combined_34, height=_h34, scrolling=False)
                 
-                # ---- SECTION 5: ACTION BUTTONS (matches Executive tab pattern) ----
-                st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:0.3rem 0;'>", unsafe_allow_html=True)
+                # ---- SECTION 5: ACTION BUTTONS ----
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
                     board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
