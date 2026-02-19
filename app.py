@@ -1547,7 +1547,7 @@ with _btn_col:
         pass
 
 # HEADER
-st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>AI-Powered Executive &amp; Board Compensation Benchmarking Throughout the Year</p></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header"><h1>Velarion Company Intelligence</h1><p>Executive &amp; Board Compensation Advisory &mdash; Powered by AI</p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="intro-text">Explore executive and board compensation across {len(reit_tickers)} publicly traded real estate companies. Select a company to benchmark against its proxy-disclosed peer group, or build a custom comparison set.</div>', unsafe_allow_html=True)
 
 # Track peer group mode: 'proxy' (default) or 'custom'
