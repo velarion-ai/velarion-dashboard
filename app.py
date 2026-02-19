@@ -2339,11 +2339,15 @@ if sel3 and sel3 != PLACEHOLDER:
                     if d.get('is_board_chair'): chair_name = d['director_name']
                     if d.get('is_lead_independent'): lead_ind_name = d['director_name']
                 
-                # Collect unique committees
+                # Collect unique committees (exclude management directors from independence-required committees)
+                _INDEP_ONLY_COMMS = {'Audit', 'Compensation', 'Nominating/Governance'}
                 all_comms = {}
                 for _, d in co_dirs.iterrows():
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
+                    is_ind = d.get('is_independent', False)
                     for c in comms:
+                        if not is_ind and c in _INDEP_ONLY_COMMS:
+                            continue  # Management cannot serve on Audit/Comp/Nom-Gov
                         if c not in all_comms:
                             all_comms[c] = {'members': 0, 'chair': None}
                         all_comms[c]['members'] += 1
@@ -2421,6 +2425,9 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                     # Committee chips with ★ for chairs
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
+                    # Management directors cannot serve on Audit/Comp/Nom-Gov (NYSE/NASDAQ rules)
+                    if is_mgmt:
+                        comms = [c for c in comms if c not in _INDEP_ONLY_COMMS]
                     comm_chips = []
                     for c in comms:
                         abbrev = c.replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
