@@ -1332,14 +1332,14 @@ def chart_returns_comparison(tk, ret_data, peer_tickers, pt):
     return fig
 
 def chart_exec_positioning(co_d, peers, all_df=None):
-    """Horizontal bar: each exec's total comp percentile vs peers. Auto-widens thin positions."""
+    """Horizontal bar: each exec's total comp vs peer median (deviation chart). Auto-widens thin positions."""
     ps = get_peer_stats(peers)
     tk = co_d['ticker'].iloc[0]
     MIN_PEERS = 3
-    wide_ps = None
-    labels = []; pcts = []; colors = []; annotations = []
+    labels = []; deviations = []; colors = []; hover_texts = []
     for _, rw in sort_by_position(co_d).iterrows():
         if rw['comp_source'] == 'external_manager': continue
+        if pd.isna(rw['total_comp']): continue
         pp = ps[ps['position']==rw['position']]
         n_pos = len(pp[pp['total_comp'].notna()])
         widened = False
@@ -1349,27 +1349,40 @@ def chart_exec_positioning(co_d, peers, all_df=None):
             if len(pp_wide[pp_wide['total_comp'].notna()]) >= n_pos:
                 pp = pp_wide
                 widened = True
-        pct = percentile_rank(rw['total_comp'], pp['total_comp'])
-        if pct is None: continue
+        med = pp['total_comp'].dropna().median()
+        if pd.isna(med) or med == 0: continue
+        val = rw['total_comp']
+        dev_pct = (val - med) / med * 100  # % deviation from median
         pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
         suffix = ' *' if widened else ''
         labels.append(f"{rw['last_name']} ({pos_d}){suffix}")
-        pcts.append(pct)
-        colors.append(CHART_COLORS['accent'] if pct >= 50 else CHART_COLORS['primary'])
-        annotations.append(widened)
+        deviations.append(dev_pct)
+        colors.append(CHART_COLORS['accent'] if dev_pct >= 0 else CHART_COLORS['primary'])
+        hover_texts.append(f"${val:,.0f} vs median ${med:,.0f}")
+    if not labels: return None
+    # Format annotations: +15% or -22%
+    bar_texts = [f"{d:+.0f}%" for d in deviations]
     fig = go.Figure()
-    fig.add_trace(go.Bar(y=labels, x=pcts, orientation='h', marker_color=colors,
-        text=[f'{p}th' for p in pcts], textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text'])))
-    fig.add_vline(x=50, line_dash='dot', line_color='#dc2626', line_width=1, annotation_text='50th pctl', annotation_position='top')
-    fig.add_vline(x=25, line_dash='dot', line_color='#cbd5e1', line_width=1)
-    fig.add_vline(x=75, line_dash='dot', line_color='#cbd5e1', line_width=1)
-    footnote = '  * = widened to all companies in market cap range' if any(annotations) else ''
-    fig.update_layout(height=max(200, len(labels)*50), margin=dict(l=10, r=40, t=40, b=30),
-        title=dict(text='Executive Compensation Positioning (Total Comp Percentile)', font=dict(size=14, color=CHART_COLORS['text'])),
-        xaxis=dict(title='Percentile vs Peers', range=[0, 100], showgrid=True, gridcolor='#f1f5f9'),
+    fig.add_trace(go.Bar(
+        y=labels, x=deviations, orientation='h', marker_color=colors,
+        text=bar_texts, textposition='outside', textfont=dict(size=12, color=CHART_COLORS['text']),
+        hovertext=hover_texts, hoverinfo='text'
+    ))
+    fig.add_vline(x=0, line_color='#94a3b8', line_width=2)
+    # Range: symmetric around 0, min ±30%
+    max_dev = max(abs(d) for d in deviations) if deviations else 30
+    x_range = max(30, max_dev * 1.3)
+    footnote = '  * = widened to similarly-sized companies' if any('*' in l for l in labels) else ''
+    fig.update_layout(
+        height=max(200, len(labels)*55),
+        margin=dict(l=10, r=40, t=40, b=30),
+        title=dict(text='Executive Total Comp vs Peer Median', font=dict(size=14, color=CHART_COLORS['text'])),
+        xaxis=dict(title='% Above / Below Peer Median', range=[-x_range, x_range], showgrid=True, gridcolor='#f1f5f9',
+                   zeroline=False, ticksuffix='%'),
         yaxis=dict(autorange='reversed'),
         plot_bgcolor='white', paper_bgcolor='white',
-        font=dict(family='Inter, Helvetica, Arial, sans-serif'))
+        font=dict(family='Inter, Helvetica, Arial, sans-serif')
+    )
     if footnote:
         fig.add_annotation(text=footnote, xref='paper', yref='paper', x=0, y=-0.15, showarrow=False, font=dict(size=10, color='#94a3b8'))
     return fig
