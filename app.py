@@ -404,6 +404,11 @@ st.markdown("""
     .ext-badge { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .hl-row { background: #fef9ee; border: 1px solid #d4a017; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; font-size: 0.88rem; }
     .filter-note { font-size: 0.75rem; color: #57534e; line-height: 1.4; padding: 0.5rem 0; border-top: 1px solid #d6d3d1; margin-top: 0.5rem; }
+    /* Tab sizing */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
     .widen-warn { background: #fffbeb; border: 1px solid #d4a017; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; color: #92400e; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
     /* SIDEBAR — warm light gray, push content down to align with main content */
     section[data-testid="stSidebar"] { background: #f5f3f0; }
@@ -1851,7 +1856,7 @@ if sel3 and sel3 != PLACEHOLDER:
             # Button layout: 2x2 grid
             btn_r1a, btn_r1b = st.columns(2)
             with btn_r1a:
-                if st.button("\U0001F4CB  Generate Full Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
+                if st.button("\U0001F4CB  Generate Executive Compensation Analysis", key="cv_lookup_rpt", use_container_width=True):
                     with st.spinner("\u23F3 Report generating — pulling CD&A, earnings, and stock data. This takes 10-15 seconds..."):
                         st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, peer_mode=st.session_state.get('peer_mode', 'proxy'))
                         st.session_state['lk_tk'] = stk3
@@ -1864,7 +1869,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.session_state['show_league'] = not st.session_state.get('show_league', False)
             btn_r2a, btn_r2b = st.columns(2)
             with btn_r2a:
-                if st.button("\U0001F4CB  Comp Summary Table", key="cv_comp_toggle", use_container_width=True):
+                if st.button("\U0001F4CB  Executive Compensation Summary Table", key="cv_comp_toggle", use_container_width=True):
                     st.session_state['show_comp_table'] = not st.session_state.get('show_comp_table', False)
             with btn_r2b:
                 proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=cd3['cik'].iloc[0] if 'cik' in cd3.columns else None)
@@ -1899,7 +1904,6 @@ if sel3 and sel3 != PLACEHOLDER:
                     <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Company</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Status</th><th style="padding:6px 8px;text-align:left;font-size:0.75rem;">Note</th></tr></thead>
                     <tbody>{''.join(peer_html_rows)}</tbody></table></div>'''
                     st.markdown(peer_html, unsafe_allow_html=True)
-            st.markdown("---")
 
             # Display Full Report
             if st.session_state.get('lk_tk') == stk3 and st.session_state.get('lk_rpt'):
