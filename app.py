@@ -1860,7 +1860,7 @@ if sel3 and sel3 != PLACEHOLDER:
             _v1y = fmt_return(vnq3.get('return_1y')); _v3y = fmt_return(vnq3.get('return_3y')); _vytd = fmt_return(vnq3.get('return_ytd'))
             _ret_html = f"""
             <div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;">
-                <table style="width:100%;font-size:0.9rem;border-collapse:collapse;">
+                <table style="width:75%;font-size:0.9rem;border-collapse:collapse;">
                     <tr style="color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;">
                         <td style="padding:2px 0;width:16%;">1-Yr (FY{RETURNS_YEAR})</td>
                         <td style="padding:2px 0;width:16%;">3-Year (FY{RETURNS_YEAR})</td>
@@ -1883,10 +1883,7 @@ if sel3 and sel3 != PLACEHOLDER:
         # Company profile card — use components.html because st.markdown strips <table>
         _profile_html = f"""
         <div style="font-family:'Source Sans Pro','Segoe UI',Roboto,sans-serif;font-size:16px;border:1px solid #e2e8f0;border-radius:10px;padding:1.4rem 1.8rem;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;">
-                <div style="font-size:1.5rem;font-weight:700;color:#1e293b;">{cn3} ({stk3})</div>
-                <div style="font-size:1.1rem;font-weight:600;color:#1e293b;">{_mcap}</div>
-            </div>
+            <div style="font-size:1.5rem;font-weight:700;color:#1e293b;margin-bottom:0.6rem;">{cn3} ({stk3})</div>
             <div style="display:flex;gap:2.5rem;font-size:0.95rem;color:#475569;">
                 <div><span style="color:#94a3b8;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">HQ</span><br><span style="font-weight:600;color:#1e293b;">{_hq}</span></div>
                 <div><span style="color:#94a3b8;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Property Type</span><br><span style="font-weight:600;color:#1e293b;">{pt3}</span></div>
