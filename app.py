@@ -2416,12 +2416,9 @@ if sel3 and sel3 != PLACEHOLDER:
         with tab_board:
             # Reduce spacing between components.html iframes in the board tab
             st.markdown("""<style>
-                [data-testid="stHorizontalBlock"] + iframe,
-                iframe + [data-testid="stMarkdownContainer"],
-                [data-testid="stMarkdownContainer"] + iframe {
-                    margin-top: -1rem !important;
-                }
-                .stHtml { margin-bottom: -1rem !important; }
+                .stHtml { margin-bottom: -1.5rem !important; padding-bottom: 0 !important; }
+                .stHtml + .stHtml { margin-top: -1rem !important; }
+                .stMarkdown + .stHtml { margin-top: -0.5rem !important; }
             </style>""", unsafe_allow_html=True)
             
             # Load director comp data
@@ -2798,7 +2795,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             fn_parts.append("Included: " + ", ".join(_peers_with))
                         if _peers_without:
                             fn_parts.append("No fee data: " + ", ".join(_peers_without))
-                        footnote = '<div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;font-style:italic;">' + " &nbsp;|&nbsp; ".join(fn_parts) + '. Use Custom Peer Group to add comparison companies.</div>'
+                        footnote = '<div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;font-style:italic;">Proxy peer group: ' + " &nbsp;|&nbsp; ".join(fn_parts) + '. Use Custom Peer Group to add comparison companies.</div>'
                         peer_bar_html = f"""
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
@@ -2846,17 +2843,16 @@ if sel3 and sel3 != PLACEHOLDER:
                     """
                 
                 # Single combined render for sections 3+4
-                combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}</div>"""
+                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:1rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>'
+                combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
                 _h34 = 40
                 if comm_section_html: _h34 += 95
                 if fee_section_html: _h34 += 210
                 if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 80
                 if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 60
                 if peer_bar_html: _h34 += 140
+                _h34 += 30  # source note
                 components.html(combined_34, height=_h34, scrolling=False)
-                
-                # Source note
-                st.markdown(f'<div style="font-size:0.7rem;color:#94a3b8;margin-top:0.5rem;text-align:center;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | Data fields populate as scraper modules complete</div>', unsafe_allow_html=True)
                 
                 # ---- SECTION 5: ACTION BUTTONS (matches Executive tab pattern) ----
                 st.markdown("<hr style='border:none;border-top:1px solid #e2e8f0;margin:1rem 0;'>", unsafe_allow_html=True)
