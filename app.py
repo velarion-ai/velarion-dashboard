@@ -1799,6 +1799,9 @@ st.markdown("")
 # COMPANY VIEW
 st.markdown("#### Company Compensation Intelligence")
 cv_opts = [PLACEHOLDER] + co_opts
+_dd_col, _ = st.columns([1, 1])
+with _dd_col:
+    sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
 cv_selected_val = st.session_state.get('cv_co', PLACEHOLDER)
 if not cv_selected_val or cv_selected_val == PLACEHOLDER:
     # Engaging pre-select state highlighting Board + Management coverage
@@ -1808,7 +1811,7 @@ if not cv_selected_val or cv_selected_val == PLACEHOLDER:
     _n_execs = len(reit_df) if not reit_df.empty else 0
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);border-radius:12px;padding:2rem 2.5rem;margin:0.5rem 0 1.5rem 0;color:white;border:2px solid #b8860b;box-shadow:0 4px 12px rgba(184,134,11,0.15);">
-        <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company to access full compensation intelligence with AI</div>
+        <div style="font-size:1.1rem;font-weight:600;margin-bottom:1.2rem;">Select a company above to access full compensation intelligence with AI</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
             <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:1.2rem;">
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7;margin-bottom:0.5rem;">\U0001F4BC Executive Compensation</div>
@@ -1823,9 +1826,6 @@ if not cv_selected_val or cv_selected_val == PLACEHOLDER:
         </div>
     </div>
     """, unsafe_allow_html=True)
-_dd_col, _ = st.columns([1, 1])
-with _dd_col:
-    sel3 = st.selectbox("cv", cv_opts, key="cv_co", label_visibility="collapsed")
 if sel3 and sel3 != PLACEHOLDER:
     prev_cv = st.session_state.get('_prev_cv')
     if prev_cv != sel3:
