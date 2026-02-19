@@ -2398,8 +2398,8 @@ if sel3 and sel3 != PLACEHOLDER:
                         <td style="padding:8px 10px;font-size:0.8rem;color:#64748b;">{comm_str}</td>
                     </tr>""")
                 
-                st.markdown(f"""
-                <div style="overflow-x:auto;">
+                roster_table_html = f"""
+                <div style="overflow-x:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                 <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
                     <thead>
                         <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;">
@@ -2417,7 +2417,10 @@ if sel3 and sel3 != PLACEHOLDER:
                     </tbody>
                 </table>
                 </div>
-                """, unsafe_allow_html=True)
+                """
+                # Use components.html since st.markdown strips <table> tags
+                table_height = max(200, 50 + len(roster_rows) * 42)
+                components.html(roster_table_html, height=table_height, scrolling=True)
                 
                 # ---- COMP MIX SUMMARY ----
                 if n_with_comp > 0:
