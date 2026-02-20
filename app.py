@@ -1096,7 +1096,8 @@ FTSE Nareit: 1-Yr {fmt_return(vnq.get('return_1y'))} | 3-Yr {fmt_return(vnq.get(
 Peers: {n_co} companies | Tickers: {', '.join(tickers)}
 NOTE: Compensation data is from the FY{FY_YEAR} DEF 14A proxy filing (filed in {FY_YEAR+1}). Returns are through Dec 31, {RETURNS_YEAR} (1-yr and 3-yr) plus YTD {RETURNS_YEAR+1}. Frame the analysis as: how has the compensation structure approved by the board performed against {RETURNS_YEAR} shareholder returns?
 CRITICAL: Only reference return figures explicitly provided above. Do NOT invent, estimate, or reference any return data not given. Do NOT reference years or periods for which no data is provided.
-INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond the primary peer set due to limited same-position peers.{en}
+INSTRUCTIONS: Cover (1) each executive's compensation positioning and mix vs peers, (2) shareholder returns vs peer group and FTSE Nareit, (3) pay-for-performance assessment comparing comp quartile to returns quartile, and (4) a clear directional recommendation. If comp is below returns quartile, advocate for the management team. If any executive is flagged as [Partial Yr], explicitly note their compensation reflects a partial year of service and should not be compared at face value to full-year peers — do NOT characterize their pay as "low" or "below median" since it only reflects a fraction of the year. For partial-year executives, focus on compensation structure and mix rather than dollar amounts or percentile rankings. If ALL executives are partial year, lead with that context and frame the entire analysis around comp structure, equity weighting, and forward-looking positioning rather than peer dollar comparisons. If any executive is flagged as [Widened], note that the peer group was expanded beyond the primary peer set due to limited same-position peers.
+At the very end, add a single-line italic footnote: "Sources: FY{FY_YEAR} DEF 14A proxy filing (SEC EDGAR), Yahoo Finance stock returns, Velarion peer compensation database ({n_co} companies)."{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=700, messages=[{"role":"user","content":prompt}])
@@ -1170,6 +1171,21 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     earnings_text = fetch_earnings_data(cn, tk)
     current_stock = fetch_current_stock(tk)
     
+    # Build source list for footnotes
+    sources = []
+    proxy_url = lookup_proxy_url(cn, FY_YEAR, co_d['cik'].iloc[0] if 'cik' in co_d.columns else None)
+    sources.append(f"DEF 14A Proxy Statement, FY{FY_YEAR} (filed {FY_YEAR+1}), SEC EDGAR" + (f" — {proxy_url}" if proxy_url else ""))
+    if cda_text:
+        sources.append(f"Compensation Discussion & Analysis (CD&A) section from FY{FY_YEAR} DEF 14A")
+    if earnings_text:
+        sources.append(f"8-K Earnings Press Releases (quarterly results, 2024-2025), SEC EDGAR")
+    if current_stock:
+        sources.append(f"Current stock data via Yahoo Finance (as of {current_stock.get('as_of', 'today')})")
+    sources.append(f"Historical stock returns (1-yr, 3-yr, YTD) via Yahoo Finance, through Dec 31, {RETURNS_YEAR}")
+    sources.append(f"FTSE Nareit All Equity REITs Index (VNQ) benchmark returns")
+    sources.append(f"Velarion Company Intelligence peer compensation database ({n_co} peer companies)")
+    sources_str = chr(10).join(f"  {i+1}. {s}" for i, s in enumerate(sources))
+
     # Build enrichment sections for prompt
     enrichment = ""
     if cda_text:
@@ -1228,7 +1244,13 @@ You MUST explicitly state and compare these three return figures: (1) {tk}'s 1-y
 Based on CD&A compensation structure, recent earnings trajectory, and stock performance, flag 2-3 things management should be prepared to address with the board. Frame as "management should be prepared to discuss..." not prescriptive. (2-3 sent)
 
 Summary with peer group disclosure including any excluded companies (2-3 sent, list all peer tickers)
-DISCLAIMER at end: "Note: This analysis is based on SEC DEF 14A proxy data, publicly available earnings releases, and market data. Verify all information against original filings before making decisions."{en}
+
+[SECTION:SOURCES]
+<h4>Sources</h4>
+You MUST include a formatted sources section listing every data source used in this analysis. Use the source list below — include ALL of them as numbered items in plain text (no links, just descriptions). This is critical for credibility.
+AVAILABLE SOURCES:
+{sources_str}
+{en}
 {AI_TONE}"""
     try:
         resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000, messages=[{"role":"user","content":prompt}])
@@ -2084,7 +2106,7 @@ if sel3 and sel3 != PLACEHOLDER:
             
                 # Split on section markers
                 import re
-                section_pattern = r'\[SECTION:(POSITIONING|MIX|RETURNS|WATCH)\]'
+                section_pattern = r'\[SECTION:(POSITIONING|MIX|RETURNS|WATCH|SOURCES)\]'
                 parts = re.split(section_pattern, rt)
             
                 try:
@@ -2095,7 +2117,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 i = 0
                 while i < len(parts):
                     text = parts[i].strip()
-                    if text and text not in ('POSITIONING', 'MIX', 'RETURNS', 'WATCH'):
+                    if text and text not in ('POSITIONING', 'MIX', 'RETURNS', 'WATCH', 'SOURCES'):
                         st.markdown(text, unsafe_allow_html=True)
                     elif text == 'POSITIONING':
                         if i + 1 < len(parts):
@@ -2129,6 +2151,11 @@ if sel3 and sel3 != PLACEHOLDER:
                     elif text == 'WATCH':
                         if i + 1 < len(parts):
                             st.markdown(parts[i+1].strip(), unsafe_allow_html=True)
+                            i += 1
+                    elif text == 'SOURCES':
+                        if i + 1 < len(parts):
+                            src_html = parts[i+1].strip()
+                            st.markdown(f'<div style="margin-top:1.5rem;padding:1rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:8px;font-size:0.8rem;color:#64748b;">{src_html}</div>', unsafe_allow_html=True)
                             i += 1
                     i += 1
             
