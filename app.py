@@ -1120,6 +1120,123 @@ def fetch_10k_financials(cik):
     except Exception:
         return None
 
+@st.cache_data(ttl=86400)
+def fetch_10q_financials(cik):
+    """Fetch recent quarterly financial metrics from XBRL (10-Q). Returns last 4 quarters."""
+    import requests as _req
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        cik_padded = str(cik).zfill(10)
+        url = f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik_padded}.json'
+        resp = _req.get(url, headers=_headers, timeout=15)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        facts = data.get('facts', {}).get('us-gaap', {})
+        
+        targets = {'Revenues': 'Revenue', 'NetIncomeLoss': 'Net Income',
+                    'OperatingIncomeLoss': 'Operating Income', 'EarningsPerShareDiluted': 'EPS'}
+        
+        quarters = {}
+        for xbrl_key, label in targets.items():
+            if xbrl_key not in facts:
+                continue
+            units = facts[xbrl_key].get('units', {})
+            for unit_type, entries in units.items():
+                # Get quarterly entries — fp field indicates Q1/Q2/Q3
+                qtr_entries = [e for e in entries if e.get('form') == '10-Q' and e.get('fp') in ('Q1','Q2','Q3')]
+                # Take last 4
+                for e in qtr_entries[-4:]:
+                    period = f"{e.get('fp','')} {e.get('end','')[:4]}"
+                    if period not in quarters:
+                        quarters[period] = {}
+                    val = e['val']
+                    if unit_type == 'USD' and abs(val) >= 1e6:
+                        val_str = f"${val/1e6:,.0f}M" if abs(val) < 1e9 else f"${val/1e9:,.1f}B"
+                    elif unit_type == 'USD/shares':
+                        val_str = f"${val:.2f}"
+                    else:
+                        val_str = f"{val:,.0f}"
+                    quarters[period][label] = val_str
+                break
+        
+        if not quarters:
+            return None
+        # Format as text
+        lines = []
+        for period in sorted(quarters.keys()):
+            metrics = quarters[period]
+            parts = [f"{k}: {v}" for k, v in metrics.items()]
+            lines.append(f"  {period}: {' | '.join(parts)}")
+        return '\n'.join(lines)
+    except Exception:
+        return None
+
+@st.cache_data(ttl=86400)
+def fetch_material_8k_events(company_name, cik):
+    """Fetch material 8-K events (CEO changes, acquisitions, restructuring, etc.)."""
+    import requests as _req
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
+        query = f'%22{clean_name.replace(" ", "+")}%22'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=8-K&dateRange=custom&startdt=2024-06-01&enddt=2025-12-31'
+        resp = _req.get(url, headers=_headers, timeout=10)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        hits = data.get('hits', {}).get('hits', [])
+        
+        # Material item codes (exclude routine filings like 2.02 earnings, 9.01 exhibits)
+        material_items = {
+            '1.01': 'Material Agreement',
+            '1.02': 'Bankruptcy/Receivership',
+            '2.01': 'Acquisition/Disposition of Assets',
+            '2.05': 'Restructuring/Impairment Costs',
+            '2.06': 'Material Impairment',
+            '3.01': 'Delisting/Transfer',
+            '4.01': 'Auditor Change',
+            '5.01': 'Change in Control',
+            '5.02': 'Director/Officer Departure or Appointment',
+        }
+        
+        events = []
+        for h in hits[:30]:
+            items = h['_source'].get('items', [])
+            mat = [(code, material_items[code]) for code in items if code in material_items]
+            if not mat:
+                continue
+            date = h['_source'].get('file_date', '')
+            doc_id = h['_id']
+            parts = doc_id.split(':')
+            accession = parts[0]
+            filename = parts[1]
+            cik_clean = str(h['_source']['ciks'][0]).lstrip('0')
+            
+            # Fetch brief text for context
+            try:
+                filing_url = f'https://www.sec.gov/Archives/edgar/data/{cik_clean}/{accession.replace("-","")}/{filename}'
+                from bs4 import BeautifulSoup
+                filing_resp = _req.get(filing_url, headers=_headers, timeout=10)
+                if filing_resp.status_code == 200:
+                    soup = BeautifulSoup(filing_resp.text, 'html.parser')
+                    text = soup.get_text(separator=' ', strip=True)[:500]
+                else:
+                    text = ""
+            except Exception:
+                text = ""
+            
+            item_labels = ', '.join(f"{code} ({label})" for code, label in mat)
+            events.append(f"  [{date}] Items: {item_labels}\n    {text[:400]}")
+            if len(events) >= 5:
+                break
+        
+        return '\n'.join(events) if events else None
+    except Exception:
+        return None
+
 def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=None):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
@@ -1290,6 +1407,8 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     cik_val = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
     say_on_pay = fetch_say_on_pay(cn, cik_val, FY_YEAR + 1) if cik_val else None
     financials_10k = fetch_10k_financials(cik_val) if cik_val else None
+    financials_10q = fetch_10q_financials(cik_val) if cik_val else None
+    material_events = fetch_material_8k_events(cn, cik_val) if cik_val else None
     
     # Build source list for footnotes
     sources = []
@@ -1303,6 +1422,10 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         sources.append(f"8-K Voting Results (Item 5.07), filed {say_on_pay.get('filing_date', '')}, SEC EDGAR")
     if financials_10k:
         sources.append(f"10-K Annual Report financial data via SEC EDGAR XBRL")
+    if financials_10q:
+        sources.append(f"10-Q Quarterly Report financial data via SEC EDGAR XBRL")
+    if material_events:
+        sources.append(f"8-K Material Event filings (leadership changes, acquisitions, restructuring), SEC EDGAR")
     if current_stock:
         sources.append(f"Current stock data via Yahoo Finance (as of {current_stock.get('as_of', 'today')})")
     sources.append(f"Historical stock returns (1-yr, 3-yr, YTD) via Yahoo Finance, through Dec 31, {RETURNS_YEAR}")
@@ -1338,6 +1461,11 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
                 val_str = f"{val:,.0f}"
             yoy = f" (YoY: {d['yoy_change']:+.1f}%)" if d.get('yoy_change') is not None else ""
             enrichment += f"\n  {label}: {val_str}{yoy} [{d['period']}]"
+    if financials_10q:
+        enrichment += f"\n\nQUARTERLY FINANCIAL TREND (10-Q filings, SEC EDGAR XBRL — use to assess recent trajectory):\n{financials_10q}"
+    if material_events:
+        enrichment += f"\n\nMATERIAL EVENTS (8-K filings — leadership changes, acquisitions, restructuring, material agreements):\n{material_events}"
+        enrichment += "\n  NOTE: Reference these events where they are relevant to compensation decisions, leadership transitions, or strategic context."
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
