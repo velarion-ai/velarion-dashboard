@@ -3243,7 +3243,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                     # Fallback: derive missing retainers from actual director_comp data
                     # (fee schedule scraper may have missed the dollar amount)
-                    _indep_dirs = bd3[bd3['is_independent'] == True] if not bd3.empty else pd.DataFrame()
+                    _indep_dirs = co_dirs[co_dirs['is_independent'] == True] if not co_dirs.empty else pd.DataFrame()
                     _dirs_with_comp = _indep_dirs[_indep_dirs['total_comp'].notna() & (_indep_dirs['total_comp'] > 0)] if not _indep_dirs.empty else pd.DataFrame()
                     if not eq_r and not _dirs_with_comp.empty:
                         _eq_vals = _dirs_with_comp['stock_awards'].dropna()
