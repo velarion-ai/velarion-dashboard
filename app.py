@@ -3298,7 +3298,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     peer_stats_html = ""
                     peer_lead_premium_html = ""
                     if not _peer_fs.empty and len(_peer_fs) >= 2:
-                        for label, key in [('Total Retainer', 'total_retainer'), ('Cash Retainer', 'cash_retainer'), ('Equity Retainer', 'equity_retainer')]:
+                        for label, key in [('Cash Retainer', 'cash_retainer'), ('Equity Retainer', 'equity_retainer'), ('Total Retainer', 'total_retainer')]:
                             vals = _peer_fs[key].dropna()
                             vals = vals[vals > 0]
                             if len(vals) >= 2:
