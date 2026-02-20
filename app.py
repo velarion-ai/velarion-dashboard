@@ -1003,6 +1003,123 @@ def fetch_current_stock(ticker):
     except Exception:
         return None
 
+@st.cache_data(ttl=86400)
+def fetch_say_on_pay(company_name, cik, fy_year):
+    """Fetch say-on-pay vote results from 8-K Item 5.07 filing."""
+    import requests as _req
+    import re
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        # Search for voting results 8-K
+        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
+        query = f'%22{clean_name.replace(" ", "+")}%22+%22Item+5.07%22'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=8-K&dateRange=custom&startdt={fy_year}-01-01&enddt={fy_year+1}-12-31'
+        resp = _req.get(url, headers=_headers, timeout=10)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        hits = data.get('hits', {}).get('hits', [])
+        if not hits:
+            return None
+        # Get the first (most recent) hit
+        hit = hits[0]
+        doc_id = hit['_id']
+        parts = doc_id.split(':')
+        accession = parts[0]
+        filename = parts[1]
+        cik_clean = str(hit['_source']['ciks'][0]).lstrip('0')
+        filing_url = f'https://www.sec.gov/Archives/edgar/data/{cik_clean}/{accession.replace("-","")}/{filename}'
+        filing_date = hit['_source'].get('file_date', '')
+        
+        filing_resp = _req.get(filing_url, headers=_headers, timeout=15)
+        if filing_resp.status_code != 200:
+            return None
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(filing_resp.text, 'html.parser')
+        text = soup.get_text(separator=' ', strip=True)
+        tl = text.lower()
+        
+        # Find say-on-pay / advisory comp vote
+        result = {'filing_date': filing_date, 'filing_url': filing_url}
+        
+        # Look for patterns like "For 540,290,905 Against 34,635,610"
+        # near "advisory" or "compensation of" or "say-on-pay"
+        for marker in ['advisory basis, the compensation', 'advisory vote on executive compensation',
+                        'say-on-pay', 'advisory vote on compensation']:
+            idx = tl.find(marker)
+            if idx >= 0:
+                chunk = text[idx:idx+800]
+                # Extract For/Against numbers
+                for_match = re.search(r'For\s+([\d,]+)', chunk)
+                against_match = re.search(r'Against\s+([\d,]+)', chunk)
+                if for_match and against_match:
+                    votes_for = int(for_match.group(1).replace(',', ''))
+                    votes_against = int(against_match.group(1).replace(',', ''))
+                    total = votes_for + votes_against
+                    if total > 0:
+                        result['votes_for'] = votes_for
+                        result['votes_against'] = votes_against
+                        result['approval_pct'] = round(votes_for / total * 100, 1)
+                        result['approved'] = result['approval_pct'] > 50
+                        return result
+        return None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=86400)
+def fetch_10k_financials(cik):
+    """Fetch key financial metrics from XBRL structured data (10-K)."""
+    import requests as _req
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        cik_padded = str(cik).zfill(10)
+        url = f'https://data.sec.gov/api/xbrl/companyfacts/CIK{cik_padded}.json'
+        resp = _req.get(url, headers=_headers, timeout=15)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        facts = data.get('facts', {}).get('us-gaap', {})
+        
+        targets = {
+            'Revenues': 'Revenue',
+            'NetIncomeLoss': 'Net Income',
+            'Assets': 'Total Assets',
+            'LongTermDebt': 'Long-Term Debt',
+            'EarningsPerShareDiluted': 'EPS (Diluted)',
+            'CommonStockDividendsPerShareDeclared': 'Dividends/Share',
+            'OperatingIncomeLoss': 'Operating Income',
+        }
+        
+        results = {}
+        for xbrl_key, label in targets.items():
+            if xbrl_key not in facts:
+                continue
+            units = facts[xbrl_key].get('units', {})
+            for unit_type, entries in units.items():
+                annual = [e for e in entries if e.get('form') == '10-K']
+                if not annual:
+                    continue
+                latest = annual[-1]
+                prev = annual[-2] if len(annual) > 1 else None
+                val = latest['val']
+                period = latest.get('end', '')
+                yoy = None
+                if prev and prev['val'] and prev['val'] != 0:
+                    yoy = round((val - prev['val']) / abs(prev['val']) * 100, 1)
+                results[label] = {
+                    'value': val,
+                    'period': period,
+                    'yoy_change': yoy,
+                    'unit': unit_type,
+                }
+                break
+        
+        return results if results else None
+    except Exception:
+        return None
+
 def gen_exec(row, peers, all_df, ret_data, filt, widened=False, wide_peers_df=None):
     cl = get_client()
     if not cl: return "Install anthropic library and set ANTHROPIC_API_KEY."
@@ -1170,15 +1287,22 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     cda_text = fetch_cda_text(cn, FY_YEAR)
     earnings_text = fetch_earnings_data(cn, tk)
     current_stock = fetch_current_stock(tk)
+    cik_val = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
+    say_on_pay = fetch_say_on_pay(cn, cik_val, FY_YEAR + 1) if cik_val else None
+    financials_10k = fetch_10k_financials(cik_val) if cik_val else None
     
     # Build source list for footnotes
     sources = []
-    proxy_url = lookup_proxy_url(cn, FY_YEAR, co_d['cik'].iloc[0] if 'cik' in co_d.columns else None)
+    proxy_url = lookup_proxy_url(cn, FY_YEAR, cik_val)
     sources.append(f"DEF 14A Proxy Statement, FY{FY_YEAR} (filed {FY_YEAR+1}), SEC EDGAR" + (f" — {proxy_url}" if proxy_url else ""))
     if cda_text:
         sources.append(f"Compensation Discussion & Analysis (CD&A) section from FY{FY_YEAR} DEF 14A")
     if earnings_text:
         sources.append(f"8-K Earnings Press Releases (quarterly results, 2024-2025), SEC EDGAR")
+    if say_on_pay:
+        sources.append(f"8-K Voting Results (Item 5.07), filed {say_on_pay.get('filing_date', '')}, SEC EDGAR")
+    if financials_10k:
+        sources.append(f"10-K Annual Report financial data via SEC EDGAR XBRL")
     if current_stock:
         sources.append(f"Current stock data via Yahoo Finance (as of {current_stock.get('as_of', 'today')})")
     sources.append(f"Historical stock returns (1-yr, 3-yr, YTD) via Yahoo Finance, through Dec 31, {RETURNS_YEAR}")
@@ -1195,6 +1319,25 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     if earnings_text:
         earnings_snippet = earnings_text[:4000]
         enrichment += f"\n\nRECENT QUARTERLY EARNINGS (use for operational context — FFO/AFFO, revenue, occupancy, same-store NOI):\n{earnings_snippet}"
+    if say_on_pay:
+        enrichment += f"\n\nSAY-ON-PAY VOTE RESULTS ({say_on_pay.get('filing_date', '')}):"
+        enrichment += f"\n  Approval: {say_on_pay['approval_pct']}% ({say_on_pay['votes_for']:,} For / {say_on_pay['votes_against']:,} Against)"
+        if say_on_pay['approval_pct'] < 70:
+            enrichment += "\n  ⚠ LOW APPROVAL — This is a significant governance risk. Below 70% typically triggers enhanced engagement with shareholders and potential comp structure changes."
+        elif say_on_pay['approval_pct'] >= 95:
+            enrichment += "\n  Strong shareholder support for current compensation program."
+    if financials_10k:
+        enrichment += f"\n\n10-K FINANCIAL HIGHLIGHTS (most recent annual filing, SEC EDGAR XBRL):"
+        for label, d in financials_10k.items():
+            val = d['value']
+            if d['unit'] == 'USD' and abs(val) >= 1e6:
+                val_str = f"${val/1e6:,.0f}M" if abs(val) < 1e9 else f"${val/1e9:,.1f}B"
+            elif d['unit'] == 'USD/shares':
+                val_str = f"${val:.2f}"
+            else:
+                val_str = f"{val:,.0f}"
+            yoy = f" (YoY: {d['yoy_change']:+.1f}%)" if d.get('yoy_change') is not None else ""
+            enrichment += f"\n  {label}: {val_str}{yoy} [{d['period']}]"
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
