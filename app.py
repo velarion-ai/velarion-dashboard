@@ -3431,8 +3431,9 @@ if sel3 and sel3 != PLACEHOLDER:
                 if fee_section_html: _h34 += 190
                 if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 70
                 if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 50
-                if peer_bar_html: _h34 += 120
-                _h34 += 20  # source note
+                if peer_bar_html: _h34 += 180
+                if peer_comm_chair_html: _h34 += 80
+                _h34 += 40  # source note + bottom margin
                 components.html(combined_34, height=_h34, scrolling=False)
                 
                 # ---- SECTION 5: ACTION BUTTONS ----
@@ -3442,14 +3443,10 @@ if sel3 and sel3 != PLACEHOLDER:
                     board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
                 with btn_col2:
                     board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
-                    board_proxy_btn = st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", use_container_width=True)
-                
-                # ---- View Proxy Filing handler ----
-                if board_proxy_btn:
                     _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else ""
                     _cik_str = str(_cik_val).zfill(10) if _cik_val else ""
-                    proxy_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={_cik_str}&type=DEF+14A&dateb=&owner=include&count=5"
-                    st.components.v1.html(f'<script>window.open("{proxy_url}", "_blank");</script>', height=0)
+                    _proxy_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={_cik_str}&type=DEF+14A&dateb=&owner=include&count=5"
+                    st.link_button("\U0001F4C4 View Proxy Filing", _proxy_url, use_container_width=True)
                 
                 # ---- Board League Tables handler ----
                 if board_league_btn:
