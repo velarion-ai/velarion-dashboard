@@ -844,7 +844,7 @@ def render_pct_card(val, pct, label, med=None, n=None, is_ext=False, is_partial=
             vs_med_line = f'<div style="font-size:0.75rem;color:#b8860b;font-weight:600;margin-top:2px;">{diff_pct:+.0f}% above median</div>'
         else:
             vs_med_line = f'<div style="font-size:0.75rem;color:#475569;font-weight:600;margin-top:2px;">{diff_pct:+.0f}% below median</div>'
-    return f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {color};">{vs_med_line}<div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(val)}</div><div style="font-size:0.82rem;color:{color};font-weight:600;">{pct_d} percentile</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;"><div style="width:{pct or 0}%;height:100%;background:{color};border-radius:4px;"></div></div>{med_line}{partial_tag}</div>'
+    return f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {color};"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(val)}</div>{vs_med_line}<div style="font-size:0.82rem;color:{color};font-weight:600;">{pct_d} percentile</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;"><div style="width:{pct or 0}%;height:100%;background:{color};border-radius:4px;"></div></div>{med_line}{partial_tag}</div>'
 
 def render_peer_table(exec_row, peers_df, position):
     ps = get_peer_stats(peers_df)
