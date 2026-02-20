@@ -834,7 +834,17 @@ def render_pct_card(val, pct, label, med=None, n=None, is_ext=False, is_partial=
     color = "#b8860b" if pct and pct >= 50 else "#1a365d" if pct and pct >= 25 else "#475569" if pct is not None else "#94a3b8"
     partial_tag = '<div style="margin-top:3px;"><span class="partial-year">PARTIAL YEAR</span></div>' if is_partial else ''
     med_line = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:3px;">Median: {fmt_dollars(med)} | n={n}</div>' if med is not None and n is not None else ''
-    return f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {color};"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(val)}</div><div style="font-size:0.82rem;color:{color};font-weight:600;">{pct_d} percentile</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;"><div style="width:{pct or 0}%;height:100%;background:{color};border-radius:4px;"></div></div>{med_line}{partial_tag}</div>'
+    # % above/below median
+    vs_med_line = ''
+    if med is not None and med > 0 and val is not None and pd.notna(val) and not is_partial:
+        diff_pct = (val - med) / med * 100
+        if abs(diff_pct) < 0.5:
+            vs_med_line = '<div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">At median</div>'
+        elif diff_pct > 0:
+            vs_med_line = f'<div style="font-size:0.75rem;color:#b8860b;font-weight:600;margin-top:2px;">{diff_pct:+.0f}% above median</div>'
+        else:
+            vs_med_line = f'<div style="font-size:0.75rem;color:#475569;font-weight:600;margin-top:2px;">{diff_pct:+.0f}% below median</div>'
+    return f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {color};">{vs_med_line}<div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">{label}</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(val)}</div><div style="font-size:0.82rem;color:{color};font-weight:600;">{pct_d} percentile</div><div style="background:#e2e8f0;border-radius:4px;height:5px;margin-top:5px;"><div style="width:{pct or 0}%;height:100%;background:{color};border-radius:4px;"></div></div>{med_line}{partial_tag}</div>'
 
 def render_peer_table(exec_row, peers_df, position):
     ps = get_peer_stats(peers_df)
