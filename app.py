@@ -1174,6 +1174,158 @@ def fetch_10q_financials(cik):
         return None
 
 @st.cache_data(ttl=86400)
+def fetch_proxy_advisory_alerts(company_name, cik, fy_year):
+    """Scan DEFA14A filings for ISS/Glass Lewis recommendations and company responses."""
+    import requests as _req
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
+        query = f'%22{clean_name.replace(" ", "+")}%22'
+        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=DEFA14A&dateRange=custom&startdt={fy_year}-01-01&enddt={fy_year+1}-06-30'
+        resp = _req.get(url, headers=_headers, timeout=10)
+        if resp.status_code != 200:
+            return None
+        import json
+        data = json.loads(resp.text)
+        hits = data.get('hits', {}).get('hits', [])
+        if not hits:
+            return None
+        
+        alerts = []
+        from bs4 import BeautifulSoup
+        for h in hits[:6]:
+            doc_id = h['_id']
+            parts = doc_id.split(':')
+            accession = parts[0]
+            filename = parts[1]
+            cik_clean = str(h['_source']['ciks'][0]).lstrip('0')
+            filing_date = h['_source'].get('file_date', '')
+            filing_url = f'https://www.sec.gov/Archives/edgar/data/{cik_clean}/{accession.replace("-","")}/{filename}'
+            
+            try:
+                filing_resp = _req.get(filing_url, headers=_headers, timeout=12)
+                if filing_resp.status_code != 200:
+                    continue
+                soup = BeautifulSoup(filing_resp.text, 'html.parser')
+                text = soup.get_text(separator=' ', strip=True)[:5000]
+                tl = text.lower()
+                
+                # Check for proxy advisory content
+                has_iss = 'iss' in tl and any(w in tl for w in ['recommend', 'advises', 'advisory', 'against', 'vote for'])
+                has_gl = 'glass lewis' in tl and any(w in tl for w in ['recommend', 'advises', 'advisory', 'against', 'vote for'])
+                has_against = any(p in tl for p in ['recommends a vote against', 'recommend that stockholders vote against',
+                    'recommends against', 'vote against the', 'has recommended against'])
+                has_for = any(p in tl for p in ['recommends a vote for', 'recommend that stockholders vote for',
+                    'recommends for', 'iss recommends'])
+                has_response = any(p in tl for p in ['we disagree', 'company disagrees', 'we believe iss',
+                    'contrary to', 'notwithstanding the recommendation', 'response to'])
+                
+                if has_iss or has_gl or has_against or has_response:
+                    # Extract relevant snippet
+                    snippet = text[:800]
+                    for kw in ['iss', 'glass lewis', 'recommends', 'advisory']:
+                        idx = tl.find(kw)
+                        if idx >= 0:
+                            snippet = text[max(0, idx - 100):idx + 700]
+                            break
+                    
+                    alert = {
+                        'date': filing_date,
+                        'has_iss': has_iss,
+                        'has_glass_lewis': has_gl,
+                        'against': has_against,
+                        'company_response': has_response,
+                        'snippet': snippet[:600],
+                    }
+                    alerts.append(alert)
+            except Exception:
+                continue
+        
+        return alerts if alerts else None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=86400)
+def fetch_institutional_ownership(company_name, cik, fy_year):
+    """Extract top institutional owners from the DEF 14A proxy filing's beneficial ownership table."""
+    import requests as _req
+    import re
+    try:
+        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        proxy_url = lookup_proxy_url(company_name, fy_year, cik)
+        if not proxy_url:
+            return None
+        resp = _req.get(proxy_url, headers=_headers, timeout=20)
+        if resp.status_code != 200:
+            return None
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        text = soup.get_text(separator='\n', strip=True)
+        tl = text.lower()
+        
+        # Find the beneficial ownership section
+        start = None
+        for marker in ['security ownership of certain beneficial', 'beneficial ownership of common',
+                        'principal stockholders', 'known to us to beneficially own more than 5%',
+                        'known to beneficially own more than 5%']:
+            idx = tl.find(marker)
+            if idx >= 0:
+                start = idx
+                break
+        
+        if start is None:
+            return None
+        
+        chunk = text[start:start + 3000]
+        
+        # Parse institutional holders — look for patterns like "Name ... 85,929,843 ... 13%"
+        owners = []
+        known_institutions = [
+            'Vanguard', 'BlackRock', 'State Street', 'Cohen & Steers', 'Capital International',
+            'Capital Research', 'Fidelity', 'JPMorgan', 'T. Rowe Price', 'Wellington',
+            'Invesco', 'Northern Trust', 'Goldman Sachs', 'Morgan Stanley', 'Dimensional',
+            'Citadel', 'AEW', 'Brookfield', 'Heitman', 'Principal', 'Nuveen', 'TIAA',
+            'Norges Bank', 'GIC', 'APG', 'PGGM', 'Canada Pension', 'CPPIB', 'Starboard',
+            'Elliott', 'Land & Buildings', 'Barington', 'Third Point'
+        ]
+        
+        lines = chunk.split('\n')
+        for i, line in enumerate(lines):
+            for inst in known_institutions:
+                if inst.lower() in line.lower():
+                    # Look in nearby lines for share count and percentage
+                    nearby = '\n'.join(lines[max(0, i-1):i+5])
+                    # Find percentage (e.g., "13%", "13 %", "13.2%")
+                    pct_match = re.search(r'(\d{1,2}(?:\.\d+)?)\s*%', nearby)
+                    # Find share count (e.g., "85,929,843")
+                    shares_match = re.search(r'(\d{1,3}(?:,\d{3}){2,})', nearby)
+                    
+                    if pct_match:
+                        pct = float(pct_match.group(1))
+                        shares = int(shares_match.group(1).replace(',', '')) if shares_match else None
+                        # Filter out footnote numbers (small percentages unlikely to be ownership)
+                        if pct >= 3.0:
+                            owners.append({
+                                'institution': inst,
+                                'pct': pct,
+                                'shares': shares,
+                            })
+                    break
+        
+        # Deduplicate and sort by percentage
+        seen = set()
+        unique = []
+        for o in owners:
+            if o['institution'] not in seen:
+                seen.add(o['institution'])
+                unique.append(o)
+        unique.sort(key=lambda x: x['pct'], reverse=True)
+        
+        return unique[:7] if unique else None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=86400)
 def fetch_material_8k_events(company_name, cik):
     """Fetch material 8-K events (CEO changes, acquisitions, restructuring, etc.)."""
     import requests as _req
@@ -1409,6 +1561,8 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     financials_10k = fetch_10k_financials(cik_val) if cik_val else None
     financials_10q = fetch_10q_financials(cik_val) if cik_val else None
     material_events = fetch_material_8k_events(cn, cik_val) if cik_val else None
+    proxy_alerts = fetch_proxy_advisory_alerts(cn, cik_val, FY_YEAR + 1) if cik_val else None
+    inst_owners = fetch_institutional_ownership(cn, cik_val, FY_YEAR) if cik_val else None
     
     # Build source list for footnotes
     sources = []
@@ -1426,6 +1580,10 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         sources.append(f"10-Q Quarterly Report financial data via SEC EDGAR XBRL")
     if material_events:
         sources.append(f"8-K Material Event filings (leadership changes, acquisitions, restructuring), SEC EDGAR")
+    if proxy_alerts:
+        sources.append(f"DEFA14A Supplemental Proxy filings (proxy advisory firm recommendations/responses), SEC EDGAR")
+    if inst_owners:
+        sources.append(f"Beneficial Ownership disclosure from DEF 14A (institutional holders >5%), SEC EDGAR")
     if current_stock:
         sources.append(f"Current stock data via Yahoo Finance (as of {current_stock.get('as_of', 'today')})")
     sources.append(f"Historical stock returns (1-yr, 3-yr, YTD) via Yahoo Finance, through Dec 31, {RETURNS_YEAR}")
@@ -1466,6 +1624,31 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     if material_events:
         enrichment += f"\n\nMATERIAL EVENTS (8-K filings — leadership changes, acquisitions, restructuring, material agreements):\n{material_events}"
         enrichment += "\n  NOTE: Reference these events where they are relevant to compensation decisions, leadership transitions, or strategic context."
+    if proxy_alerts:
+        enrichment += f"\n\nPROXY ADVISORY ALERTS (DEFA14A filings — ISS/Glass Lewis recommendations and company responses):"
+        for alert in proxy_alerts:
+            advisory = []
+            if alert.get('has_iss'): advisory.append('ISS')
+            if alert.get('has_glass_lewis'): advisory.append('Glass Lewis')
+            adv_str = ' & '.join(advisory) if advisory else 'Proxy advisory'
+            status = "AGAINST recommendation" if alert.get('against') else "recommendation noted"
+            response = " — COMPANY FILED RESPONSE" if alert.get('company_response') else ""
+            enrichment += f"\n  [{alert['date']}] {adv_str}: {status}{response}"
+            enrichment += f"\n    {alert['snippet'][:400]}"
+        enrichment += "\n  ⚠ CRITICAL FOR BOARD PREP: If ISS or Glass Lewis recommended AGAINST say-on-pay, this MUST be addressed in Board Considerations. The comp committee will face direct questions about this."
+    if inst_owners:
+        enrichment += f"\n\nINSTITUTIONAL OWNERSHIP (from DEF 14A beneficial ownership table):"
+        total_pct = 0
+        for o in inst_owners:
+            shares_str = f" ({o['shares']:,} shares)" if o.get('shares') else ""
+            enrichment += f"\n  {o['institution']}: {o['pct']}%{shares_str}"
+            total_pct += o['pct']
+        enrichment += f"\n  Top {len(inst_owners)} holders control ~{total_pct:.0f}% of shares"
+        # Flag if passive index funds dominate (they follow ISS)
+        index_funds = [o for o in inst_owners if o['institution'] in ('Vanguard', 'BlackRock', 'State Street')]
+        if index_funds:
+            idx_pct = sum(o['pct'] for o in index_funds)
+            enrichment += f"\n  NOTE: Passive index funds ({', '.join(o['institution'] for o in index_funds)}) hold ~{idx_pct:.0f}% — these investors typically follow ISS vote recommendations on say-on-pay."
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
