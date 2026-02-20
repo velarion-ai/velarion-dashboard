@@ -3035,28 +3035,28 @@ if sel3 and sel3 != PLACEHOLDER:
                 <div style="margin:0.5rem 0 0.5rem 0;">
                     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.8rem;">
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Board Size</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Board Size</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_dirs}</div>
                         </div>
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Independent</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Independent</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_independent} of {n_dirs}</div>
                             <div style="font-size:0.7rem;color:#94a3b8;">{indep_pct}%</div>
                         </div>
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Age</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Age</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_age}</div>
                         </div>
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Tenure</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Tenure</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_tenure} yrs</div>
                         </div>
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Median Total Comp</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Median Total Comp</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{"${:,.0f}".format(median_total) if pd.notna(median_total) else "—"}</div>
                         </div>
                         <div>
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Committees</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Committees</div>
                             <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{len(all_comms)}</div>
                         </div>
                     </div>
@@ -3149,7 +3149,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     <td style="padding:10px 10px;text-align:right;font-weight:800;color:white;font-size:0.9rem;">${agg_total:,.0f}</td>
                 </tr>"""
                 
-                hdr_style = "padding:8px 10px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
+                hdr_style = "padding:8px 10px;font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
                 roster_table_html = f"""
                 <div style="overflow-x:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                 <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
@@ -3319,7 +3319,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             if len(vals) >= 2:
                                 peer_stats_html += f"""
                                 <div style="margin-bottom:4px;">
-                                    <div style="font-size:0.75rem;font-weight:600;color:#475569;margin-bottom:4px;border-bottom:1px solid #cbd5e1;padding-bottom:3px;">{label}</div>
+                                    <div style="font-size:0.75rem;font-weight:600;color:#1e293b;margin-bottom:4px;border-bottom:1px solid #cbd5e1;padding-bottom:3px;">{label}</div>
                                     <div style="font-size:0.8rem;line-height:1.6;">
                                         <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
@@ -3342,18 +3342,18 @@ if sel3 and sel3 != PLACEHOLDER:
                     # (peer benchmarks go in the peer benchmarks box below)
                     right_content = ""
                     if premium_html:
-                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Leadership Premiums</div>{premium_html}'
+                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Leadership Premiums</div>{premium_html}'
                     if comm_chair_html:
                         sep = "0.8rem" if premium_html else "0"
-                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers</div>{comm_chair_html}'
+                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers</div>{comm_chair_html}'
                     if comm_member_html:
-                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:0.8rem 0 0.6rem 0;">Committee Member Retainers</div>{comm_member_html}'
+                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:0.8rem 0 0.6rem 0;">Committee Member Retainers</div>{comm_member_html}'
                     
                     if right_content:
                         right_panel = f'<div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">{right_content}</div>'
                     else:
                         right_panel = f"""<div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Directors with Comp</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">{n_with_comp} of {n_dirs}</span></div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span></div>
                         </div>"""
@@ -3372,10 +3372,10 @@ if sel3 and sel3 != PLACEHOLDER:
                         _premiums_combined = peer_lead_premium_html + peer_comm_chair_html
                         _premiums_section = ''
                         if _premiums_combined:
-                            _premiums_section = f'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Premiums</div><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:0.5rem;">{_premiums_combined}</div></div>'
+                            _premiums_section = f'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Premiums</div><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:0.5rem;">{_premiums_combined}</div></div>'
                         peer_bar_html = f"""
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;margin-bottom:2.5rem;">
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
                             {peer_stats_html}
                             </div>
@@ -3387,7 +3387,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Director Compensation Program</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers</div>
                             {retainer_html}
                             {eq_detail}
                         </div>
@@ -3405,14 +3405,14 @@ if sel3 and sel3 != PLACEHOLDER:
                     <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Director Compensation Program</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers (Avg)</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers (Avg)</div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Cash Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_cash:,.0f}</span></div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Equity Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_stock:,.0f}</span></div>
                             <div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;"><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">Total Retainer</span><span style="font-size:0.85rem;font-weight:800;color:#1e293b;">${avg_total:,.0f}</span></div>
                             <div style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">Cash: {pct_cash:.0f}% &nbsp;|&nbsp; Equity: {pct_stock:.0f}%</div>
                         </div>
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
+                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Directors with Comp</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">{n_with_comp} of {n_dirs}</span></div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span></div>
                             {chair_row}{lead_row}
@@ -3479,7 +3479,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                 <td style="padding:6px 10px;font-size:0.85rem;text-align:right;font-weight:600;color:#1e293b;">${row['total_board_cost']:,.0f}</td>
                             </tr>""")
                         
-                        lhdr = "padding:8px 10px;font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
+                        lhdr = "padding:8px 10px;font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
                         league_html = f"""
                         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                         <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🏆 Board Compensation League Tables</div>
