@@ -3050,9 +3050,11 @@ if sel3 and sel3 != PLACEHOLDER:
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
                     is_ind = d.get('is_independent', False)
                     for c in comms:
-                        if not is_ind and c in _INDEP_ONLY_COMMS:
+                        # Normalize: strip "(Chair)" suffix for counting purposes
+                        c_base = re.sub(r'\s*\(Chair\)', '', c).strip() if isinstance(c, str) else c
+                        if not is_ind and c_base in _INDEP_ONLY_COMMS:
                             continue
-                        _raw_comm_counts[c] = _raw_comm_counts.get(c, 0) + 1
+                        _raw_comm_counts[c_base] = _raw_comm_counts.get(c_base, 0) + 1
                 # Only show committees with 2+ members (filter scraper noise)
                 _valid_comms = {c for c, n in _raw_comm_counts.items() if n >= 2}
                 all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
@@ -3145,14 +3147,16 @@ if sel3 and sel3 != PLACEHOLDER:
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
                     # Management directors cannot serve on Audit/Comp/Nom-Gov (NYSE/NASDAQ rules)
                     if is_mgmt:
-                        comms = [c for c in comms if c not in _INDEP_ONLY_COMMS]
+                        comms = [c for c in comms if re.sub(r'\s*\(Chair\)', '', c).strip() not in _INDEP_ONLY_COMMS]
                     # Only show committees with 2+ members (filter scraper noise)
-                    comms = [c for c in comms if c in _valid_comms]
+                    comms = [c for c in comms if re.sub(r'\s*\(Chair\)', '', c).strip() in _valid_comms]
                     comm_chips = []
                     for c in comms:
-                        abbrev = c.replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
-                        # TODO: chair detection per committee (need committee_chairs in DB)
-                        comm_chips.append(f'<span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:0.65rem;padding:1px 5px;border-radius:3px;margin:1px 2px;">{abbrev}</span>')
+                        is_chair = '(Chair)' in c
+                        c_clean = re.sub(r'\s*\(Chair\)', '', c).strip()
+                        abbrev = c_clean.replace("Nominating and Corporate Governance", "Nom/Gov").replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
+                        chair_star = "★ " if is_chair else ""
+                        comm_chips.append(f'<span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:0.65rem;padding:1px 5px;border-radius:3px;margin:1px 2px;">{chair_star}{abbrev}</span>')
                     comm_html = "".join(comm_chips) if comm_chips else '<span style="color:#cbd5e1;">—</span>'
                     
                     # Row background: R directors get subtle strikethrough feel, N get light blue, MGMT amber
