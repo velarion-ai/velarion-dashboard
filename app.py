@@ -3308,9 +3308,8 @@ if sel3 and sel3 != PLACEHOLDER:
                                     <div style="font-size:0.8rem;line-height:1.6;">
                                         <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span>
                                     </div>
-                                    <div style="font-size:0.8rem;"><span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span></div>
+                                    <div style="font-size:0.8rem;"><span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span></div>
                                 </div>"""
                         # Lead Director Premium — goes into Leadership Premiums box, not peer benchmarks
                         _lead_vals = _peer_fs['lead_director_premium'].dropna()
@@ -3322,9 +3321,8 @@ if sel3 and sel3 != PLACEHOLDER:
                                 <div style="font-size:0.8rem;line-height:1.6;">
                                     <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.25):,.0f}</span>
                                     &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${_lead_vals.median():,.0f}</span>
-                                    &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span>
                                 </div>
-                                <div style="font-size:0.8rem;"><span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.75):,.0f}</span></div>
+                                <div style="font-size:0.8rem;"><span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.75):,.0f}</span></div>
                             </div>"""
                     
                     # Right panel
