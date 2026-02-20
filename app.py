@@ -3377,11 +3377,12 @@ if sel3 and sel3 != PLACEHOLDER:
                             fn_parts.append("No fee data: " + ", ".join(_peers_without))
                         footnote = '<div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;font-style:italic;">Proxy peer group: ' + " &nbsp;|&nbsp; ".join(fn_parts) + '. Use Custom Peer Group to add comparison companies.</div>'
                         peer_bar_html = f"""
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;margin-bottom:1.5rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
                             {peer_stats_html}
                             </div>
+                            {'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Committee Chair Premiums</div>' + peer_comm_chair_html + '</div>' if peer_comm_chair_html else ''}
                             {footnote}
                         </div>"""
                     
