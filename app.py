@@ -3449,7 +3449,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else ""
                     _cik_str = str(_cik_val).zfill(10) if _cik_val else ""
                     proxy_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={_cik_str}&type=DEF+14A&dateb=&owner=include&count=5"
-                    st.markdown(f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1rem;margin:0.5rem 0;font-size:0.85rem;color:#0c4a6e;">📄 <a href="{proxy_url}" target="_blank" style="color:#1e40af;font-weight:600;">View {cn3} DEF 14A Proxy Filings on SEC EDGAR →</a></div>', unsafe_allow_html=True)
+                    st.components.v1.html(f'<script>window.open("{proxy_url}", "_blank");</script>', height=0)
                 
                 # ---- Board League Tables handler ----
                 if board_league_btn:
