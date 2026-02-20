@@ -3240,6 +3240,27 @@ if sel3 and sel3 != PLACEHOLDER:
                     chair_p = _co_fs.get('chair_premium')
                     eq_vehicle = _co_fs.get('equity_vehicle', '') or ''
                     eq_vesting = _co_fs.get('equity_vesting', '') or ''
+                    
+                    # Fallback: derive missing retainers from actual director_comp data
+                    # (fee schedule scraper may have missed the dollar amount)
+                    _indep_dirs = bd3[bd3['is_independent'] == True] if not bd3.empty else pd.DataFrame()
+                    _dirs_with_comp = _indep_dirs[_indep_dirs['total_comp'].notna() & (_indep_dirs['total_comp'] > 0)] if not _indep_dirs.empty else pd.DataFrame()
+                    if not eq_r and not _dirs_with_comp.empty:
+                        _eq_vals = _dirs_with_comp['stock_awards'].dropna()
+                        _eq_vals = _eq_vals[_eq_vals > 0]
+                        if len(_eq_vals) >= 2:
+                            # Use mode (most common value) since retainers are usually uniform
+                            eq_r = int(_eq_vals.mode().iloc[0]) if not _eq_vals.mode().empty else int(_eq_vals.median())
+                    if not tot_r and cash_r and eq_r:
+                        tot_r = cash_r + eq_r
+                    elif not tot_r and not _dirs_with_comp.empty:
+                        _tot_vals = _dirs_with_comp['total_comp'].dropna()
+                        _tot_vals = _tot_vals[_tot_vals > 0]
+                        if len(_tot_vals) >= 2:
+                            tot_r = int(_tot_vals.mode().iloc[0]) if not _tot_vals.mode().empty else int(_tot_vals.median())
+                    if not cash_r and tot_r and eq_r:
+                        cash_r = tot_r - eq_r
+                    
                     pct_eq = (eq_r / tot_r * 100) if eq_r and tot_r and tot_r > 0 else 0
                     
                     retainer_html = ""
