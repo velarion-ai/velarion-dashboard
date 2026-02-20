@@ -2959,6 +2959,26 @@ if sel3 and sel3 != PLACEHOLDER:
             else:
                 co_dirs = dir_df[dir_df['ticker'] == stk3].copy()
                 
+                # Filter out departed directors (legacy — fully removed from display)
+                if 'is_departed' in co_dirs.columns:
+                    co_dirs = co_dirs[co_dirs['is_departed'] != True].copy()
+                
+                # ============================================================
+                # BOARD COMPOSITION LOGIC — Current vs Comp Year
+                # ============================================================
+                # is_not_standing (R) = served during comp year, not on current board
+                # is_newly_elected (N) = on current board, no comp data for displayed FY
+                # Current Board = exclude R, include N (for governance metrics)
+                # Comp Board = include R, exclude N (for compensation aggregates)
+                
+                _has_r_n = 'is_not_standing' in co_dirs.columns and 'is_newly_elected' in co_dirs.columns
+                if _has_r_n:
+                    current_board = co_dirs[co_dirs.get('is_not_standing', False) != True].copy()
+                    comp_board = co_dirs[co_dirs.get('is_newly_elected', False) != True].copy()
+                else:
+                    current_board = co_dirs.copy()
+                    comp_board = co_dirs.copy()
+                
                 # ============================================================
                 # QC RULES — Management Director Validation
                 # ============================================================
@@ -2990,35 +3010,43 @@ if sel3 and sel3 != PLACEHOLDER:
                 # Rule 4: MGMT directors cannot serve on Audit/Comp/Nom-Gov (enforced in chip rendering below)
                 # ============================================================
                 
-                # Board Snapshot metrics
-                n_dirs = len(co_dirs)
-                n_independent = int(co_dirs['is_independent'].sum()) if 'is_independent' in co_dirs.columns else 0
-                indep_pct = round(n_independent / n_dirs * 100) if n_dirs > 0 else 0
-                n_with_comp = int(co_dirs['total_comp'].notna().sum())
-                avg_total = co_dirs['total_comp'].dropna().mean()
-                median_total = co_dirs['total_comp'].dropna().median()
-                avg_cash = co_dirs['fees_earned_cash'].dropna().mean()
-                avg_stock = co_dirs['stock_awards'].dropna().mean()
-                total_board_comp = co_dirs['total_comp'].dropna().sum()
+                # Recompute current_board/comp_board after QC rules (independence may have changed)
+                if _has_r_n:
+                    current_board = co_dirs[co_dirs.get('is_not_standing', False) != True].copy()
+                    comp_board = co_dirs[co_dirs.get('is_newly_elected', False) != True].copy()
+                else:
+                    current_board = co_dirs.copy()
+                    comp_board = co_dirs.copy()
                 
-                # Avg age and tenure
-                ages = co_dirs['age'].dropna()
+                # Board Snapshot metrics — CURRENT BOARD (exclude R, include N)
+                n_dirs = len(current_board)
+                n_independent = int(current_board['is_independent'].sum()) if 'is_independent' in current_board.columns else 0
+                indep_pct = round(n_independent / n_dirs * 100) if n_dirs > 0 else 0
+                n_with_comp = int(comp_board['total_comp'].notna().sum())
+                avg_total = comp_board['total_comp'].dropna().mean()
+                median_total = comp_board['total_comp'].dropna().median()
+                avg_cash = comp_board['fees_earned_cash'].dropna().mean()
+                avg_stock = comp_board['stock_awards'].dropna().mean()
+                total_board_comp = comp_board['total_comp'].dropna().sum()
+                
+                # Avg age and tenure — CURRENT BOARD
+                ages = current_board['age'].dropna()
                 avg_age = int(ages.mean()) if len(ages) > 0 else "—"
-                tenures = co_dirs['director_since'].dropna()
+                tenures = current_board['director_since'].dropna()
                 avg_tenure = int(2025 - tenures.mean()) if len(tenures) > 0 else "—"
                 
-                # Find chair and lead independent
+                # Find chair and lead independent — from CURRENT BOARD
                 chair_name = ""
                 lead_ind_name = ""
-                for _, d in co_dirs.iterrows():
+                for _, d in current_board.iterrows():
                     if d.get('is_board_chair'): chair_name = d['director_name']
                     if d.get('is_lead_independent'): lead_ind_name = d['director_name']
                 
-                # Collect unique committees (exclude management directors from independence-required committees)
+                # Collect unique committees — from CURRENT BOARD (exclude R directors)
                 _INDEP_ONLY_COMMS = {'Audit', 'Compensation', 'Nominating/Governance'}
-                # First pass: count committee members across all directors
+                # First pass: count committee members across current board directors
                 _raw_comm_counts = {}
-                for _, d in co_dirs.iterrows():
+                for _, d in current_board.iterrows():
                     comms = d.get('committees_list', []) if 'committees_list' in d.index else []
                     is_ind = d.get('is_independent', False)
                     for c in comms:
@@ -3090,6 +3118,13 @@ if sel3 and sel3 != PLACEHOLDER:
                         badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">LEAD</span>')
                     if d.get('is_board_chair'):
                         badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">CHAIR</span>')
+                    # R badge: not standing for re-election (served during comp year but off the board now)
+                    _is_r = bool(d.get('is_not_standing', False))
+                    _is_n = bool(d.get('is_newly_elected', False))
+                    if _is_r:
+                        badges.append('<span style="background:#fee2e2;color:#991b1b;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;" title="Did not stand for re-election">R</span>')
+                    if _is_n:
+                        badges.append('<span style="background:#dbeafe;color:#1e40af;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;" title="Newly elected">N</span>')
                     badge_html = " ".join(badges)
                     
                     cash = f"${d['fees_earned_cash']:,.0f}" if pd.notna(d.get('fees_earned_cash')) else "—"
@@ -3120,8 +3155,12 @@ if sel3 and sel3 != PLACEHOLDER:
                         comm_chips.append(f'<span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:0.65rem;padding:1px 5px;border-radius:3px;margin:1px 2px;">{abbrev}</span>')
                     comm_html = "".join(comm_chips) if comm_chips else '<span style="color:#cbd5e1;">—</span>'
                     
-                    # Row background: amber tint for management, alternating for others
-                    if is_mgmt:
+                    # Row background: R directors get subtle strikethrough feel, N get light blue, MGMT amber
+                    if _is_r:
+                        bg = "background:rgba(241,245,249,0.7);opacity:0.7;"  # Faded for departing
+                    elif _is_n:
+                        bg = "background:rgba(219,234,254,0.25);"  # Light blue tint for new
+                    elif is_mgmt:
                         bg = "background:rgba(254,243,199,0.3);"
                     elif row_idx % 2 == 0:
                         bg = "background:white;"
