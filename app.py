@@ -3323,8 +3323,8 @@ if sel3 and sel3 != PLACEHOLDER:
                                     <div style="font-size:0.8rem;line-height:1.6;">
                                         <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
                                     </div>
-                                    <div style="font-size:0.8rem;"><span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span></div>
                                 </div>"""
                         # Lead Director Premium — goes into Leadership Premiums box, not peer benchmarks
                         _lead_vals = _peer_fs['lead_director_premium'].dropna()
@@ -3377,7 +3377,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             fn_parts.append("No fee data: " + ", ".join(_peers_without))
                         footnote = '<div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;font-style:italic;">Proxy peer group: ' + " &nbsp;|&nbsp; ".join(fn_parts) + '. Use Custom Peer Group to add comparison companies.</div>'
                         peer_bar_html = f"""
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;margin-bottom:1.5rem;">
+                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;margin-bottom:2.5rem;">
                             <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
                             {peer_stats_html}
