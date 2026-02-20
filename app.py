@@ -814,7 +814,8 @@ def comp_mix_str(row):
     s = row['base_salary'] if pd.notna(row['base_salary']) else 0
     b = row['cash_bonus_incentive'] if pd.notna(row['cash_bonus_incentive']) else 0
     sk = row['stock_based_comp'] if pd.notna(row['stock_based_comp']) else 0
-    return f"{s/t*100:.0f}% salary / {b/t*100:.0f}% cash / {sk/t*100:.0f}% equity"
+    o = max(0, t - s - b - sk)
+    return f"{s/t*100:.0f}% salary / {b/t*100:.0f}% cash / {sk/t*100:.0f}% equity / {o/t*100:.0f}% other"
 
 def peer_mix_median(peers_df, position):
     pp = peers_df[peers_df['position']==position]
@@ -857,10 +858,11 @@ def render_peer_table(exec_row, peers_df, position):
         bg = "background:#dbeafe;" if is_hl else ("background:#f8fafc;" if i % 2 else "")
         fw = "font-weight:600;" if is_hl else ""
         mc = fmt_mcap(r['market_cap']) if pd.notna(r.get('market_cap')) else "\u2014"
-        rows.append(f"<tr style='{bg}{fw}'><td>{i+1}</td><td>{r['ticker']}</td><td>{r['company_name'][:30]}</td><td>{r['first_name']} {r['last_name']}</td><td style='text-align:right'>{fmt_dollars(r['base_salary'])}</td><td style='text-align:right'>{fmt_dollars(r['cash_bonus_incentive'])}</td><td style='text-align:right'>{fmt_dollars(r['stock_based_comp'])}</td><td style='text-align:right'>{fmt_dollars(r['total_comp'])}</td><td style='text-align:right'>{mc}</td></tr>")
+        _oc = max(0, (r['total_comp'] or 0) - (r['base_salary'] or 0) - (r['cash_bonus_incentive'] or 0) - (r['stock_based_comp'] or 0)) if pd.notna(r.get('total_comp')) and r['total_comp'] > 0 else 0
+        rows.append(f"<tr style='{bg}{fw}'><td>{i+1}</td><td>{r['ticker']}</td><td>{r['company_name'][:30]}</td><td>{r['first_name']} {r['last_name']}</td><td style='text-align:right'>{fmt_dollars(r['base_salary'])}</td><td style='text-align:right'>{fmt_dollars(r['cash_bonus_incentive'])}</td><td style='text-align:right'>{fmt_dollars(r['stock_based_comp'])}</td><td style='text-align:right;color:#64748b;'>{fmt_dollars(_oc)}</td><td style='text-align:right'>{fmt_dollars(r['total_comp'])}</td><td style='text-align:right'>{mc}</td></tr>")
     html = f"""<div style="max-height:300px;overflow-y:auto;margin:0.5rem 0;border:1px solid #e2e8f0;border-radius:8px;">
     <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-    <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px;text-align:left;">Rank</th><th style="padding:6px;text-align:left;">Ticker</th><th style="padding:6px;text-align:left;">Company</th><th style="padding:6px;text-align:left;">Executive</th><th style="padding:6px;text-align:right;">Salary</th><th style="padding:6px;text-align:right;">Cash Bonus</th><th style="padding:6px;text-align:right;">Stock</th><th style="padding:6px;text-align:right;">Total Comp</th><th style="padding:6px;text-align:right;">Mkt Cap</th></tr></thead>
+    <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px;text-align:left;">Rank</th><th style="padding:6px;text-align:left;">Ticker</th><th style="padding:6px;text-align:left;">Company</th><th style="padding:6px;text-align:left;">Executive</th><th style="padding:6px;text-align:right;">Salary</th><th style="padding:6px;text-align:right;">Cash Bonus</th><th style="padding:6px;text-align:right;">Stock</th><th style="padding:6px;text-align:right;color:#64748b;">Other</th><th style="padding:6px;text-align:right;">Total Comp</th><th style="padding:6px;text-align:right;">Mkt Cap</th></tr></thead>
     <tbody>{''.join(rows)}</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
 
@@ -1739,7 +1741,7 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
     MIN_PEERS = 3
     fig = go.Figure()
     labels = []
-    sal_pcts = []; cash_pcts = []; eq_pcts = []
+    sal_pcts = []; cash_pcts = []; eq_pcts = []; oth_pcts = []
     # Company execs
     for _, rw in sort_by_position(co_d).iterrows():
         if rw['comp_source'] == 'external_manager': continue
@@ -1747,9 +1749,10 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
         s = (rw['base_salary'] or 0) / tc * 100
         c = (rw['cash_bonus_incentive'] or 0) / tc * 100
         e = (rw['stock_based_comp'] or 0) / tc * 100
+        o = max(0, 100 - s - c - e)
         pos_d = POSITION_DISPLAY.get(rw['position'], rw['position'])
         labels.append(f"{rw['last_name']} ({pos_d})")
-        sal_pcts.append(round(s, 1)); cash_pcts.append(round(c, 1)); eq_pcts.append(round(e, 1))
+        sal_pcts.append(round(s, 1)); cash_pcts.append(round(c, 1)); eq_pcts.append(round(e, 1)); oth_pcts.append(round(o, 1))
     # Peer median — use widened if thin
     for pos in ['CEO','CFO','COO','CIO','GC','CAO']:
         pp = ps[ps['position']==pos]
@@ -1767,11 +1770,13 @@ def chart_comp_mix(co_d, peers, pt, all_df=None):
         s_med = use_pp['base_salary'].median() / tc_med * 100
         c_med = use_pp['cash_bonus_incentive'].median() / tc_med * 100
         e_med = use_pp['stock_based_comp'].median() / tc_med * 100
+        o_med = max(0, 100 - s_med - c_med - e_med)
         labels.append(f"Peer {POSITION_DISPLAY.get(pos, pos)}{suffix}")
-        sal_pcts.append(round(s_med, 1)); cash_pcts.append(round(c_med, 1)); eq_pcts.append(round(e_med, 1))
+        sal_pcts.append(round(s_med, 1)); cash_pcts.append(round(c_med, 1)); eq_pcts.append(round(e_med, 1)); oth_pcts.append(round(o_med, 1))
     fig.add_trace(go.Bar(name='Base Salary', y=labels, x=sal_pcts, orientation='h', marker_color=CHART_COLORS['salary'], text=[f'{v:.0f}%' for v in sal_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.add_trace(go.Bar(name='Cash Bonus', y=labels, x=cash_pcts, orientation='h', marker_color=CHART_COLORS['cash'], text=[f'{v:.0f}%' for v in cash_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.add_trace(go.Bar(name='Non-Cash Equity', y=labels, x=eq_pcts, orientation='h', marker_color=CHART_COLORS['equity'], text=[f'{v:.0f}%' for v in eq_pcts], textposition='inside', textfont=dict(color='white', size=11)))
+    fig.add_trace(go.Bar(name='All Other', y=labels, x=oth_pcts, orientation='h', marker_color='#94a3b8', text=[f'{v:.0f}%' if v >= 3 else '' for v in oth_pcts], textposition='inside', textfont=dict(color='white', size=11)))
     fig.update_layout(barmode='stack', height=max(250, len(labels)*42+30), margin=dict(l=10, r=10, t=60, b=10),
         title=dict(text='Compensation Mix: Company vs Peer Median', font=dict(size=14, color=CHART_COLORS['text']), y=0.97),
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5, font=dict(size=11)),
@@ -2881,10 +2886,23 @@ if sel3 and sel3 != PLACEHOLDER:
                 n_pos = len(peers[peers['total_comp'].notna()])
                 if widened and widen_desc:
                     st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 {widen_desc}</div>', unsafe_allow_html=True)
-                cols = st.columns(4)
+                cols = st.columns(5)
                 for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
                     v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
                     with cols[i]: st.markdown(render_pct_card(v, p, l, med=med, n=n, is_ext=ie, is_partial=ip), unsafe_allow_html=True)
+                # All Other Comp — computed, displayed but NOT benchmarked
+                with cols[4]:
+                    _oc_sal = er.get('base_salary') or 0 if pd.notna(er.get('base_salary')) else 0
+                    _oc_bon = er.get('cash_bonus_incentive') or 0 if pd.notna(er.get('cash_bonus_incentive')) else 0
+                    _oc_stk = er.get('stock_based_comp') or 0 if pd.notna(er.get('stock_based_comp')) else 0
+                    _oc_tot = er.get('total_comp') or 0 if pd.notna(er.get('total_comp')) else 0
+                    _oc_val = max(0, _oc_tot - _oc_sal - _oc_bon - _oc_stk)
+                    _oc_color = "#64748b"
+                    st.markdown(f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid {_oc_color};">'
+                        f'<div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">All Other Comp \u00B2</div>'
+                        f'<div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(_oc_val)}</div>'
+                        f'<div style="font-size:0.58rem;color:#94a3b8;margin-top:6px;line-height:1.4;">Includes perquisites, retirement contributions, tax gross-ups, relocation, personal use of aircraft, etc.</div>'
+                        f'</div>', unsafe_allow_html=True)
                 nk = f"cv_n_{stk3}_{er['position']}_{er['last_name']}_{idx}"
                 if nk not in st.session_state: st.session_state[nk] = None
                 pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
