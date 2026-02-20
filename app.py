@@ -3330,29 +3330,22 @@ if sel3 and sel3 != PLACEHOLDER:
                         _lead_vals = _peer_fs['lead_director_premium'].dropna()
                         _lead_vals = _lead_vals[_lead_vals > 0]
                         if len(_lead_vals) >= 2:
-                            peer_lead_premium_html = f"""
-                            <div style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;">
-                                <div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Peer Lead Director Premium</div>
-                                <div style="font-size:0.8rem;line-height:1.6;">
-                                    <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.25):,.0f}</span>
-                                    &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${_lead_vals.median():,.0f}</span>
-                                    &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.75):,.0f}</span>
-                                </div>
-                            </div>"""
+                            peer_lead_premium_html = f"""<div style="margin-bottom:4px;">
+                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                        <span style="font-size:0.75rem;color:#475569;font-weight:600;">Lead Director:</span>
+                                        &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.25):,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${_lead_vals.median():,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.75):,.0f}</span>
+                                    </div></div>"""
                     
-                    # Right panel
+                    # Right panel — company's own premiums and committee retainers only
+                    # (peer benchmarks go in the peer benchmarks box below)
                     right_content = ""
                     if premium_html:
-                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Leadership Premiums</div>{premium_html}{peer_lead_premium_html}'
+                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Leadership Premiums</div>{premium_html}'
                     if comm_chair_html:
                         sep = "0.8rem" if premium_html else "0"
                         right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers</div>{comm_chair_html}'
-                    if not comm_chair_html and peer_comm_chair_html:
-                        # No company data but we have peer data — show peer benchmarks with header
-                        sep = "0.8rem" if premium_html else "0"
-                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers (Peer)</div>{peer_comm_chair_html}'
-                    elif peer_comm_chair_html:
-                        right_content += f'<div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:6px;">{peer_comm_chair_html}</div>'
                     if comm_member_html:
                         right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:0.8rem 0 0.6rem 0;">Committee Member Retainers</div>{comm_member_html}'
                     
@@ -3382,7 +3375,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
                             {peer_stats_html}
                             </div>
-                            {'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Committee Chair Premiums</div>' + peer_comm_chair_html + '</div>' if peer_comm_chair_html else ''}
+                            {'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Premiums</div>' + peer_lead_premium_html + peer_comm_chair_html + '</div>' if (peer_lead_premium_html or peer_comm_chair_html) else ''}
                             {footnote}
                         </div>"""
                     
