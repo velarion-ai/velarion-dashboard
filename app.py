@@ -3425,12 +3425,12 @@ if sel3 and sel3 != PLACEHOLDER:
                 combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
                 _h34 = 10
                 if comm_section_html: _h34 += 85
-                if fee_section_html: _h34 += 190
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 70
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 50
-                if peer_bar_html: _h34 += 180
-                if peer_comm_chair_html: _h34 += 80
-                _h34 += 40  # source note + bottom margin
+                if fee_section_html: _h34 += 160
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 50
+                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 40
+                if peer_bar_html: _h34 += 140
+                if peer_comm_chair_html: _h34 += 60
+                _h34 += 30  # source note
                 components.html(combined_34, height=_h34, scrolling=False)
                 
                 # ---- SECTION 5: ACTION BUTTONS ----
@@ -3440,10 +3440,12 @@ if sel3 and sel3 != PLACEHOLDER:
                     board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
                 with btn_col2:
                     board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
-                    _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else ""
-                    _cik_str = str(_cik_val).zfill(10) if _cik_val else ""
-                    _proxy_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={_cik_str}&type=DEF+14A&dateb=&owner=include&count=5"
-                    st.link_button("\U0001F4C4 View Proxy Filing", _proxy_url, use_container_width=True)
+                    _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
+                    _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
+                    if _board_proxy_url:
+                        st.link_button("\U0001F4C4 View Proxy Filing", _board_proxy_url, use_container_width=True)
+                    else:
+                        st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
                 
                 # ---- Board League Tables handler ----
                 if board_league_btn:
