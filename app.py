@@ -3288,6 +3288,21 @@ if sel3 and sel3 != PLACEHOLDER:
                         if v:
                             comm_chair_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">{label}</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${v:,}</span></div>'
                     
+                    # Peer stats for committee chairs
+                    peer_comm_chair_html = ""
+                    if not _peer_fs.empty and len(_peer_fs) >= 2:
+                        for label, key in [('Audit Chair', 'audit_chair'), ('Comp Chair', 'comp_chair'), ('Nom/Gov Chair', 'nomgov_chair')]:
+                            vals = _peer_fs[key].dropna()
+                            vals = vals[vals > 0]
+                            if len(vals) >= 2:
+                                peer_comm_chair_html += f"""<div style="margin-bottom:4px;">
+                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                        <span style="font-size:0.75rem;color:#475569;font-weight:600;">{label}:</span>
+                                        &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
+                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
+                                    </div></div>"""
+                    
                     comm_member_html = ""
                     for label, key in [('Audit Member', 'audit_member'), ('Compensation Member', 'comp_member'), ('Nom/Gov Member', 'nomgov_member')]:
                         v = _co_fs.get(key)
@@ -3332,6 +3347,12 @@ if sel3 and sel3 != PLACEHOLDER:
                     if comm_chair_html:
                         sep = "0.8rem" if premium_html else "0"
                         right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers</div>{comm_chair_html}'
+                    if not comm_chair_html and peer_comm_chair_html:
+                        # No company data but we have peer data — show peer benchmarks with header
+                        sep = "0.8rem" if premium_html else "0"
+                        right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers (Peer)</div>{peer_comm_chair_html}'
+                    elif peer_comm_chair_html:
+                        right_content += f'<div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:6px;">{peer_comm_chair_html}</div>'
                     if comm_member_html:
                         right_content += f'<div style="font-size:0.65rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:0.8rem 0 0.6rem 0;">Committee Member Retainers</div>{comm_member_html}'
                     
