@@ -2992,11 +2992,13 @@ if sel3 and sel3 != PLACEHOLDER:
                             _exec_last_names.add(ln)
                 
                 # Rule 2: If director is flagged MGMT but their last name is NOT in exec_comp → reclassify as INDEP
-                for idx, d in co_dirs.iterrows():
-                    if not d.get('is_independent', True):  # is MGMT
-                        dir_last = d['director_name'].split()[-1].lower()
-                        if dir_last not in _exec_last_names:
-                            co_dirs.at[idx, 'is_independent'] = True
+                # Skip this rule if exec_comp has no named executives (e.g. externally managed companies)
+                if _exec_last_names:
+                    for idx, d in co_dirs.iterrows():
+                        if not d.get('is_independent', True):  # is MGMT
+                            dir_last = d['director_name'].split()[-1].lower()
+                            if dir_last not in _exec_last_names:
+                                co_dirs.at[idx, 'is_independent'] = True
                 
                 # Rule 3: MGMT directors get zero board comp (executives don't receive separate board pay)
                 for idx, d in co_dirs.iterrows():
