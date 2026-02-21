@@ -4249,7 +4249,25 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                 
                 with _bt_ai:
-                    with st.spinner("Generating board compensation analysis..."):
+                    _board_ai_key = f"board_ai_{stk3}"
+                    
+                    # Show button if no cached analysis
+                    if not st.session_state.get(_board_ai_key):
+                        st.markdown(f"""
+                        <div style="background:#f8f6f3;border:1px solid #e2e0db;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
+                            <div style="font-size:1.3rem;margin-bottom:0.5rem;">📋</div>
+                            <div style="font-size:1rem;font-weight:600;color:#1a365d;margin-bottom:0.5rem;">Board Compensation Analysis</div>
+                            <div style="font-size:0.85rem;color:#475569;line-height:1.6;max-width:500px;margin:0 auto;">
+                                Generate a Ferguson-style institutional board compensation benchmarking report with peer comparisons, fee schedule analysis, and governance considerations.
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        _gen_board = st.button("📋 Generate Board Compensation Analysis", key=f"gen_board_{stk3}", use_container_width=True)
+                    else:
+                        _gen_board = False
+                    
+                    if _gen_board:
+                      with st.spinner("Generating board compensation analysis..."):
                         # Build comprehensive board context for AI
                         _ai_dirs_info = []
                         for _, d in co_dirs.iterrows():
@@ -4460,34 +4478,42 @@ CRITICAL: Only use data explicitly provided above. Do not invent numbers, meetin
                                 messages=[{"role": "user", "content": _board_prompt}]
                             )
                             analysis_text = clean_ai(response.content[0].text)
-                    
-                            # Parse sections and render with styled formatting
-                            import re as _re2
-                            section_pattern = r'\[SECTION:(COMPOSITION|PROGRAM|PREMIUMS|WATCH|SOURCES)\]'
-                            parts = _re2.split(section_pattern, analysis_text)
-                    
-                            st.markdown(f'<div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">', unsafe_allow_html=True)
-                            st.markdown(f'<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">\U0001F4CB Board Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
-                    
-                            idx = 0
-                            while idx < len(parts):
-                                text = parts[idx].strip()
-                                if text and text not in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH', 'SOURCES'):
-                                    st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{text}</div>', unsafe_allow_html=True)
-                                elif text == 'SOURCES':
-                                    if idx + 1 < len(parts):
-                                        src_html = parts[idx+1].strip()
-                                        st.markdown(f'<div style="margin-top:1rem;padding:0.8rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:6px;font-size:0.78rem;color:#64748b;">{src_html}</div>', unsafe_allow_html=True)
-                                        idx += 1
-                                elif text in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH'):
-                                    if idx + 1 < len(parts):
-                                        st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{parts[idx+1].strip()}</div>', unsafe_allow_html=True)
-                                        idx += 1
-                                idx += 1
-                    
-                            st.markdown('</div>', unsafe_allow_html=True)
+                            st.session_state[_board_ai_key] = analysis_text
                         except Exception as e:
                             st.error(f"AI analysis error: {str(e)[:200]}")
+                    
+                    # Render cached analysis
+                    if st.session_state.get(_board_ai_key):
+                        analysis_text = st.session_state[_board_ai_key]
+                        
+                        # Parse sections and render with styled formatting
+                        import re as _re2
+                        section_pattern = r'\[SECTION:(COMPOSITION|PROGRAM|PREMIUMS|WATCH|SOURCES)\]'
+                        parts = _re2.split(section_pattern, analysis_text)
+                    
+                        st.markdown(f'<div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">', unsafe_allow_html=True)
+                        st.markdown(f'<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">\U0001F4CB Board Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
+                    
+                        idx = 0
+                        while idx < len(parts):
+                            text = parts[idx].strip()
+                            if text and text not in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH', 'SOURCES'):
+                                st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{text}</div>', unsafe_allow_html=True)
+                            elif text == 'SOURCES':
+                                if idx + 1 < len(parts):
+                                    src_html = parts[idx+1].strip()
+                                    st.markdown(f'<div style="margin-top:1rem;padding:0.8rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:6px;font-size:0.78rem;color:#64748b;">{src_html}</div>', unsafe_allow_html=True)
+                                    idx += 1
+                            elif text in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH'):
+                                if idx + 1 < len(parts):
+                                    st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{parts[idx+1].strip()}</div>', unsafe_allow_html=True)
+                                    idx += 1
+                            idx += 1
+                    
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        if st.button("\u2715 Close Board Analysis", key=f"close_board_ai_{stk3}"):
+                            del st.session_state[_board_ai_key]
+                            st.rerun()
                     
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
                 
