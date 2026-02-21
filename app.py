@@ -3755,8 +3755,8 @@ if sel3 and sel3 != PLACEHOLDER:
                 
                 # Sub-tabs
                 _bt_comp, _bt_fees, _bt_peers, _bt_sop, _bt_refresh, _bt_pgi, _bt_ai = st.tabs([
-                    "Board Composition", "Fee Schedule", "Peer Comparison",
-                    "Say-on-Pay", "Refreshment & Risk", "Peer Group Integrity", "AI Analysis"
+                    "Composition", "Fees", "Peers",
+                    "Say-on-Pay", "Refreshment", "Peer Integrity", "AI Analysis"
                 ])
                 
                 with _bt_comp:
