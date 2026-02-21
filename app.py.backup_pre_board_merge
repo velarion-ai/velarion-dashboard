@@ -418,7 +418,7 @@ FILTER_POSITIONS = ['CEO', 'PRESIDENT', 'COO', 'CFO', 'CIO', 'GC', 'CAO']
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-    .stApp { font-family: 'Libre Franklin', 'DM Sans', sans-serif; background: #f7f6f3; }
+    .stApp { font-family: 'DM Sans', sans-serif; background: #f7f8fa; }
     /* Remove top padding/whitespace */
     .stMainBlockContainer { padding-top: 1rem !important; }
     .block-container { padding-top: 1rem !important; }
@@ -684,653 +684,6 @@ def load_total_returns(tickers):
         returns[t] = {'return_1y': r1, 'return_3y': r3, 'return_ytd': r_ytd}
     return returns
 
-
-# ============================================================
-# BOARD TAB — INSTITUTIONAL RENDER FUNCTIONS
-# ============================================================
-def board_fmt(n):
-    """Format number as $X,XXX for board tab display."""
-    if n is None or (isinstance(n, float) and np.isnan(n)):
-        return "—"
-    return f"${int(n):,}"
-
-def board_pct_rank(val, arr):
-    """Percentile rank for board comparisons."""
-    valid = [v for v in arr if v is not None and not (isinstance(v, float) and np.isnan(v)) and v > 0]
-    if not valid or val is None or (isinstance(val, float) and np.isnan(val)):
-        return None
-    return round(sum(1 for v in valid if v < val) / len(valid) * 100)
-
-# ============================================================
-# COMMITTEE COLOR SYSTEM
-# ============================================================
-BOARD_COMM_COLORS = {
-    'Audit': '#1a73a7',
-    'Compensation': '#7b5ea7',
-    'Comp': '#7b5ea7',
-    'Corporate Governance': '#2d7d46',
-    'Nom/Gov': '#2d7d46',
-    'Nominating/Governance': '#2d7d46',
-    'Nominating and Corporate Governance': '#2d7d46',
-    'Executive': '#8a7a5a',
-    'Investment': '#b87333',
-    'Finance': '#4a7c8a',
-}
-
-def comm_color(name):
-    base = re.sub(r'\s*\(Chair\)', '', name).strip()
-    for key, color in BOARD_COMM_COLORS.items():
-        if key.lower() in base.lower():
-            return color
-    return '#8a8577'
-
-# ============================================================
-# HEADER COMPONENT
-# ============================================================
-def render_board_header(ticker, company_name, prop_type, n_peers, fee_sched, agg_board, n_indep, sop=None):
-    """Render the dark institutional header band with KPI cards."""
-    fs = fee_sched or {}
-    total_ret = fs.get('total_retainer') or 0
-    
-    sop_html = ""
-    if sop:
-        sop_color = "#5cb85c" if sop['pct'] >= 80 else "#e8c34a" if sop['pct'] >= 70 else "#d9534f"
-        sop_html = f"""
-        <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
-            <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Say-on-Pay</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:{sop_color};">{sop['pct']}%</div>
-            <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">{sop.get('date','')}</div>
-        </div>"""
-    
-    return f"""
-    <div style="background:linear-gradient(135deg, #1b2a3d 0%, #2d4156 100%);padding:28px 32px 20px;color:#fff;margin:-1rem -1rem 0 -1rem;font-family:'Libre Franklin',sans-serif;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fb8d4;margin-bottom:4px;">Velarion Company Intelligence</div>
-                <div style="font-size:28px;font-weight:700;margin:4px 0;font-family:'Source Serif 4',Georgia,serif;">
-                    {ticker} <span style="font-weight:300;color:#b8d4e8;">Board of Directors Compensation</span>
-                </div>
-                <div style="font-size:14px;color:#8fb8d4;margin-top:4px;">
-                    {company_name} &bull; {prop_type or 'REIT'} &bull; FY 2024 &bull; {n_peers} Proxy Peers
-                </div>
-            </div>
-            <div style="display:flex;gap:16px;margin-top:8px;">
-                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
-                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Total Retainer</div>
-                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{board_fmt(total_ret) if total_ret else '—'}</div>
-                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">annual per director</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
-                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Aggregate Board</div>
-                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{board_fmt(agg_board)}</div>
-                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">{n_indep} independent dirs</div>
-                </div>
-                {sop_html}
-            </div>
-        </div>
-    </div>"""
-
-# ============================================================
-# KPI ROW
-# ============================================================
-def render_board_kpi_row(n_board, n_indep, avg_age, avg_tenure, median_comp, equity_pct, n_comms):
-    cards = [
-        ("Board Size", str(n_board), "active trustees"),
-        ("Independent", f"{n_indep} of {n_board}", f"{round(n_indep/n_board*100)}%" if n_board > 0 else "—"),
-        ("Avg Age", str(avg_age), "years"),
-        ("Avg Tenure", f"{avg_tenure} yrs", f"since ~{2024 - avg_tenure}" if isinstance(avg_tenure, int) else ""),
-        ("Median Comp", board_fmt(median_comp), "per independent dir"),
-        ("Equity Mix", f"{equity_pct}%", "stock / total"),
-        ("Committees", str(n_comms), "standing"),
-    ]
-    
-    items = []
-    for label, value, sub in cards:
-        items.append(f"""
-        <div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;box-shadow:0 1px 3px rgba(0,0,0,0.04);min-width:120px;">
-            <div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;font-weight:600;">{label}</div>
-            <div style="font-size:22px;font-weight:700;color:#1b2a3d;margin-top:4px;">{value}</div>
-            <div style="font-size:11px;color:#a09b8e;">{sub}</div>
-        </div>""")
-    
-    return f'<div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap;font-family:\'Libre Franklin\',sans-serif;">{"".join(items)}</div>'
-
-# ============================================================
-# DIRECTOR TABLE
-# ============================================================
-def render_board_director_table(directors_df, valid_comms):
-    """Render the institutional director roster table."""
-    
-    # Sort: Chair → Lead → Management → Active (by total comp desc) → Retired
-    def sort_key(row):
-        is_r = bool(row.get('is_not_standing', False))
-        is_n = bool(row.get('is_newly_elected', False))
-        is_mgmt = not row.get('is_independent', False)
-        if row.get('is_board_chair') and not is_r: return (0, -row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0)
-        if row.get('is_lead_independent') and not is_r: return (1, -row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0)
-        if is_mgmt and not is_r: return (4, 0)
-        if is_r: return (5, 0)
-        return (2, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
-    
-    sorted_dirs = directors_df.copy()
-    sorted_dirs['_sk'] = sorted_dirs.apply(sort_key, axis=1)
-    sorted_dirs = sorted_dirs.sort_values('_sk').drop(columns=['_sk'])
-    
-    hdr_style = "padding:10px 12px;font-size:11px;font-weight:600;color:#5a5549;letter-spacing:0.8px;text-transform:uppercase;"
-    
-    rows_html = []
-    for i, (_, d) in enumerate(sorted_dirs.iterrows()):
-        is_mgmt = not d.get('is_independent', False)
-        is_r = bool(d.get('is_not_standing', False))
-        is_n = bool(d.get('is_newly_elected', False))
-        opacity = "0.45" if is_r else "0.5" if is_mgmt else "1"
-        bg = "#faf9f6" if is_r else ("#f8f8f6" if i % 2 == 0 else "transparent")
-        
-        # Name + badges
-        badges = []
-        if d.get('is_board_chair'):
-            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">CHAIR</span>')
-        if d.get('is_lead_independent'):
-            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">LEAD</span>')
-        if is_mgmt:
-            badges.append('<span style="font-size:10px;color:#888;margin-left:6px;background:#eee;padding:1px 6px;border-radius:3px;font-weight:600;">MGMT</span>')
-        if is_r:
-            badges.append('<span style="font-size:10px;color:#991b1b;margin-left:6px;background:#fee2e2;padding:1px 6px;border-radius:3px;font-weight:600;">RETIRED</span>')
-        if is_n:
-            badges.append('<span style="font-size:10px;color:#2d7d46;margin-left:6px;background:#e6f4ea;padding:1px 6px;border-radius:3px;font-weight:600;">NEW</span>')
-        
-        # Committee chips
-        comms = d.get('committees_list', []) if isinstance(d.get('committees_list'), list) else []
-        comms = [c for c in comms if re.sub(r'\s*\(Chair\)', '', c).strip() in valid_comms]
-        chips = []
-        for c in comms:
-            is_chair = '(Chair)' in c
-            c_clean = re.sub(r'\s*\(Chair\)', '', c).strip()
-            abbrev = c_clean.replace("Nominating and Corporate Governance", "Nom/Gov").replace("Nominating/Governance", "Nom/Gov").replace("Corporate Governance", "Nom/Gov").replace("Compensation", "Comp")
-            color = comm_color(c)
-            if is_chair:
-                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{color};color:#fff;font-weight:600;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev} (Chair)</span>')
-            else:
-                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:transparent;color:{color};border:1px solid {color};font-weight:400;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev}</span>')
-        
-        age = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
-        since = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
-        cash = board_fmt(d['fees_earned_cash']) if pd.notna(d.get('fees_earned_cash')) else "—"
-        stock = board_fmt(d['stock_awards']) if pd.notna(d.get('stock_awards')) else ("" if not pd.notna(d.get('option_awards')) else "")
-        if stock == "—" and pd.notna(d.get('option_awards')):
-            stock = f"{board_fmt(d['option_awards'])} <span style='font-size:10px;color:#999;'>(opt)</span>"
-        total = board_fmt(d['total_comp']) if pd.notna(d.get('total_comp')) else "—"
-        total_weight = "font-weight:700;" if pd.notna(d.get('total_comp')) else ""
-        
-        rows_html.append(f"""
-        <tr style="border-bottom:1px solid #eeeae3;opacity:{opacity};background:{bg};">
-            <td style="padding:10px 12px;font-weight:500;">{d['director_name']} {"".join(badges)}</td>
-            <td style="padding:10px 12px;color:#777;">{age}</td>
-            <td style="padding:10px 12px;color:#777;">{since}</td>
-            <td style="padding:10px 12px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{"".join(chips)}</div></td>
-            <td style="padding:10px 12px;text-align:right;">{cash}</td>
-            <td style="padding:10px 12px;text-align:right;">{stock}</td>
-            <td style="padding:10px 12px;text-align:right;{total_weight}">{total}</td>
-        </tr>""")
-    
-    # Compute aggregates
-    agg_cash = sum(d['fees_earned_cash'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('fees_earned_cash')))
-    agg_stock = sum(d['stock_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('stock_awards')))
-    agg_options = sum(d['option_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('option_awards')))
-    agg_total = sum(d['total_comp'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('total_comp')))
-    
-    totals_row = f"""
-    <tr style="border-top:2px solid #1b2a3d;background:#f5f4f0;">
-        <td style="padding:10px 12px;font-weight:700;color:#1b2a3d;">AGGREGATE</td>
-        <td></td><td></td><td></td>
-        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">{board_fmt(agg_cash)}</td>
-        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">{board_fmt(agg_stock + agg_options)}</td>
-        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;font-size:14px;">{board_fmt(agg_total)}</td>
-    </tr>"""
-    
-    return f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow-x:auto;font-family:'Libre Franklin',sans-serif;">
-        <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;">
-            <thead>
-                <tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;">
-                    <th style="{hdr_style}text-align:left;min-width:180px;">Director</th>
-                    <th style="{hdr_style}text-align:center;width:45px;">Age</th>
-                    <th style="{hdr_style}text-align:center;width:50px;">Since</th>
-                    <th style="{hdr_style}text-align:left;min-width:200px;">Committees</th>
-                    <th style="{hdr_style}text-align:right;min-width:100px;">Cash</th>
-                    <th style="{hdr_style}text-align:right;min-width:100px;">Stock</th>
-                    <th style="{hdr_style}text-align:right;min-width:100px;">Total</th>
-                </tr>
-            </thead>
-            <tbody>{"".join(rows_html)}{totals_row}</tbody>
-        </table>
-    </div>"""
-
-# ============================================================
-# FEE SCHEDULE COMPONENT
-# ============================================================
-def render_board_fee_schedule(fs, peer_fs_list):
-    """Render fee schedule with peer percentile badges."""
-    if not fs:
-        return '<div style="padding:20px;color:#999;text-align:center;">No fee schedule data available.</div>'
-    
-    def _pctl_badge(key, val):
-        if val is None or val == 0: return ""
-        peers = [p.get(key) for p in peer_fs_list if p.get(key) and p[key] > 0]
-        if len(peers) < 3: return ""
-        pct = board_pct_rank(val, peers)
-        if pct is None: return ""
-        bg = "#fdf0e6" if pct >= 75 else "#e6f4f0" if pct <= 25 else "#f0f0f0"
-        color = "#c27a30" if pct >= 75 else "#2d7d5a" if pct <= 25 else "#777"
-        return f' <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{bg};color:{color};margin-left:4px;">P{pct}</span>'
-    
-    # Retainer section
-    retainer_rows = []
-    for label, key in [("Cash Retainer", "cash_retainer"), ("Equity Retainer", "equity_retainer")]:
-        val = fs.get(key)
-        if val and val > 0:
-            retainer_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">{board_fmt(val)}{_pctl_badge(key, val)}</span></div>')
-    
-    total_ret = fs.get('total_retainer')
-    if total_ret and total_ret > 0:
-        retainer_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;"><span style="font-weight:700;color:#1b2a3d;">Total Retainer</span><span style="font-weight:700;font-size:18px;">{board_fmt(total_ret)}{_pctl_badge("total_retainer", total_ret)}</span></div>')
-    
-    vehicle = fs.get('equity_vehicle', '—')
-    retainer_html = f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;">
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">ANNUAL RETAINER</div>
-        {"".join(retainer_rows)}
-        <div style="margin-top:16px;padding:10px 14px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#6a6358;">
-            <strong>Equity Vehicle:</strong> {vehicle}
-        </div>
-    </div>"""
-    
-    # Premiums + Committee fees
-    premium_rows = []
-    for label, key in [("Board Chair Premium", "chair_premium"), ("Lead Independent Director", "lead_director_premium")]:
-        val = fs.get(key)
-        if val and val > 0:
-            premium_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">{board_fmt(val)}{_pctl_badge(key, val)}</span></div>')
-    
-    comm_rows = []
-    for name, chair_key, member_key, color in [
-        ("Audit", "audit_chair", "audit_member", "#1a73a7"),
-        ("Compensation", "comp_chair", "comp_member", "#7b5ea7"),
-        ("Nom/Gov", "nomgov_chair", "nomgov_member", "#2d7d46"),
-    ]:
-        chair_val = fs.get(chair_key)
-        member_val = fs.get(member_key)
-        if chair_val or member_val:
-            comm_rows.append(f"""
-            <tr style="border-bottom:1px solid #f0ece4;">
-                <td style="padding:8px 0;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{color};margin-right:8px;"></span>{name}</td>
-                <td style="text-align:right;">{board_fmt(chair_val) if chair_val else '—'}</td>
-                <td style="text-align:right;">{board_fmt(member_val) if member_val else '—'}</td>
-            </tr>""")
-    
-    comm_table = ""
-    if comm_rows:
-        comm_table = f"""
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:24px 0 16px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">COMMITTEE FEES</div>
-        <table style="width:100%;font-size:13px;border-collapse:collapse;">
-            <thead><tr style="border-bottom:2px solid #e4e0d8;">
-                <th style="padding:6px 0;text-align:left;font-size:11px;color:#8a8577;letter-spacing:0.5px;text-transform:uppercase;">Committee</th>
-                <th style="text-align:right;font-size:11px;color:#8a8577;letter-spacing:0.5px;text-transform:uppercase;">Chair</th>
-                <th style="text-align:right;font-size:11px;color:#8a8577;letter-spacing:0.5px;text-transform:uppercase;">Member</th>
-            </tr></thead>
-            <tbody>{"".join(comm_rows)}</tbody>
-        </table>"""
-    
-    premiums_html = f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;">
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">LEADERSHIP PREMIUMS</div>
-        {"".join(premium_rows) if premium_rows else '<div style="color:#999;font-size:13px;">No premium data available.</div>'}
-        {comm_table}
-    </div>"""
-    
-    return f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-family:\'Libre Franklin\',sans-serif;">{retainer_html}{premiums_html}</div>'
-
-# ============================================================
-# PEER RETAINER BAR CHART
-# ============================================================
-def render_board_retainer_bars(ticker, my_retainer, peer_fs_list):
-    """Horizontal bar chart of retainers — subject company highlighted."""
-    all_bars = [{'ticker': ticker, 'retainer': my_retainer, 'subject': True}]
-    for p in peer_fs_list:
-        r = p.get('total_retainer')
-        if r and r > 0:
-            all_bars.append({'ticker': p['ticker'], 'retainer': r, 'subject': False})
-    
-    all_bars.sort(key=lambda x: -x['retainer'])
-    max_val = max(b['retainer'] for b in all_bars) * 1.1 if all_bars else 1
-    
-    retainers = [b['retainer'] for b in all_bars if not b['subject']]
-    median_ret = sorted(retainers)[len(retainers)//2] if retainers else 0
-    
-    bar_rows = []
-    for b in all_bars:
-        pct = (b['retainer'] / max_val) * 100
-        is_s = b['subject']
-        bar_bg = "linear-gradient(90deg, #1b2a3d, #2d5a7b)" if is_s else "#c8d8e4"
-        fw = "700" if is_s else "400"
-        color = "#1b2a3d" if is_s else "#777"
-        bar_rows.append(f"""
-        <div style="display:flex;align-items:center;margin-bottom:6px;">
-            <div style="width:50px;font-size:12px;font-weight:{fw};color:{color};">{b['ticker']}</div>
-            <div style="flex:1;height:22px;background:#f5f4f0;border-radius:4px;overflow:hidden;">
-                <div style="width:{pct}%;height:100%;border-radius:4px;background:{bar_bg};"></div>
-            </div>
-            <div style="width:90px;text-align:right;font-size:12px;font-weight:{fw};">{board_fmt(b['retainer'])}</div>
-        </div>""")
-    
-    my_pctile = board_pct_rank(my_retainer, retainers)
-    pctile_str = f"P{my_pctile}" if my_pctile is not None else ""
-    
-    return f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;margin:20px 0;font-family:'Libre Franklin',sans-serif;">
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">
-            TOTAL ANNUAL RETAINER — {ticker} vs PROXY PEERS
-        </div>
-        {"".join(bar_rows)}
-        <div style="margin-top:12px;font-size:11px;color:#8a8577;">
-            {ticker} at {pctile_str} &bull; Peer median: {board_fmt(median_ret)} &bull; {len(retainers)} peers with data
-        </div>
-    </div>"""
-
-# ============================================================
-# REFRESHMENT TAB
-# ============================================================
-def render_board_refreshment(directors_df, ticker):
-    """Render tenure + age distribution bars."""
-    active = directors_df[(directors_df.get('is_not_standing', False) != True) & (directors_df['is_independent'] == True)].copy()
-    if active.empty:
-        return '<div style="color:#999;">No active independent directors.</div>'
-    
-    # Tenure bars
-    tenure_rows = []
-    for _, d in active.sort_values('director_since').iterrows():
-        tenure = 2024 - int(d['director_since']) if pd.notna(d.get('director_since')) else 0
-        pct = min(tenure / 20 * 100, 100)
-        color = "#e8c34a" if tenure > 12 else "#8bc4a0"
-        last_name = d['director_name'].split()[-1] if d['director_name'] else "?"
-        tenure_rows.append(f"""
-        <div style="display:flex;align-items:center;margin-bottom:6px;">
-            <div style="width:120px;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{last_name}</div>
-            <div style="flex:1;height:18px;background:#f5f4f0;border-radius:3px;overflow:hidden;">
-                <div style="width:{pct}%;height:100%;border-radius:3px;background:{color};"></div>
-            </div>
-            <div style="width:50px;text-align:right;font-size:11px;color:{'#b89a30' if tenure > 12 else '#555'};">{tenure} yrs</div>
-        </div>""")
-    
-    # Age bars
-    age_rows = []
-    for _, d in active.sort_values('age', ascending=False).iterrows():
-        age = int(d['age']) if pd.notna(d.get('age')) else 0
-        pct = (age / 80) * 100
-        color = "#e8c34a" if age >= 72 else "#8bc4a0"
-        last_name = d['director_name'].split()[-1]
-        age_rows.append(f"""
-        <div style="display:flex;align-items:center;margin-bottom:6px;">
-            <div style="width:120px;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{last_name}</div>
-            <div style="flex:1;height:18px;background:#f5f4f0;border-radius:3px;overflow:hidden;">
-                <div style="width:{pct}%;height:100%;border-radius:3px;background:{color};"></div>
-            </div>
-            <div style="width:35px;text-align:right;font-size:11px;color:{'#b89a30' if age >= 72 else '#555'};">{age}</div>
-        </div>""")
-    
-    legend_tenure = """<div style="margin-top:12px;font-size:11px;color:#8a8577;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8bc4a0;margin-right:4px;"></span> 0-12 yrs
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e8c34a;margin-left:12px;margin-right:4px;"></span> 12+ yrs (ISS concern zone)
-    </div>"""
-    legend_age = """<div style="margin-top:12px;font-size:11px;color:#8a8577;">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8bc4a0;margin-right:4px;"></span> Under 72
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e8c34a;margin-left:12px;margin-right:4px;"></span> 72+ (mandatory retirement at many boards)
-    </div>"""
-    
-    # Risk summary
-    long_tenure = active[active['director_since'].notna() & ((2024 - active['director_since']) > 12)]
-    old_dirs = active[active['age'] > 72]
-    new_dirs = directors_df[directors_df.get('is_newly_elected', False) == True] if 'is_newly_elected' in directors_df.columns else pd.DataFrame()
-    
-    risk_html = f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;margin-top:20px;font-size:13px;line-height:1.7;color:#444;">
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 12px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">REFRESHMENT RISK ASSESSMENT</div>
-        <strong>{len(long_tenure)} directors</strong> with tenure over 12 years (ISS independence concern threshold).
-        <strong>{len(old_dirs)} directors</strong> aged 72+ approaching typical mandatory retirement.
-        {f'<strong>{len(new_dirs)} newly elected directors</strong> — board is actively refreshing.' if len(new_dirs) > 0 else ''}
-    </div>"""
-    
-    return f"""
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-family:'Libre Franklin',sans-serif;">
-        <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;">
-            <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">TENURE DISTRIBUTION</div>
-            {"".join(tenure_rows)}
-            {legend_tenure}
-        </div>
-        <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;">
-            <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">AGE DISTRIBUTION</div>
-            {"".join(age_rows)}
-            {legend_age}
-        </div>
-    </div>
-    {risk_html}"""
-
-# ============================================================
-# SAY-ON-PAY DATA + RENDER
-# ============================================================
-@st.cache_data(ttl=3600)
-@st.cache_data(ttl=3600)
-def fetch_say_on_pay(cik):
-    """Fetch most recent say-on-pay vote from 8-K Item 5.07."""
-    import requests
-    try:
-        headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
-        padded = str(cik).zfill(10)
-        r = requests.get(f"https://data.sec.gov/submissions/CIK{padded}.json", headers=headers, timeout=10)
-        data = r.json()
-        import time; time.sleep(0.12)
-        
-        recent = data.get('filings',{}).get('recent',{})
-        forms = recent.get('form',[])
-        dates = recent.get('filingDate',[])
-        items_list = recent.get('items',[])
-        accessions = recent.get('accessionNumber',[])
-        docs = recent.get('primaryDocument',[])
-        
-        for i, form in enumerate(forms):
-            if form != '8-K': continue
-            item_str = items_list[i] if i < len(items_list) else ''
-            if '5.07' not in item_str: continue
-            # Only use filings from last 2 years
-            if dates[i] < '2023-01-01': continue
-            
-            cik_clean = str(cik).lstrip('0')
-            acc = accessions[i].replace('-','')
-            filing_url = f"https://www.sec.gov/Archives/edgar/data/{cik_clean}/{acc}/{docs[i]}"
-            
-            import time; time.sleep(0.12)
-            from bs4 import BeautifulSoup
-            fr = requests.get(filing_url, headers=headers, timeout=15)
-            if fr.status_code != 200: continue
-            
-            soup = BeautifulSoup(fr.text, 'html.parser')
-            text = soup.get_text(separator=' ', strip=True)
-            tl = text.lower()
-            
-            sop_markers = [
-                'advisory approval of executive compensation',
-                'advisory vote to approve the company',
-                'advisory vote to approve the compensation',
-                'advisory vote to approve executive compensation',
-                'approve, on an advisory basis, the compensation',
-                'approved the compensation paid to',
-                'approved, on an advisory basis',
-                'advisory vote on the compensation',
-                'advisory vote on executive compensation',
-                'say-on-pay',
-                'compensation of named executive officers',
-                'compensation of the company\'s named executive',
-                'compensation of our named executive',
-                'proposal 2',
-                'proposal no. 2',
-            ]
-            
-            for marker in sop_markers:
-                idx = tl.find(marker)
-                if idx < 0: continue
-                chunk = text[idx:idx+1500]
-                
-                # Pattern 1: "Votes For NNN Votes Against NNN"
-                m1 = re.search(r'Votes?\s+For\s+([\d,]+)\s+Votes?\s+Against\s+([\d,]+)', chunk)
-                if m1:
-                    vf, va = int(m1.group(1).replace(',','')), int(m1.group(2).replace(',',''))
-                    if vf + va > 1000:
-                        return {'pct': round(vf/(vf+va)*100,1), 'for': vf, 'against': va, 'date': dates[i]}
-                
-                # Pattern 2: "FOR NNN AGAINST NNN" (all caps)
-                m2 = re.search(r'FOR\s+([\d,]+)\s+AGAINST\s+([\d,]+)', chunk)
-                if m2:
-                    vf, va = int(m2.group(1).replace(',','')), int(m2.group(2).replace(',',''))
-                    if vf + va > 1000:
-                        return {'pct': round(vf/(vf+va)*100,1), 'for': vf, 'against': va, 'date': dates[i]}
-                
-                # Pattern 3: "For NNN Against NNN"
-                m3 = re.search(r'For\s+([\d,]+)\s+Against\s+([\d,]+)', chunk)
-                if m3:
-                    vf, va = int(m3.group(1).replace(',','')), int(m3.group(2).replace(',',''))
-                    if vf + va > 1000:
-                        return {'pct': round(vf/(vf+va)*100,1), 'for': vf, 'against': va, 'date': dates[i]}
-                
-                # Pattern 4: Narrative "NNN votes were cast in favor...NNN cast against"
-                m4f = re.search(r'([\d,]+)\s+votes?\s+(?:were\s+)?cast\s+in\s+favor', chunk)
-                m4a = re.search(r'([\d,]+)\s+votes?\s+(?:were\s+)?cast\s+against', chunk)
-                if m4f and m4a:
-                    vf, va = int(m4f.group(1).replace(',','')), int(m4a.group(1).replace(',',''))
-                    if vf + va > 1000:
-                        return {'pct': round(vf/(vf+va)*100,1), 'for': vf, 'against': va, 'date': dates[i]}
-        
-        return None
-    except Exception:
-        return None
-
-def render_board_say_on_pay(ticker, my_sop, peer_sop_data):
-    """Render the full say-on-pay risk overlay."""
-    all_data = []
-    if my_sop:
-        all_data.append({'ticker': ticker, 'sop': my_sop, 'subject': True})
-    for ptk, sop in peer_sop_data:
-        if sop:
-            all_data.append({'ticker': ptk, 'sop': sop, 'subject': False})
-    
-    if not all_data:
-        return '<div style="padding:40px;text-align:center;color:#999;">No say-on-pay vote data found for this company or its peers.</div>'
-    
-    # KPI cards
-    pcts = [d['sop']['pct'] for d in all_data]
-    peer_pcts = [d['sop']['pct'] for d in all_data if not d['subject']]
-    median_pct = sorted(peer_pcts)[len(peer_pcts)//2] if peer_pcts else 0
-    below_70 = [d for d in all_data if d['sop']['pct'] < 70]
-    below_80 = [d for d in all_data if d['sop']['pct'] < 80]
-    
-    my_rank = sum(1 for p in pcts if p > (my_sop['pct'] if my_sop else 0)) + 1 if my_sop else "—"
-    
-    kpi_cards = []
-    if my_sop:
-        sop_color = "#5cb85c" if my_sop['pct'] >= 80 else "#e8c34a" if my_sop['pct'] >= 70 else "#d9534f"
-        kpi_cards.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;text-align:center;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;">Subject Approval</div><div style="font-size:24px;font-weight:700;color:{sop_color};margin-top:4px;">{my_sop["pct"]}%</div></div>')
-    kpi_cards.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;text-align:center;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;">Peer Median</div><div style="font-size:24px;font-weight:700;color:#1b2a3d;margin-top:4px;">{median_pct:.1f}%</div></div>')
-    kpi_cards.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;text-align:center;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;">Rank</div><div style="font-size:24px;font-weight:700;color:#1b2a3d;margin-top:4px;">#{my_rank} of {len(all_data)}</div></div>')
-    fail_color = "#d9534f" if below_70 else "#5cb85c"
-    kpi_cards.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;text-align:center;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;">Below 70%</div><div style="font-size:24px;font-weight:700;color:{fail_color};margin-top:4px;">{len(below_70)} peer{"s" if len(below_70) != 1 else ""}</div></div>')
-    
-    kpi_html = f'<div style="display:flex;gap:16px;margin-bottom:24px;">{"".join(kpi_cards)}</div>'
-    
-    # Bar chart
-    sorted_data = sorted(all_data, key=lambda x: -x['sop']['pct'])
-    bar_rows = []
-    for d in sorted_data:
-        pct = d['sop']['pct']
-        is_s = d['subject']
-        is_fail = pct < 70
-        is_warn = pct < 80
-        
-        bar_bg = ("linear-gradient(90deg, #d9534f, #c9302c)" if is_fail 
-                  else "linear-gradient(90deg, #1b2a3d, #2d5a7b)" if is_s 
-                  else "#e8c34a" if is_warn 
-                  else "#8bc4a0")
-        
-        fw = "700" if is_s else "400"
-        tk_color = "#d9534f" if is_fail else "#1b2a3d" if is_s else "#777"
-        pct_color = "#d9534f" if is_fail else "#333"
-        
-        bar_rows.append(f"""
-        <div style="display:flex;align-items:center;margin-bottom:8px;">
-            <div style="width:50px;font-size:12px;font-weight:{fw};color:{tk_color};">{d['ticker']}</div>
-            <div style="flex:1;height:26px;background:#f5f4f0;border-radius:4px;overflow:hidden;position:relative;">
-                <div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:#d9534f;opacity:0.4;z-index:2;"></div>
-                <div style="width:{pct}%;height:100%;border-radius:4px;background:{bar_bg};"></div>
-            </div>
-            <div style="width:60px;text-align:right;font-size:12px;font-weight:{fw};color:{pct_color};">{pct}%</div>
-            <div style="width:85px;text-align:right;font-size:10px;color:#999;">{d['sop']['date']}</div>
-        </div>""")
-    
-    bar_html = f"""
-    <div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;margin-bottom:24px;">
-        <div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:'Source Serif 4',Georgia,serif;">
-            SAY-ON-PAY APPROVAL — {ticker} vs PROXY PEERS
-        </div>
-        <div style="font-size:10px;color:#d9534f;margin-bottom:8px;margin-left:50px;">
-            <span style="margin-left:calc(70% - 50px);">▼ 70% threshold</span>
-        </div>
-        {"".join(bar_rows)}
-    </div>"""
-    
-    # Alert boxes for failures
-    alerts_html = ""
-    for d in below_70:
-        alerts_html += f"""
-        <div style="background:#fdf0e6;border:1px solid #e8c4a0;border-radius:8px;padding:20px;margin-bottom:16px;">
-            <div style="display:flex;gap:12px;align-items:flex-start;">
-                <span style="font-size:24px;">🔴</span>
-                <div>
-                    <div style="font-weight:700;color:#c27a30;font-size:14px;margin-bottom:6px;">
-                        {d['ticker']} FAILED Say-on-Pay — {d['sop']['pct']}% Approval ({d['sop']['date']})
-                    </div>
-                    <div style="font-size:13px;color:#5a4a30;line-height:1.6;">
-                        Received less than majority support for executive compensation. Under SEC rules, this triggers a 
-                        mandatory compensation committee response. ISS and Glass Lewis will flag for heightened scrutiny.
-                        <br><br>
-                        <strong>Implication for {ticker}:</strong> As a peer company, any restructuring at {d['ticker']} could 
-                        shift peer group benchmarks. Monitor for changes in their next proxy filing.
-                    </div>
-                </div>
-            </div>
-        </div>"""
-    
-    if not below_70 and my_sop and my_sop['pct'] >= 80:
-        alerts_html = f"""
-        <div style="background:#e6f4ea;border:1px solid #a8d5b4;border-radius:8px;padding:20px;">
-            <div style="display:flex;gap:12px;align-items:flex-start;">
-                <span style="font-size:24px;">✅</span>
-                <div>
-                    <div style="font-weight:700;color:#2d7d46;font-size:14px;margin-bottom:6px;">
-                        Strong Say-on-Pay Support — {my_sop['pct']}% Approval
-                    </div>
-                    <div style="font-size:13px;color:#2d5a30;line-height:1.6;">
-                        {ticker}'s compensation program has robust shareholder support. No peers below the 70% ISS concern threshold.
-                        The compensation committee has a clear mandate for the current program structure.
-                    </div>
-                </div>
-            </div>
-        </div>"""
-    
-    return f"""
-    <div style="font-family:'Libre Franklin',sans-serif;">
-        {kpi_html}
-        {bar_html}
-        {alerts_html}
-    </div>"""
-
 # ============================================================
 # HELPERS
 # ============================================================
@@ -1588,6 +941,217 @@ def render_peer_table(exec_row, peers_df, position):
     <tbody>{''.join(rows)}</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
 
+# ============================================================
+# INSTITUTIONAL BOARD TAB — RENDER FUNCTIONS
+# ============================================================
+_COMM_COLORS = {
+    'Audit': '#1a73a7', 'Compensation': '#7b5ea7', 'Comp': '#7b5ea7',
+    'Corporate Governance': '#2d7d46', 'Nom/Gov': '#2d7d46',
+    'Nominating/Governance': '#2d7d46', 'Nominating and Corporate Governance': '#2d7d46',
+    'Executive': '#8a7a5a', 'Investment': '#b87333', 'Finance': '#4a7c8a',
+}
+
+def _comm_color(name):
+    base = re.sub(r'\s*\(Chair\)', '', name).strip()
+    for key, color in _COMM_COLORS.items():
+        if key.lower() in base.lower():
+            return color
+    return '#8a8577'
+
+def render_board_header(ticker, company_name, prop_type, n_peers, fee_sched, agg_board, n_indep):
+    """Dark institutional header band with KPI cards."""
+    fs = fee_sched or {}
+    total_ret = fs.get('total_retainer') or 0
+    return f"""
+    <div style="background:linear-gradient(135deg, #1b2a3d 0%, #2d4156 100%);padding:28px 32px 20px;color:#fff;margin:-1rem -1rem 0 -1rem;font-family:'Libre Franklin',sans-serif;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fb8d4;margin-bottom:4px;">Velarion Company Intelligence</div>
+                <div style="font-size:28px;font-weight:700;margin:4px 0;font-family:'Source Serif 4',Georgia,serif;">
+                    {ticker} <span style="font-weight:300;color:#b8d4e8;">Board of Directors Compensation</span>
+                </div>
+                <div style="font-size:14px;color:#8fb8d4;margin-top:4px;">
+                    {company_name} &bull; {prop_type or 'REIT'} &bull; FY {FY_YEAR} &bull; {n_peers} Proxy Peers
+                </div>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:8px;">
+                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
+                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Total Retainer</div>
+                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{"${:,.0f}".format(total_ret) if total_ret else "—"}</div>
+                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">annual per director</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
+                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Aggregate Board</div>
+                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{"${:,.0f}".format(agg_board) if agg_board else "—"}</div>
+                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">{n_indep} independent dirs</div>
+                </div>
+            </div>
+        </div>
+    </div>"""
+
+def render_board_kpi_row(n_board, n_indep, avg_age, avg_tenure, median_comp, equity_pct, n_comms):
+    cards = [
+        ("Board Size", str(n_board), "active trustees"),
+        ("Independent", f"{n_indep} of {n_board}", f"{round(n_indep/n_board*100)}%" if n_board > 0 else "—"),
+        ("Avg Age", str(avg_age), "years"),
+        ("Avg Tenure", f"{avg_tenure} yrs", f"since ~{FY_YEAR - avg_tenure}" if isinstance(avg_tenure, int) else ""),
+        ("Median Comp", "${:,.0f}".format(median_comp) if pd.notna(median_comp) and median_comp > 0 else "—", "per independent dir"),
+        ("Equity Mix", f"{equity_pct}%", "stock / total"),
+        ("Committees", str(n_comms), "standing"),
+    ]
+    items = []
+    for label, value, sub in cards:
+        items.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;box-shadow:0 1px 3px rgba(0,0,0,0.04);min-width:120px;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;font-weight:600;">{label}</div><div style="font-size:22px;font-weight:700;color:#1b2a3d;margin-top:4px;">{value}</div><div style="font-size:11px;color:#a09b8e;">{sub}</div></div>')
+    return f'<div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap;font-family:\'Libre Franklin\',sans-serif;">{"".join(items)}</div>'
+
+def render_board_director_table(directors_df, valid_comms):
+    """Institutional director roster with colored committee chips and aggregate row."""
+    _INDEP_ONLY = {'Audit', 'Compensation', 'Nominating/Governance', 'Nominating and Corporate Governance', 'Corporate Governance'}
+    
+    def sort_key(row):
+        is_r = bool(row.get('is_not_standing', False)) if 'is_not_standing' in row.index else False
+        is_mgmt = not row.get('is_independent', False)
+        if row.get('is_board_chair') and not is_r: return (0, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+        if row.get('is_lead_independent') and not is_r: return (1, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+        if is_mgmt and not is_r: return (4, 0)
+        if is_r: return (5, 0)
+        return (2, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+    
+    sorted_dirs = directors_df.copy()
+    sorted_dirs['_sk'] = sorted_dirs.apply(sort_key, axis=1)
+    sorted_dirs = sorted_dirs.sort_values('_sk').drop(columns=['_sk'])
+    
+    hdr_style = "padding:10px 12px;font-size:11px;font-weight:600;color:#5a5549;letter-spacing:0.8px;text-transform:uppercase;"
+    rows_html = []
+    
+    for i, (_, d) in enumerate(sorted_dirs.iterrows()):
+        is_mgmt = not d.get('is_independent', False)
+        is_r = bool(d.get('is_not_standing', False)) if 'is_not_standing' in d.index else False
+        is_n = bool(d.get('is_newly_elected', False)) if 'is_newly_elected' in d.index else False
+        opacity = "0.45" if is_r else "0.5" if is_mgmt else "1"
+        bg = "#faf9f6" if is_r else ("#f8f8f6" if i % 2 == 0 else "transparent")
+        
+        badges = []
+        if d.get('is_board_chair'):
+            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">CHAIR</span>')
+        if d.get('is_lead_independent'):
+            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">LEAD</span>')
+        if is_mgmt:
+            badges.append('<span style="font-size:10px;color:#888;margin-left:6px;background:#eee;padding:1px 6px;border-radius:3px;font-weight:600;">MGMT</span>')
+        if is_r:
+            badges.append('<span style="font-size:10px;color:#991b1b;margin-left:6px;background:#fee2e2;padding:1px 6px;border-radius:3px;font-weight:600;">RETIRED</span>')
+        if is_n:
+            badges.append('<span style="font-size:10px;color:#2d7d46;margin-left:6px;background:#e6f4ea;padding:1px 6px;border-radius:3px;font-weight:600;">NEW</span>')
+        
+        comms_raw = d.get('committees_list', []) if isinstance(d.get('committees_list'), list) else (d.get('committees', []) if isinstance(d.get('committees'), list) else [])
+        if is_mgmt:
+            comms_raw = [c for c in comms_raw if re.sub(r'\s*\(Chair\)', '', c).strip() not in _INDEP_ONLY]
+        comms_raw = [c for c in comms_raw if re.sub(r'\s*\(Chair\)', '', c).strip() in valid_comms]
+        
+        chips = []
+        for c in comms_raw:
+            is_chair = '(Chair)' in c
+            c_clean = re.sub(r'\s*\(Chair\)', '', c).strip()
+            abbrev = c_clean.replace("Nominating and Corporate Governance", "Nom/Gov").replace("Nominating/Governance", "Nom/Gov").replace("Corporate Governance", "Nom/Gov").replace("Compensation", "Comp")
+            color = _comm_color(c)
+            if is_chair:
+                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{color};color:#fff;font-weight:600;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev} (Chair)</span>')
+            else:
+                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:transparent;color:{color};border:1px solid {color};font-weight:400;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev}</span>')
+        
+        age = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
+        since = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
+        cash = "${:,.0f}".format(d['fees_earned_cash']) if pd.notna(d.get('fees_earned_cash')) else "—"
+        stock = "${:,.0f}".format(d['stock_awards']) if pd.notna(d.get('stock_awards')) else ("" if not pd.notna(d.get('option_awards')) else "")
+        if stock == "" and pd.notna(d.get('option_awards')):
+            stock = f"${d['option_awards']:,.0f} <span style='font-size:10px;color:#999;'>(opt)</span>"
+        if not stock: stock = "—"
+        total = "${:,.0f}".format(d['total_comp']) if pd.notna(d.get('total_comp')) else "—"
+        total_w = "font-weight:700;" if pd.notna(d.get('total_comp')) else ""
+        
+        rows_html.append(f'<tr style="border-bottom:1px solid #eeeae3;opacity:{opacity};background:{bg};"><td style="padding:10px 12px;font-weight:500;">{d["director_name"]} {"".join(badges)}</td><td style="padding:10px 12px;text-align:center;color:#777;">{age}</td><td style="padding:10px 12px;text-align:center;color:#777;">{since}</td><td style="padding:10px 12px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{"".join(chips)}</div></td><td style="padding:10px 12px;text-align:right;">{cash}</td><td style="padding:10px 12px;text-align:right;">{stock}</td><td style="padding:10px 12px;text-align:right;{total_w}">{total}</td></tr>')
+    
+    # Aggregate row
+    agg_c = sum(d['fees_earned_cash'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('fees_earned_cash')))
+    agg_s = sum(d['stock_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('stock_awards'))) + sum(d['option_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('option_awards')))
+    agg_t = sum(d['total_comp'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('total_comp')))
+    totals_row = f'<tr style="border-top:2px solid #1b2a3d;background:#f5f4f0;"><td style="padding:10px 12px;font-weight:700;color:#1b2a3d;">AGGREGATE</td><td></td><td></td><td></td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">${agg_c:,.0f}</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">${agg_s:,.0f}</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;font-size:14px;">${agg_t:,.0f}</td></tr>'
+    
+    return f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow-x:auto;font-family:\'Libre Franklin\',sans-serif;"><table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;"><th style="{hdr_style}text-align:left;min-width:180px;">Director</th><th style="{hdr_style}text-align:center;width:45px;">Age</th><th style="{hdr_style}text-align:center;width:50px;">Since</th><th style="{hdr_style}text-align:left;min-width:200px;">Committees</th><th style="{hdr_style}text-align:right;min-width:100px;">Cash</th><th style="{hdr_style}text-align:right;min-width:100px;">Stock</th><th style="{hdr_style}text-align:right;min-width:100px;">Total</th></tr></thead><tbody>{"".join(rows_html)}{totals_row}</tbody></table></div>'
+
+def render_board_fee_schedule(fs, peer_fs_list):
+    """Fee schedule with peer percentile badges — two-column layout."""
+    if not fs:
+        return '<div style="padding:20px;color:#999;text-align:center;">No fee schedule data available.</div>'
+    
+    def _pb(key, val):
+        if not val or val <= 0: return ""
+        peers = [p.get(key) for p in peer_fs_list if p.get(key) and p[key] > 0]
+        if len(peers) < 3: return ""
+        pct = percentile_rank(val, pd.Series(peers))
+        if pct is None: return ""
+        bg = "#fdf0e6" if pct >= 75 else "#e6f4f0" if pct <= 25 else "#f0f0f0"
+        color = "#c27a30" if pct >= 75 else "#2d7d5a" if pct <= 25 else "#777"
+        return f' <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{bg};color:{color};margin-left:4px;">P{pct}</span>'
+    
+    ret_rows = []
+    for label, key in [("Cash Retainer","cash_retainer"),("Equity Retainer","equity_retainer")]:
+        val = fs.get(key)
+        if val and val > 0:
+            ret_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">${val:,.0f}{_pb(key,val)}</span></div>')
+    tot = fs.get('total_retainer')
+    if tot and tot > 0:
+        ret_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;"><span style="font-weight:700;color:#1b2a3d;">Total Retainer</span><span style="font-weight:700;font-size:18px;">${tot:,.0f}{_pb("total_retainer",tot)}</span></div>')
+    vehicle = fs.get('equity_vehicle','—')
+    
+    prem_rows = []
+    for label, key in [("Board Chair Premium","chair_premium"),("Lead Independent Director","lead_director_premium")]:
+        val = fs.get(key)
+        if val and val > 0:
+            prem_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">${val:,.0f}{_pb(key,val)}</span></div>')
+    
+    comm_rows = []
+    for name, ck, mk, color in [("Audit","audit_chair","audit_member","#1a73a7"),("Compensation","comp_chair","comp_member","#7b5ea7"),("Nom/Gov","nomgov_chair","nomgov_member","#2d7d46")]:
+        cv, mv = fs.get(ck), fs.get(mk)
+        if cv or mv:
+            comm_rows.append(f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:8px 0;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{color};margin-right:8px;"></span>{name}</td><td style="text-align:right;">{"${:,.0f}".format(cv) if cv else "—"}</td><td style="text-align:right;">{"${:,.0f}".format(mv) if mv else "—"}</td></tr>')
+    
+    comm_table = ""
+    if comm_rows:
+        comm_table = f'<div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:24px 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">COMMITTEE FEES</div><table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="border-bottom:2px solid #e4e0d8;"><th style="padding:6px 0;text-align:left;font-size:11px;color:#8a8577;">Committee</th><th style="text-align:right;font-size:11px;color:#8a8577;">Chair</th><th style="text-align:right;font-size:11px;color:#8a8577;">Member</th></tr></thead><tbody>{"".join(comm_rows)}</tbody></table>'
+    
+    left = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">ANNUAL RETAINER</div>{"".join(ret_rows)}<div style="margin-top:16px;padding:10px 14px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#6a6358;"><strong>Equity Vehicle:</strong> {vehicle}</div></div>'
+    right = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">LEADERSHIP PREMIUMS</div>{"".join(prem_rows) if prem_rows else "<div style=color:#999;font-size:13px;>No premium data.</div>"}{comm_table}</div>'
+    return f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-family:\'Libre Franklin\',sans-serif;">{left}{right}</div>'
+
+def render_board_retainer_bars(ticker, my_retainer, peer_fs_list):
+    """Horizontal bar chart — subject company highlighted."""
+    all_bars = [{'ticker': ticker, 'retainer': my_retainer, 'subject': True}]
+    for p in peer_fs_list:
+        r = p.get('total_retainer')
+        if r and r > 0 and not (isinstance(r, float) and np.isnan(r)):
+            all_bars.append({'ticker': p['ticker'], 'retainer': r, 'subject': False})
+    all_bars.sort(key=lambda x: -x['retainer'])
+    max_val = max(b['retainer'] for b in all_bars) * 1.1 if all_bars else 1
+    peer_rets = [b['retainer'] for b in all_bars if not b['subject']]
+    median_ret = sorted(peer_rets)[len(peer_rets)//2] if peer_rets else 0
+    
+    bar_rows = []
+    for b in all_bars:
+        pct = (b['retainer'] / max_val) * 100
+        is_s = b['subject']
+        bar_bg = "linear-gradient(90deg, #1b2a3d, #2d5a7b)" if is_s else "#c8d8e4"
+        fw = "700" if is_s else "400"
+        clr = "#1b2a3d" if is_s else "#777"
+        bar_rows.append(f'<div style="display:flex;align-items:center;margin-bottom:6px;"><div style="width:50px;font-size:12px;font-weight:{fw};color:{clr};">{b["ticker"]}</div><div style="flex:1;height:22px;background:#f5f4f0;border-radius:4px;overflow:hidden;"><div style="width:{pct}%;height:100%;border-radius:4px;background:{bar_bg};"></div></div><div style="width:90px;text-align:right;font-size:12px;font-weight:{fw};">${b["retainer"]:,.0f}</div></div>')
+    
+    my_pctl = percentile_rank(my_retainer, pd.Series(peer_rets)) if peer_rets else None
+    pctl_str = f"P{my_pctl}" if my_pctl is not None else ""
+    
+    return f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;margin:20px 0;font-family:\'Libre Franklin\',sans-serif;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">TOTAL ANNUAL RETAINER — {ticker} vs PROXY PEERS</div>{"".join(bar_rows)}<div style="margin-top:12px;font-size:11px;color:#8a8577;">{ticker} at {pctl_str} &bull; Peer median: ${median_ret:,.0f} &bull; {len(peer_rets)} peers with data</div></div>'
+
+# ============================================================
+# AI — COMPENSATION CONSULTANT TONE
 # ============================================================
 def get_client():
     try:
@@ -3781,63 +3345,123 @@ if sel3 and sel3 != PLACEHOLDER:
                 _valid_comms = {c for c, n in _raw_comm_counts.items() if n >= 2}
                 all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
                 
-                # ---- INSTITUTIONAL BOARD TAB — SUB-TAB ARCHITECTURE ----
+                # ---- INSTITUTIONAL HEADER + KPI + DIRECTOR TABLE + FEE SCHEDULE ----
                 # Load fee schedule and peer data for header KPIs
                 _co_fs = None
                 _fs_df = load_fee_schedule()
-                if not _fs_df.empty and stk3 in _fs_df["ticker"].values:
-                    _co_fs = _fs_df[_fs_df["ticker"] == stk3].iloc[0].to_dict()
+                if not _fs_df.empty and stk3 in _fs_df['ticker'].values:
+                    _co_fs = _fs_df[_fs_df['ticker'] == stk3].iloc[0].to_dict()
                 
                 _peer_fs_list = []
                 if peer_tickers and not _fs_df.empty:
-                    _peer_fs_list = _fs_df[_fs_df["ticker"].isin(peer_tickers)].to_dict("records")
+                    _peer_fs_list = _fs_df[_fs_df['ticker'].isin(peer_tickers)].to_dict('records')
                 
                 # Equity mix
-                _stock_total = comp_board["stock_awards"].fillna(0).sum()
+                _stock_total = comp_board['stock_awards'].fillna(0).sum()
                 _equity_pct = round(_stock_total / total_board_comp * 100) if total_board_comp > 0 else 0
                 
-                # CIK for SEC lookups
-                _cik_val = cd3["cik"].iloc[0] if "cik" in cd3.columns else None
-                _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
-                
-                # Pre-fetch say-on-pay for header KPI
-                _header_sop = None
-                if _cik_val:
-                    _header_sop = fetch_say_on_pay(_cik_val)
-                
-                # Header band
-                _header_html = render_board_header(stk3, cn3, pt3, len(peer_tickers) if peer_tickers else 0, _co_fs, total_board_comp, n_independent, sop=_header_sop)
+                # Header
+                _header_html = render_board_header(stk3, cn3, pt3, len(peer_tickers) if peer_tickers else 0, _co_fs, total_board_comp, n_independent)
                 components.html(_header_html, height=170, scrolling=False)
                 
                 # KPI Row
                 _kpi_html = render_board_kpi_row(n_dirs, n_independent, avg_age, avg_tenure, median_total, _equity_pct, len(all_comms))
                 components.html(_kpi_html, height=120, scrolling=False)
                 
-                # Sub-tabs
-                _bt_comp, _bt_fees, _bt_peers, _bt_sop, _bt_refresh, _bt_pgi, _bt_ai = st.tabs([
-                    "Board Composition", "Fee Schedule", "Peer Comparison",
-                    "Say-on-Pay", "Refreshment & Risk", "Peer Group Integrity", "AI Analysis"
-                ])
+                # Director Table
+                _table_html = render_board_director_table(co_dirs, _valid_comms)
+                _n_rows = len(co_dirs)
+                components.html(_table_html, height=max(250, 60 + _n_rows * 48 + 50), scrolling=True)
                 
-                with _bt_comp:
-                    _table_html = render_board_director_table(co_dirs, _valid_comms)
-                    _n_rows = len(co_dirs)
-                    components.html(_table_html, height=max(250, 60 + _n_rows * 48 + 50), scrolling=True)
+                # Fee Schedule
+                _fee_html = render_board_fee_schedule(_co_fs, _peer_fs_list)
+                components.html(_fee_html, height=500, scrolling=False)
+                
+                # Retainer Bar Chart
+                if _co_fs and _co_fs.get('total_retainer') and _co_fs['total_retainer'] > 0:
+                    _bar_html = render_board_retainer_bars(stk3, _co_fs['total_retainer'], _peer_fs_list)
+                    _n_bars = 1 + len([p for p in _peer_fs_list if p.get('total_retainer') and p['total_retainer'] > 0 and not (isinstance(p['total_retainer'], float) and p['total_retainer'] != p['total_retainer'])])
+                    components.html(_bar_html, height=max(200, 100 + _n_bars * 32), scrolling=False)
+
+                
+                # ---- SECTION 5: ACTION BUTTONS ----
+                _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
+                _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
+                
+                btn_col1, btn_col2, btn_col3 = st.columns(3)
+                with btn_col1:
+                    board_peer_btn = st.button("📊 Peer Comparison", key="board_peer_btn", use_container_width=True)
+                    board_ai_btn = st.button("📋 AI Analysis", key="board_ai_btn", use_container_width=True)
+                with btn_col2:
+                    board_refresh_btn = st.button("🔄 Refreshment & Tenure", key="board_refresh_btn", use_container_width=True)
+                    board_league_btn = st.button("🏆 League Tables", key="board_league_btn", use_container_width=True)
+                with btn_col3:
+                    board_pgi_btn = st.button("🔍 Peer Group Integrity", key="board_pgi_btn", use_container_width=True)
                     if _board_proxy_url:
-                        st.link_button("📄 View Proxy Filing", _board_proxy_url, use_container_width=False)
+                        st.link_button("📄 View Proxy Filing", _board_proxy_url, use_container_width=True)
+                    else:
+                        st.button("📄 View Proxy Filing", key="board_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found")
                 
-                with _bt_fees:
-                    _fee_html = render_board_fee_schedule(_co_fs, _peer_fs_list)
-                    components.html(_fee_html, height=500, scrolling=False)
-                
-                with _bt_peers:
-                    # Retainer Bar Chart
-                    if _co_fs and _co_fs.get("total_retainer") and _co_fs["total_retainer"] > 0:
-                        _bar_html = render_board_retainer_bars(stk3, _co_fs["total_retainer"], _peer_fs_list)
-                        _n_bars = 1 + len([p for p in _peer_fs_list if p.get("total_retainer") and p["total_retainer"] > 0 and not (isinstance(p["total_retainer"], float) and p["total_retainer"] != p["total_retainer"])])
-                        components.html(_bar_html, height=max(200, 100 + _n_bars * 32), scrolling=False)
+                # ---- Board League Tables handler ----
+                if board_league_btn:
+                    # Build league table from director_comp across peer group
+                    _league_dirs = dir_df.copy()
+                    if peer_tickers:
+                        _league_dirs = _league_dirs[_league_dirs['ticker'].isin(list(peer_tickers) + [stk3])]
+                    else:
+                        _league_dirs = _league_dirs[_league_dirs['property_type'] == pt3] if 'property_type' in _league_dirs.columns else _league_dirs
                     
-                    # Peer Board Comparison
+                    if not _league_dirs.empty:
+                        # Aggregate by company: avg total director comp
+                        _board_agg = _league_dirs[_league_dirs['is_independent'] == True].groupby(['ticker', 'company_name']).agg(
+                            n_directors=('director_name', 'count'),
+                            avg_comp=('total_comp', 'mean'),
+                            median_comp=('total_comp', 'median'),
+                            total_board_cost=('total_comp', 'sum'),
+                        ).reset_index().dropna(subset=['avg_comp'])
+                        _board_agg = _board_agg.sort_values('avg_comp', ascending=False)
+                        
+                        league_rows = []
+                        for rank, (_, row) in enumerate(_board_agg.iterrows(), 1):
+                            is_target = row['ticker'] == stk3
+                            bg = "background:#fffbeb;font-weight:700;" if is_target else ("background:#f8fafc;" if rank % 2 == 0 else "")
+                            marker = " ◄" if is_target else ""
+                            league_rows.append(f"""
+                            <tr style="border-bottom:1px solid #f1f5f9;{bg}">
+                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{rank}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;font-weight:{'700' if is_target else '500'};color:#1e293b;">{row['company_name']}{marker}</td>
+                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{row['ticker']}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:center;color:#334155;">{int(row['n_directors'])}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;color:#334155;">${row['avg_comp']:,.0f}</td>
+                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;font-weight:600;color:#1e293b;">${row['total_board_cost']:,.0f}</td>
+                            </tr>""")
+                        
+                        lhdr = "padding:8px 10px;font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
+                        league_html = f"""
+                        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                        <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🏆 Board Compensation League Tables</div>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                            <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                <th style="{lhdr}text-align:center;width:40px;">Rank</th>
+                                <th style="{lhdr}text-align:left;">Company</th>
+                                <th style="{lhdr}text-align:center;">Ticker</th>
+                                <th style="{lhdr}text-align:center;">Indep. Dirs</th>
+                                <th style="{lhdr}text-align:right;">Avg Comp</th>
+                                <th style="{lhdr}text-align:right;">Total Board Cost</th>
+                            </tr></thead>
+                            <tbody>{"".join(league_rows)}</tbody>
+                        </table>
+                        </div>
+                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">Independent directors only | ◄ = selected company</div>
+                        </div>"""
+                        league_height = max(300, 80 + len(league_rows) * 36)
+                        components.html(league_html, height=league_height, scrolling=True)
+                    else:
+                        st.info("No peer director compensation data available for league table.")
+                
+                # ---- Peer Board Comparison handler ----
+                if board_peer_btn:
                     _peer_dirs = dir_df.copy()
                     if peer_tickers:
                         _peer_dirs = _peer_dirs[_peer_dirs['ticker'].isin(list(peer_tickers) + [stk3])]
@@ -3854,19 +3478,19 @@ if sel3 and sel3 != PLACEHOLDER:
                             total_cost=('total_comp', 'sum'),
                         ).reset_index()
                         _peer_board_stats['avg_tenure'] = 2025 - _peer_board_stats['avg_tenure_since']
-                    
+                        
                         # Target company stats
                         _target = _peer_board_stats[_peer_board_stats['ticker'] == stk3]
                         _peers = _peer_board_stats[_peer_board_stats['ticker'] != stk3]
-                    
+                        
                         if not _target.empty and not _peers.empty:
                             t = _target.iloc[0]
-                    
+                            
                             def pctile_str(val, series):
                                 if pd.isna(val) or series.dropna().empty: return "—"
                                 rank = (series.dropna() < val).sum() / len(series.dropna()) * 100
                                 return f"P{int(rank)}"
-                    
+                            
                             comp_items = [
                                 ("Board Size", f"{int(t['board_size'])}", pctile_str(t['board_size'], _peers['board_size'])),
                                 ("Avg Director Age", f"{int(t['avg_age'])}" if pd.notna(t['avg_age']) else "—", pctile_str(t['avg_age'], _peers['avg_age'])),
@@ -3874,7 +3498,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                 ("Avg Director Comp", f"${t['avg_comp']:,.0f}" if pd.notna(t['avg_comp']) else "—", pctile_str(t['avg_comp'], _peers['avg_comp'])),
                                 ("Total Board Cost", f"${t['total_cost']:,.0f}" if pd.notna(t['total_cost']) else "—", pctile_str(t['total_cost'], _peers['total_cost'])),
                             ]
-                    
+                            
                             comp_rows = ""
                             for label, val, pct in comp_items:
                                 comp_rows += f"""
@@ -3883,7 +3507,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                     <td style="padding:8px 12px;font-size:0.85rem;font-weight:700;color:#1e293b;text-align:right;">{val}</td>
                                     <td style="padding:8px 12px;font-size:0.8rem;font-weight:600;color:#64748b;text-align:center;">{pct}</td>
                                 </tr>"""
-                    
+                            
                             summary_html = f"""
                             <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                             <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">📊 {cn3} vs. Peer Boards</div>
@@ -3898,19 +3522,19 @@ if sel3 and sel3 != PLACEHOLDER:
                             </table>
                             </div>"""
                             components.html(summary_html, height=300, scrolling=False)
-                    
+                            
                             # ================================================================
                             # COMPANY-BY-COMPANY RETAINER TABLE (Ferguson Ex. 3 equivalent)
                             # ================================================================
                             _bpc_fs_df = load_fee_schedule()
                             _bpc_all_tks = list(peer_tickers) + [stk3] if peer_tickers else [stk3]
                             _bpc_fs = _bpc_fs_df[_bpc_fs_df['ticker'].isin(_bpc_all_tks)] if not _bpc_fs_df.empty else pd.DataFrame()
-                    
+                            
                             if not _bpc_fs.empty:
                                 for _fc in ['cash_retainer','equity_retainer','total_retainer','audit_chair','comp_chair','nomgov_chair','lead_director_premium']:
                                     if _fc in _bpc_fs.columns:
                                         _bpc_fs[_fc] = pd.to_numeric(_bpc_fs[_fc], errors='coerce')
-                    
+                                
                                 # Compute Scenario I: Standardized per-director estimate
                                 # Base retainer + 2 avg committee member fees + meeting fees (if any)
                                 def _calc_scenario_i(row):
@@ -3937,9 +3561,9 @@ if sel3 and sel3 != PLACEHOLDER:
                                     if com_mtg and not pd.isna(com_mtg) and com_mtg > 0:
                                         mtg_add += com_mtg * 6
                                     return int(tr + member_add + mtg_add)
-                    
+                                
                                 _bpc_fs['scenario_i'] = _bpc_fs.apply(_calc_scenario_i, axis=1)
-                    
+                                
                                 # Compute Scenario II: Aggregate independent board cost excl. leadership premiums
                                 _bpc_fs['scenario_ii'] = None
                                 for idx, row in _bpc_fs.iterrows():
@@ -3955,7 +3579,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                     if pd.isna(lead_p): lead_p = 0
                                     adj = agg - chair_p - lead_p
                                     _bpc_fs.at[idx, 'scenario_ii'] = int(adj) if adj > 0 else int(agg)
-                    
+                                
                                 # Build the table — highlight subject company
                                 _d = lambda v: f"${int(v):,}" if v and not pd.isna(v) and v > 0 else "—"
                                 _bpc_rows_html = ""
@@ -3965,7 +3589,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                     bg = "background:#fffbeb;" if is_target else ""
                                     fw = "font-weight:700;" if is_target else ""
                                     tk_display = f"<strong>{row['ticker']}</strong>" if is_target else row['ticker']
-                    
+                                    
                                     _bpc_rows_html += f"""<tr style="border-bottom:1px solid #f1f5f9;{bg}">
                                         <td style="padding:6px 10px;font-size:0.8rem;color:#1e293b;{fw}">{tk_display}</td>
                                         <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;{fw}">{_d(row.get('cash_retainer'))}</td>
@@ -3976,7 +3600,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                         <td style="padding:6px 10px;font-size:0.8rem;color:#0f766e;text-align:right;font-weight:600;">{_d(row.get('scenario_i'))}</td>
                                         <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;">{_d(row.get('scenario_ii'))}</td>
                                     </tr>"""
-                    
+                                
                                 # Stats row
                                 def _stat_row(label, fn, bg_color="#f8fafc"):
                                     vals = {}
@@ -3994,15 +3618,15 @@ if sel3 and sel3 != PLACEHOLDER:
                                         <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['scenario_i'])}</td>
                                         <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['scenario_ii'])}</td>
                                     </tr>"""
-                    
+                                
                                 stats_html = _stat_row("25th Percentile", lambda s: s.quantile(0.25))
                                 stats_html += _stat_row("Median", lambda s: s.median(), "#f1f5f9")
                                 stats_html += _stat_row("75th Percentile", lambda s: s.quantile(0.75))
-                    
+                                
                                 _n_with_fs = len(_bpc_fs[_bpc_fs['total_retainer'].notna() & (_bpc_fs['total_retainer'] > 0)])
                                 _n_without = len(_bpc_all_tks) - _n_with_fs
                                 _no_data_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:6px;font-style:italic;">{_n_without} peer(s) without fee schedule data excluded from statistics.</div>' if _n_without > 0 else ""
-                    
+                                
                                 retainer_table_html = f"""
                                 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin-top:1.5rem;">
                                 <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.3rem 0;font-family:Georgia,serif;">Peer Retainer Schedule Comparison</div>
@@ -4029,92 +3653,244 @@ if sel3 and sel3 != PLACEHOLDER:
                                 {_no_data_note}
                                 <div style="font-size:0.65rem;color:#94a3b8;margin-top:4px;font-style:italic;">Source: SEC DEF 14A proxy filings | FY{FY_YEAR}</div>
                                 </div>"""
-                    
+                                
                                 _rt_height = 80 + len(_bpc_sorted) * 32 + 130  # header + rows + stats + footer
                                 components.html(retainer_table_html, height=_rt_height, scrolling=False)
-                    
+                            
                         else:
                             st.info("Insufficient peer data for board comparison.")
                     else:
                         st.info("No independent director data available for peer comparison.")
+                
+                # ---- BOARD REFRESHMENT & TENURE RISK ----
+                if board_refresh_btn:
+                    _rf_dirs = co_dirs.copy()
+                    _rf_active = _rf_dirs[_rf_dirs.get('is_not_standing', False) != True] if 'is_not_standing' in _rf_dirs.columns else _rf_dirs
+                    _rf_indep = _rf_active[_rf_active['is_independent'] == True]
                     
-                    # League Tables
-                    st.markdown("---")
-                    _league_dirs = dir_df.copy()
-                    if peer_tickers:
-                        _league_dirs = _league_dirs[_league_dirs['ticker'].isin(list(peer_tickers) + [stk3])]
-                    else:
-                        _league_dirs = _league_dirs[_league_dirs['property_type'] == pt3] if 'property_type' in _league_dirs.columns else _league_dirs
-                    
-                    if not _league_dirs.empty:
-                        # Aggregate by company: avg total director comp
-                        _board_agg = _league_dirs[_league_dirs['is_independent'] == True].groupby(['ticker', 'company_name']).agg(
-                            n_directors=('director_name', 'count'),
-                            avg_comp=('total_comp', 'mean'),
-                            median_comp=('total_comp', 'median'),
-                            total_board_cost=('total_comp', 'sum'),
-                        ).reset_index().dropna(subset=['avg_comp'])
-                        _board_agg = _board_agg.sort_values('avg_comp', ascending=False)
-                    
-                        league_rows = []
-                        for rank, (_, row) in enumerate(_board_agg.iterrows(), 1):
-                            is_target = row['ticker'] == stk3
-                            bg = "background:#fffbeb;font-weight:700;" if is_target else ("background:#f8fafc;" if rank % 2 == 0 else "")
-                            marker = " ◄" if is_target else ""
-                            league_rows.append(f"""
-                            <tr style="border-bottom:1px solid #f1f5f9;{bg}">
-                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{rank}</td>
-                                <td style="padding:6px 10px;font-size:0.85rem;font-weight:{'700' if is_target else '500'};color:#1e293b;">{row['company_name']}{marker}</td>
-                                <td style="padding:6px 10px;font-size:0.8rem;color:#64748b;text-align:center;">{row['ticker']}</td>
-                                <td style="padding:6px 10px;font-size:0.85rem;text-align:center;color:#334155;">{int(row['n_directors'])}</td>
-                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;color:#334155;">${row['avg_comp']:,.0f}</td>
-                                <td style="padding:6px 10px;font-size:0.85rem;text-align:right;font-weight:600;color:#1e293b;">${row['total_board_cost']:,.0f}</td>
-                            </tr>""")
-                    
-                        lhdr = "padding:8px 10px;font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
-                        league_html = f"""
+                    if not _rf_active.empty:
+                        _cur_year = 2025
+                        
+                        # --- Tenure Distribution ---
+                        _rf_active = _rf_active.copy()
+                        _rf_active['tenure'] = _rf_active['director_since'].apply(lambda x: _cur_year - int(x) if pd.notna(x) and x > 0 else None)
+                        _tenures = _rf_active['tenure'].dropna()
+                        
+                        band_0_3 = len(_tenures[_tenures <= 3])
+                        band_4_7 = len(_tenures[(_tenures >= 4) & (_tenures <= 7)])
+                        band_8_12 = len(_tenures[(_tenures >= 8) & (_tenures <= 12)])
+                        band_13 = len(_tenures[_tenures >= 13])
+                        total_with_tenure = len(_tenures)
+                        
+                        # ISS long-tenure flag (>12 years)
+                        _iss_flagged = _rf_active[_rf_active['tenure'].notna() & (_rf_active['tenure'] > 12)]
+                        
+                        # Refreshment rate: directors joined in last 3 years
+                        _recent = _rf_active[_rf_active['tenure'].notna() & (_rf_active['tenure'] <= 3)]
+                        refresh_rate = len(_recent) / len(_rf_active) * 100 if len(_rf_active) > 0 else 0
+                        
+                        # Age distribution
+                        _ages = _rf_active['age'].dropna()
+                        avg_age = _ages.mean() if not _ages.empty else None
+                        age_70_plus = len(_ages[_ages >= 70])
+                        
+                        # Chair/Lead succession exposure
+                        _chair = _rf_active[_rf_active['is_board_chair'] == True]
+                        _lead = _rf_active[_rf_active['is_lead_independent'] == True]
+                        chair_age = int(_chair['age'].iloc[0]) if not _chair.empty and pd.notna(_chair['age'].iloc[0]) else None
+                        chair_tenure = int(_chair['tenure'].iloc[0]) if not _chair.empty and pd.notna(_chair.get('tenure', pd.Series()).iloc[0] if not _chair.empty else None) else None
+                        lead_age = int(_lead['age'].iloc[0]) if not _lead.empty and pd.notna(_lead['age'].iloc[0]) else None
+                        lead_tenure = int(_lead['tenure'].iloc[0]) if not _lead.empty and pd.notna(_lead.get('tenure', pd.Series()).iloc[0] if not _lead.empty else None) else None
+                        
+                        # Tenure concentration: >50% in one band
+                        _bands = {'0-3 yrs': band_0_3, '4-7 yrs': band_4_7, '8-12 yrs': band_8_12, '13+ yrs': band_13}
+                        _max_band = max(_bands, key=_bands.get) if total_with_tenure > 0 else None
+                        _max_pct = _bands[_max_band] / total_with_tenure * 100 if _max_band and total_with_tenure > 0 else 0
+                        concentration_flag = _max_pct > 50 and total_with_tenure >= 4
+                        
+                        # --- Peer Comparison ---
+                        _peer_refresh = []
+                        _peer_iss_counts = []
+                        _peer_avg_tenures = []
+                        if not dir_df.empty:
+                            _peer_tks = list(peer_tickers) if peer_tickers else []
+                            for ptk in _peer_tks:
+                                pd_dirs = dir_df[(dir_df['ticker'] == ptk) & (dir_df['is_independent'] == True)]
+                                if pd_dirs.empty:
+                                    continue
+                                pd_tenures = pd_dirs['director_since'].apply(lambda x: _cur_year - int(x) if pd.notna(x) and x > 0 else None).dropna()
+                                if pd_tenures.empty:
+                                    continue
+                                pd_recent = len(pd_tenures[pd_tenures <= 3])
+                                pd_rate = pd_recent / len(pd_dirs) * 100
+                                pd_iss = len(pd_tenures[pd_tenures > 12])
+                                _peer_refresh.append(pd_rate)
+                                _peer_iss_counts.append(pd_iss)
+                                _peer_avg_tenures.append(pd_tenures.mean())
+                        
+                        peer_med_refresh = np.median(_peer_refresh) if _peer_refresh else None
+                        peer_med_tenure = np.median(_peer_avg_tenures) if _peer_avg_tenures else None
+                        avg_tenure = _tenures.mean() if not _tenures.empty else None
+                        
+                        # --- Render ---
+                        # Tenure distribution bar chart
+                        _bar_max = max(band_0_3, band_4_7, band_8_12, band_13, 1)
+                        def _bar(count, color, label):
+                            pct = count / _bar_max * 100
+                            n_pct = count / total_with_tenure * 100 if total_with_tenure > 0 else 0
+                            return f'''<div style="margin-bottom:8px;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                                    <span style="font-size:0.78rem;color:#475569;">{label}</span>
+                                    <span style="font-size:0.78rem;font-weight:600;color:#1e293b;">{count} <span style="color:#94a3b8;font-weight:400;">({n_pct:.0f}%)</span></span>
+                                </div>
+                                <div style="background:#f1f5f9;border-radius:4px;height:20px;overflow:hidden;">
+                                    <div style="background:{color};height:100%;width:{pct}%;border-radius:4px;transition:width 0.3s;"></div>
+                                </div>
+                            </div>'''
+                        
+                        tenure_chart = _bar(band_0_3, '#10b981', '0–3 years (New)')
+                        tenure_chart += _bar(band_4_7, '#3b82f6', '4–7 years')
+                        tenure_chart += _bar(band_8_12, '#f59e0b', '8–12 years')
+                        tenure_chart += _bar(band_13, '#ef4444', '13+ years (ISS Flag)')
+                        
+                        # Key metrics cards
+                        def _metric(label, value, sublabel="", alert=False):
+                            border_color = "#ef4444" if alert else "#e2e8f0"
+                            return f'''<div style="border:1px solid {border_color};border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:0.65rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">{label}</div>
+                                <div style="font-size:1.3rem;font-weight:700;color:#1e293b;margin:4px 0;">{value}</div>
+                                <div style="font-size:0.7rem;color:#94a3b8;">{sublabel}</div>
+                            </div>'''
+                        
+                        refresh_vs_peer = f"Peer median: {peer_med_refresh:.0f}%" if peer_med_refresh is not None else ""
+                        tenure_vs_peer = f"Peer median: {peer_med_tenure:.1f} yrs" if peer_med_tenure is not None else ""
+                        
+                        metrics_html = f'''<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem;">
+                            {_metric("Refreshment Rate", f"{refresh_rate:.0f}%", refresh_vs_peer, refresh_rate < 15)}
+                            {_metric("Avg Tenure", f"{avg_tenure:.1f} yrs" if avg_tenure else "—", tenure_vs_peer)}
+                            {_metric("ISS Flagged", f"{len(_iss_flagged)}", f"of {total_with_tenure} directors (&gt;12 yrs)", len(_iss_flagged) >= 3)}
+                            {_metric("Age 70+", f"{age_70_plus}", f"Avg age: {avg_age:.0f}" if avg_age else "", age_70_plus >= 3)}
+                        </div>'''
+                        
+                        # Leadership succession
+                        succession_html = ""
+                        _succession_items = []
+                        if chair_age or chair_tenure:
+                            chair_name = _chair['director_name'].iloc[0] if not _chair.empty else "—"
+                            parts = []
+                            if chair_age: parts.append(f"Age {chair_age}")
+                            if chair_tenure: parts.append(f"{chair_tenure} yrs tenure")
+                            _succession_items.append(("Board Chair", chair_name, ", ".join(parts), 
+                                (chair_age and chair_age >= 72) or (chair_tenure and chair_tenure >= 15)))
+                        if lead_age or lead_tenure:
+                            lead_name = _lead['director_name'].iloc[0] if not _lead.empty else "—"
+                            parts = []
+                            if lead_age: parts.append(f"Age {lead_age}")
+                            if lead_tenure: parts.append(f"{lead_tenure} yrs tenure")
+                            _succession_items.append(("Lead Independent", lead_name, ", ".join(parts),
+                                (lead_age and lead_age >= 72) or (lead_tenure and lead_tenure >= 15)))
+                        
+                        # Committee chair succession exposure
+                        for _, d in _rf_active.iterrows():
+                            try:
+                                comms_raw = d.get('committees')
+                                if isinstance(comms_raw, str) and comms_raw.startswith('['):
+                                    import json as _jsc
+                                    comms_list = _jsc.loads(comms_raw)
+                                elif isinstance(comms_raw, list):
+                                    comms_list = comms_raw
+                                else:
+                                    comms_list = []
+                            except Exception:
+                                comms_list = []
+                            for c in comms_list:
+                                if '(Chair)' in str(c) or '(chair)' in str(c):
+                                    d_age = int(d['age']) if pd.notna(d.get('age')) else None
+                                    d_tenure = int(_cur_year - d['director_since']) if pd.notna(d.get('director_since')) and d['director_since'] > 0 else None
+                                    comm_name = str(c).replace(' (Chair)', '').replace(' (chair)', '')
+                                    parts = []
+                                    if d_age: parts.append(f"Age {d_age}")
+                                    if d_tenure: parts.append(f"{d_tenure} yrs")
+                                    alert = (d_age and d_age >= 72) or (d_tenure and d_tenure >= 15)
+                                    _succession_items.append((f"{comm_name} Chair", d['director_name'], ", ".join(parts), alert))
+                        
+                        if _succession_items:
+                            succ_rows = ""
+                            for role, name, detail, alert in _succession_items:
+                                alert_icon = ' <span style="color:#ef4444;">⚠</span>' if alert else ''
+                                succ_rows += f'''<tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:6px 10px;font-size:0.8rem;color:#475569;">{role}</td>
+                                    <td style="padding:6px 10px;font-size:0.8rem;font-weight:600;color:#1e293b;">{name.split()[-1]}{alert_icon}</td>
+                                    <td style="padding:6px 10px;font-size:0.78rem;color:#64748b;">{detail}</td>
+                                </tr>'''
+                            succession_html = f'''
+                            <div style="margin-top:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Leadership Succession Exposure</div>
+                                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                                    <thead><tr style="background:#f8fafc;">
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Role</th>
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Director</th>
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Profile</th>
+                                    </tr></thead>
+                                    <tbody>{succ_rows}</tbody>
+                                </table>
+                                <div style="font-size:0.65rem;color:#94a3b8;margin-top:4px;">⚠ = Age ≥ 72 or tenure ≥ 15 years — succession planning recommended</div>
+                            </div>'''
+                        
+                        # Concentration warning
+                        concentration_html = ""
+                        if concentration_flag:
+                            concentration_html = f'''<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 1rem;margin-top:0.75rem;font-size:0.8rem;color:#991b1b;">
+                                <strong>Tenure Concentration:</strong> {_bands[_max_band]} of {total_with_tenure} directors ({_max_pct:.0f}%) are in the {_max_band} band. ISS and Glass Lewis flag concentrated tenure as a board refreshment concern.
+                            </div>'''
+                        
+                        # ISS flagged directors list
+                        iss_html = ""
+                        if not _iss_flagged.empty:
+                            iss_names = []
+                            for _, d in _iss_flagged.iterrows():
+                                t = int(d['tenure']) if pd.notna(d.get('tenure')) else 0
+                                iss_names.append(f"{d['director_name'].split()[-1]} ({t} yrs)")
+                            iss_html = f'''<div style="font-size:0.75rem;color:#64748b;margin-top:0.5rem;">
+                                <span style="color:#ef4444;font-weight:600;">ISS long-tenure flagged:</span> {", ".join(iss_names)}
+                            </div>'''
+                        
+                        full_html = f'''
                         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-                        <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🏆 Board Compensation League Tables</div>
-                        <div style="overflow-x:auto;">
-                        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-                            <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
-                                <th style="{lhdr}text-align:center;width:40px;">Rank</th>
-                                <th style="{lhdr}text-align:left;">Company</th>
-                                <th style="{lhdr}text-align:center;">Ticker</th>
-                                <th style="{lhdr}text-align:center;">Indep. Dirs</th>
-                                <th style="{lhdr}text-align:right;">Avg Comp</th>
-                                <th style="{lhdr}text-align:right;">Total Board Cost</th>
-                            </tr></thead>
-                            <tbody>{"".join(league_rows)}</tbody>
-                        </table>
+                        <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🔄 Board Refreshment & Tenure Risk — {cn3}</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:1rem;">Independent directors | Tenure calculated from director_since year</div>
+                        {metrics_html}
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Tenure Distribution</div>
+                                {tenure_chart}
+                                {iss_html}
+                            </div>
+                            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Profile</div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Board Size (Independent)</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{len(_rf_indep)}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Avg Director Age</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{f"{avg_age:.0f}" if avg_age else "—"}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Avg Tenure</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{f"{avg_tenure:.1f} yrs" if avg_tenure else "—"}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">New Directors (≤3 yrs)</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{len(_recent)}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Long-Tenured (&gt;12 yrs)</span><span style="font-size:0.8rem;font-weight:700;color:{"#ef4444" if len(_iss_flagged) >= 3 else "#1e293b"};">{len(_iss_flagged)}</span></div>
+                            </div>
                         </div>
-                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">Independent directors only | ◄ = selected company</div>
-                        </div>"""
-                        league_height = max(300, 80 + len(league_rows) * 36)
-                        components.html(league_html, height=league_height, scrolling=True)
+                        {concentration_html}
+                        {succession_html}
+                        <div style="font-size:0.65rem;color:#94a3b8;margin-top:0.5rem;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | ISS flags directors with &gt;12 years tenure</div>
+                        </div>'''
+                        
+                        _rf_height = 250  # base
+                        _rf_height += 200  # tenure chart + board profile
+                        if concentration_flag: _rf_height += 60
+                        if _succession_items: _rf_height += 50 + len(_succession_items) * 35
+                        if not _iss_flagged.empty: _rf_height += 30
+                        components.html(full_html, height=_rf_height, scrolling=False)
                     else:
-                        st.info("No peer director compensation data available for league table.")
+                        st.info("No director data available for refreshment analysis.")
                 
-                with _bt_sop:
-                    if _cik_val:
-                        with st.spinner("Fetching say-on-pay vote data from SEC EDGAR..."):
-                            my_sop = fetch_say_on_pay(_cik_val)
-                            peer_sop_data = []
-                            _peer_ciks = df[df["ticker"].isin(peer_tickers if peer_tickers else [])][["ticker","cik"]].drop_duplicates("ticker").dropna(subset=["cik"]) if not df.empty else pd.DataFrame()
-                            for _, pr in _peer_ciks.iterrows():
-                                p_sop = fetch_say_on_pay(pr["cik"])
-                                peer_sop_data.append((pr["ticker"], p_sop))
-                            n_with_data = sum(1 for _, s in peer_sop_data if s) + (1 if my_sop else 0)
-                            sop_html = render_board_say_on_pay(stk3, my_sop, peer_sop_data)
-                            components.html(sop_html, height=max(400, 200 + n_with_data * 40 + 200), scrolling=False)
-                    else:
-                        st.info("No CIK found for this company.")
-                
-                with _bt_refresh:
-                    _refresh_html = render_board_refreshment(co_dirs, stk3)
-                    components.html(_refresh_html, height=700, scrolling=False)
-                
-                with _bt_pgi:
+                # ---- PEER GROUP INTEGRITY AUDIT ----
+                if board_pgi_btn:
                     _pgi_peer_tks = list(peer_tickers) if peer_tickers else []
                     
                     if not _pgi_peer_tks:
@@ -4136,9 +3912,9 @@ if sel3 and sel3 != PLACEHOLDER:
                                         _not_reciprocal.append(ptk)
                                 else:
                                     _not_reciprocal.append(ptk)  # No peer data = can't confirm
-                    
+                            
                             recip_rate = len(_reciprocal) / len(_pgi_peer_tks) * 100 if _pgi_peer_tks else 0
-                    
+                            
                             # 2. SIZE ALIGNMENT: Market cap comparison
                             _pgi_stock_data = {}
                             try:
@@ -4154,7 +3930,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                         pass
                             except Exception:
                                 pass
-                    
+                            
                             subject_mcap = _pgi_stock_data.get(stk3)
                             _size_flags = []
                             _peer_mcaps = []
@@ -4166,40 +3942,40 @@ if sel3 and sel3 != PLACEHOLDER:
                                         ratio = pmcap / subject_mcap if subject_mcap > 0 else 0
                                         if ratio > 3.0 or ratio < 0.33:
                                             _size_flags.append((ptk, pmcap, ratio))
-                    
+                            
                             peer_med_mcap = np.median([m for _, m in _peer_mcaps]) if _peer_mcaps else None
-                    
+                            
                             # 3. COMP SENSITIVITY: How does percentile change if we remove 2 smallest and 2 largest peers?
                             _pgi_fs = load_fee_schedule()
                             _sensitivity_html = ""
                             if not _pgi_fs.empty:
                                 _pgi_peer_fs = _pgi_fs[_pgi_fs['ticker'].isin(_pgi_peer_tks)]
                                 _pgi_subj_fs = _pgi_fs[_pgi_fs['ticker'] == stk3]
-                    
+                                
                                 if not _pgi_subj_fs.empty and not _pgi_peer_fs.empty:
                                     subj_total = _pgi_subj_fs['total_retainer'].iloc[0] if pd.notna(_pgi_subj_fs['total_retainer'].iloc[0]) else None
-                    
+                                    
                                     if subj_total and subj_total > 0:
                                         peer_totals = _pgi_peer_fs[['ticker','total_retainer']].dropna()
                                         peer_totals = peer_totals[peer_totals['total_retainer'] > 0].copy()
-                    
+                                        
                                         if len(peer_totals) >= 5:
                                             # Full peer set percentile
                                             full_vals = peer_totals['total_retainer'].values
                                             full_pctile = (full_vals < subj_total).sum() / len(full_vals) * 100
-                    
+                                            
                                             # Remove 2 smallest (percentile goes down)
                                             trimmed_high = peer_totals.nlargest(len(peer_totals) - 2, 'total_retainer')
                                             high_vals = trimmed_high['total_retainer'].values
                                             high_pctile = (high_vals < subj_total).sum() / len(high_vals) * 100
                                             removed_small = peer_totals.nsmallest(2, 'total_retainer')['ticker'].tolist()
-                    
+                                            
                                             # Remove 2 largest (percentile goes up)
                                             trimmed_low = peer_totals.nsmallest(len(peer_totals) - 2, 'total_retainer')
                                             low_vals = trimmed_low['total_retainer'].values
                                             low_pctile = (low_vals < subj_total).sum() / len(low_vals) * 100
                                             removed_large = peer_totals.nlargest(2, 'total_retainer')['ticker'].tolist()
-                    
+                                            
                                             _sensitivity_html = f'''
                                             <div style="margin-top:1rem;">
                                                 <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Compensation Positioning Sensitivity</div>
@@ -4232,11 +4008,11 @@ if sel3 and sel3 != PLACEHOLDER:
                                                 </table>
                                                 <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">A swing of &gt;15 pts indicates the peer group may be sensitive to composition changes.</div>
                                             </div>'''
-                    
+                            
                             # 4. RENDER
                             # Reciprocity visual
                             recip_color = "#10b981" if recip_rate >= 50 else "#f59e0b" if recip_rate >= 25 else "#ef4444"
-                    
+                            
                             recip_list = ""
                             for ptk in sorted(_pgi_peer_tks):
                                 is_recip = ptk in _reciprocal
@@ -4248,7 +4024,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                     if ftk == ptk:
                                         size_note = f' <span style="color:#f59e0b;font-size:0.7rem;">({fratio:.1f}x)</span>'
                                 recip_list += f'<span style="display:inline-block;margin:2px 6px 2px 0;padding:3px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;font-size:0.78rem;"><span style="color:{color};font-weight:700;">{icon}</span> {ptk}{size_note}</span>'
-                    
+                            
                             # Metrics
                             def _pgi_metric(label, value, sublabel="", alert=False):
                                 border_color = "#ef4444" if alert else "#e2e8f0"
@@ -4257,19 +4033,19 @@ if sel3 and sel3 != PLACEHOLDER:
                                     <div style="font-size:1.3rem;font-weight:700;color:#1e293b;margin:4px 0;">{value}</div>
                                     <div style="font-size:0.7rem;color:#94a3b8;">{sublabel}</div>
                                 </div>'''
-                    
+                            
                             mcap_display = f"${subject_mcap/1e9:.1f}B" if subject_mcap and subject_mcap >= 1e9 else f"${subject_mcap/1e6:.0f}M" if subject_mcap else "—"
                             peer_mcap_display = f"${peer_med_mcap/1e9:.1f}B" if peer_med_mcap and peer_med_mcap >= 1e9 else f"${peer_med_mcap/1e6:.0f}M" if peer_med_mcap else "—"
                             mcap_ratio = subject_mcap / peer_med_mcap if subject_mcap and peer_med_mcap and peer_med_mcap > 0 else None
                             mcap_sub = f"Peer median: {peer_mcap_display}" if peer_med_mcap else ""
-                    
+                            
                             pgi_metrics = f'''<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem;">
                                 {_pgi_metric("Reciprocity", f"{recip_rate:.0f}%", f"{len(_reciprocal)} of {len(_pgi_peer_tks)} name you back", recip_rate < 25)}
                                 {_pgi_metric("Peer Count", str(len(_pgi_peer_tks)), "from proxy DEF 14A")}
                                 {_pgi_metric(f"{stk3} Market Cap", mcap_display, mcap_sub, mcap_ratio is not None and (mcap_ratio < 0.4 or mcap_ratio > 2.5))}
                                 {_pgi_metric("Size Outliers", str(len(_size_flags)), f"&gt;3x or &lt;0.33x market cap", len(_size_flags) >= 3)}
                             </div>'''
-                    
+                            
                             pgi_html = f'''
                             <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                             <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🔍 Peer Group Integrity Audit — {cn3}</div>
@@ -4283,13 +4059,13 @@ if sel3 and sel3 != PLACEHOLDER:
                             {_sensitivity_html}
                             <div style="font-size:0.65rem;color:#94a3b8;margin-top:0.75rem;font-style:italic;">Source: SEC DEF 14A proxy filings | Market data via Yahoo Finance | FY{FY_YEAR}</div>
                             </div>'''
-                    
+                            
                             _pgi_height = 350
                             if _sensitivity_html: _pgi_height += 220
                             components.html(pgi_html, height=_pgi_height, scrolling=False)
-                    
                 
-                with _bt_ai:
+                # ---- SECTION 6: AI BOARD ANALYSIS ----
+                if board_ai_btn:
                     with st.spinner("Generating board compensation analysis..."):
                         # Build comprehensive board context for AI
                         _ai_dirs_info = []
@@ -4318,7 +4094,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                 'committees': comms,
                                 'departed': bool(d.get('is_departed', False)),
                             })
-                    
+                        
                         # Build peer board comparison data
                         peer_board_lines = []
                         _peer_tickers = []
@@ -4333,7 +4109,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             if not _peer_tickers:
                                 # Fall back to same property type
                                 _peer_tickers = dir_df[(dir_df['property_type'] == pt3) & (dir_df['ticker'] != stk3)]['ticker'].unique().tolist()
-                    
+                            
                             for ptk in _peer_tickers[:15]:
                                 pd_dirs = dir_df[dir_df['ticker'] == ptk]
                                 if pd_dirs.empty:
@@ -4362,23 +4138,23 @@ if sel3 and sel3 != PLACEHOLDER:
                                             pd_comms.update(raw)
                                     except Exception:
                                         pass
-                    
+                                
                                 line = f"  {ptk}: {pd_n} dirs, {pd_n_indep} indep, med=${pd_med:,.0f}, cash=${pd_cash_med:,.0f}, equity=${pd_equity_med:,.0f}, agg=${pd_agg:,.0f}"
                                 if pd_chair_comp: line += f", chair=${pd_chair_comp:,.0f}"
                                 if pd_lead_comp: line += f", lead=${pd_lead_comp:,.0f}"
                                 line += f", {len(pd_comms)} comms"
                                 peer_board_lines.append(line)
-                    
+                        
                         peer_board_str = chr(10).join(peer_board_lines) if peer_board_lines else "  No peer board data available"
                         n_peer_boards = len(peer_board_lines)
-                    
+                        
                         # Calculate key differentials for the prompt
                         # Chair premium
                         chair_dir = next((d for d in _ai_dirs_info if d['is_chair']), None)
                         lead_dir = next((d for d in _ai_dirs_info if d['is_lead']), None)
                         indep_dirs = [d for d in _ai_dirs_info if d['independent'] and not d['is_chair'] and not d['is_lead'] and d.get('total')]
                         reg_med = np.median([d['total'] for d in indep_dirs]) if indep_dirs else None
-                    
+                        
                         chair_premium = ""
                         if chair_dir and chair_dir.get('total') and reg_med:
                             premium = chair_dir['total'] - reg_med
@@ -4387,7 +4163,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         if lead_dir and lead_dir.get('total') and reg_med:
                             premium = lead_dir['total'] - reg_med
                             lead_premium = f"\nLead Independent Premium: ${premium:,.0f} above regular member median (${lead_dir['total']:,.0f} vs ${reg_med:,.0f})"
-                    
+                        
                         # Cash/equity split
                         cash_vals = [d['cash'] for d in _ai_dirs_info if d.get('cash') and d['independent']]
                         equity_vals = [d['equity'] for d in _ai_dirs_info if d.get('equity') and d['independent']]
@@ -4395,22 +4171,22 @@ if sel3 and sel3 != PLACEHOLDER:
                         avg_equity = np.mean(equity_vals) if equity_vals else 0
                         total_mix = avg_cash + avg_equity
                         mix_str = f"Cash/Equity Mix: {avg_cash/total_mix*100:.0f}% cash / {avg_equity/total_mix*100:.0f}% equity" if total_mix > 0 else ""
-                    
+                        
                         # Fetch enrichment data (same sources as exec analysis)
                         _cik = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
                         _say_on_pay = fetch_say_on_pay(cn3, _cik, FY_YEAR + 1) if _cik else None
                         _inst_owners = fetch_institutional_ownership(cn3, _cik, FY_YEAR) if _cik else None
                         _proxy_alerts = fetch_proxy_advisory_alerts(cn3, _cik, FY_YEAR + 1) if _cik else None
-                    
+                        
                         board_enrichment = ""
                         board_sources = [f"DEF 14A Proxy Statement, FY{FY_YEAR}, SEC EDGAR"]
-                    
+                        
                         if _say_on_pay:
                             board_enrichment += f"\n\nSAY-ON-PAY VOTE: {_say_on_pay['approval_pct']}% approval ({_say_on_pay['votes_for']:,} For / {_say_on_pay['votes_against']:,} Against)"
                             if _say_on_pay['approval_pct'] < 70:
                                 board_enrichment += " ⚠ LOW APPROVAL"
                             board_sources.append(f"8-K Voting Results (Item 5.07), SEC EDGAR")
-                    
+                        
                         if _proxy_alerts:
                             board_enrichment += "\n\nPROXY ADVISORY ALERTS:"
                             for alert in _proxy_alerts[:3]:
@@ -4420,29 +4196,29 @@ if sel3 and sel3 != PLACEHOLDER:
                                 adv_str = ' & '.join(advisory) if advisory else 'Advisory'
                                 board_enrichment += f"\n  [{alert['date']}] {adv_str}: {'AGAINST' if alert.get('against') else 'noted'}"
                             board_sources.append("DEFA14A Supplemental Proxy filings, SEC EDGAR")
-                    
+                        
                         if _inst_owners:
                             board_enrichment += "\n\nINSTITUTIONAL OWNERSHIP:"
                             for o in _inst_owners[:5]:
                                 board_enrichment += f"\n  {o['institution']}: {o['pct']}%"
                             board_sources.append("Beneficial Ownership disclosure from DEF 14A, SEC EDGAR")
-                    
+                        
                         board_sources.append(f"Velarion peer director compensation database ({n_peer_boards} peer companies)")
                         sources_footnote = chr(10).join(f"  {i+1}. {s}" for i, s in enumerate(board_sources))
-                    
+                        
                         _ai_context = f"""Company: {cn3} ({stk3}) | {pt3} | Mkt Cap ${co_d['market_cap'].iloc[0]/1e9:.2f}B
-                    
+
 BOARD COMPOSITION:
   Board Size: {n_dirs} directors | Independent: {n_independent} ({indep_pct}%)
   Avg Age: {avg_age} | Avg Tenure: {avg_tenure} yrs
   Committees: {len(all_comms)} ({', '.join(sorted(all_comms))})
   Chair: {chair_name or "N/A"} | Lead Independent: {lead_ind_name or "N/A"}
-                    
+
 COMPENSATION PROGRAM:
   Median Independent Director Comp: {"${:,.0f}".format(median_total) if pd.notna(median_total) else "N/A"}
   Aggregate Board Cost (all directors): ${agg_total:,.0f}
   {mix_str}{chair_premium}{lead_premium}
-                    
+
 INDIVIDUAL DIRECTORS:
 """
                         for di in _ai_dirs_info:
@@ -4454,61 +4230,61 @@ INDIVIDUAL DIRECTORS:
                             cash_str = f"cash=${di['cash']:,.0f}" if di.get('cash') else "cash=N/A"
                             eq_str = f"equity=${di['equity']:,.0f}" if di.get('equity') else "equity=N/A"
                             _ai_context += f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | {cash_str}, {eq_str}, total=${di['total']:,.0f}{comms_str}\n" if di.get('total') else f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | no comp data{comms_str}\n"
-                    
+                        
                         _ai_context += f"""
 PEER BOARD BENCHMARKING ({n_peer_boards} companies):
 {peer_board_str}
 {board_enrichment}
 """
-                    
+                        
                         try:
                             import anthropic
                             client = anthropic.Anthropic()
                             _board_prompt = f"""You are a senior board compensation consultant (like Ferguson Partners or Pearl Meyer) preparing a confidential benchmarking analysis for a compensation committee. This should match the depth and rigor of a professional consulting engagement.
-                    
+
 {_ai_context}
-                    
+
 CRITICAL FORMAT INSTRUCTIONS: Include these section markers on their own line before each section.
-                    
+
 [SECTION:COMPOSITION]
 <h4>Board Composition & Governance</h4>
 Board size vs peer median, independence ratio vs peers, average age and tenure, committee structure. If any director has tenure >15 years, note potential entrenchment concern. If average age >70 or <55, note the outlier. If independence ratio <67%, flag it. Compare number of committees to peer median. (3-4 sentences)
-                    
+
 [SECTION:PROGRAM]
 <h4>Director Compensation Program</h4>
 Median director comp vs peer group (percentile, % above/below). Cash/equity mix vs peer median mix — is the company more cash-heavy or equity-heavy? Board Chair premium vs peer chair premiums. Lead Independent Director premium vs peers. Comment on whether compensation structure incentivizes alignment with shareholders (higher equity = better alignment). Aggregate board cost vs peer aggregate. (4-5 sentences)
-                    
+
 [SECTION:PREMIUMS]
 <h4>Committee & Leadership Premiums</h4>
 Analyze committee chair premiums if detectable from the data (Audit chairs typically command the highest premium, followed by Comp, then Nom/Gov). Compare leadership premiums (Chair, Lead Independent) to peer companies. If a director serves on 3+ committees, note the workload premium question. If any director's comp is significantly above or below the median, explain why (leadership role, committee load, partial year). (3-4 sentences)
-                    
+
 [SECTION:WATCH]
 <h4>Board Considerations</h4>
 Based on the data: flag 2-3 items the comp committee should be prepared to address. Examples: say-on-pay concerns, ISS/Glass Lewis attention, board refreshment needs (age/tenure concentration), comp competitiveness vs peers (risk of director attrition if below market), governance optics if above market. If institutional ownership data is available, note implications for proxy voting. Frame as "the committee should be prepared to discuss..." (2-3 sentences)
-                    
+
 [SECTION:SOURCES]
 <h4>Sources</h4>
 {sources_footnote}
-                    
+
 No markdown (no asterisks, bold, headers, bullets). Plain flowing paragraphs only. No title above the first section. Write in a professional, consulting-report tone — confident, data-driven, with specific numbers throughout. Reference peer comparisons frequently.
-                    
+
 CRITICAL: Only use data explicitly provided above. Do not invent numbers, meeting counts, or fee schedules not shown in the data."""
-                    
+                            
                             response = client.messages.create(
                                 model="claude-sonnet-4-20250514",
                                 max_tokens=2000,
                                 messages=[{"role": "user", "content": _board_prompt}]
                             )
                             analysis_text = clean_ai(response.content[0].text)
-                    
+                            
                             # Parse sections and render with styled formatting
                             import re as _re2
                             section_pattern = r'\[SECTION:(COMPOSITION|PROGRAM|PREMIUMS|WATCH|SOURCES)\]'
                             parts = _re2.split(section_pattern, analysis_text)
-                    
+                            
                             st.markdown(f'<div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">', unsafe_allow_html=True)
                             st.markdown(f'<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">\U0001F4CB Board Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
-                    
+                            
                             idx = 0
                             while idx < len(parts):
                                 text = parts[idx].strip()
@@ -4524,13 +4300,11 @@ CRITICAL: Only use data explicitly provided above. Do not invent numbers, meetin
                                         st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{parts[idx+1].strip()}</div>', unsafe_allow_html=True)
                                         idx += 1
                                 idx += 1
-                    
+                            
                             st.markdown('</div>', unsafe_allow_html=True)
                         except Exception as e:
                             st.error(f"AI analysis error: {str(e)[:200]}")
-                    
-# MONTHLY INTELLIGENCE — placeholder, revisit placement later
-                
+
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
 # st.markdown("---")
 # st.markdown("#### Monthly Executive Intelligence")
