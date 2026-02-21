@@ -3339,7 +3339,7 @@ if sel3 and sel3 != PLACEHOLDER:
                             vals = vals[vals > 0]
                             if len(vals) >= 2:
                                 peer_comm_chair_html += f"""<div style="margin-bottom:4px;">
-                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
                                         <span style="font-size:0.75rem;color:#475569;font-weight:600;">{label}:</span>
                                         &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
@@ -3363,7 +3363,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                 peer_stats_html += f"""
                                 <div style="margin-bottom:4px;">
                                     <div style="font-size:0.75rem;font-weight:600;color:#1e293b;margin-bottom:4px;border-bottom:1px solid #cbd5e1;padding-bottom:3px;">{label}</div>
-                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
                                         <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
@@ -3374,7 +3374,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         _lead_vals = _lead_vals[_lead_vals > 0]
                         if len(_lead_vals) >= 2:
                             peer_lead_premium_html = f"""<div style="margin-bottom:4px;">
-                                    <div style="font-size:0.8rem;line-height:1.6;">
+                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
                                         <span style="font-size:0.75rem;color:#475569;font-weight:600;">Lead Director:</span>
                                         &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.25):,.0f}</span>
                                         &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${_lead_vals.median():,.0f}</span>
@@ -3419,7 +3419,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         peer_bar_html = f"""
                         <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
                             <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:1rem;">
                             {peer_stats_html}
                             </div>
                             {_premiums_section}
