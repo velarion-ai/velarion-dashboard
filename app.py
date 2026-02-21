@@ -3718,6 +3718,10 @@ if sel3 and sel3 != PLACEHOLDER:
                 all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
                 
                 # ---- INSTITUTIONAL BOARD TAB — SUB-TAB ARCHITECTURE ----
+                # Load peer tickers for this company
+                _board_peers_data = _build_proxy_peer_data(stk3, peer_groups_df, df)
+                peer_tickers = _board_peers_data[1] if _board_peers_data else []
+                
                 # Load fee schedule and peer data for header KPIs
                 _co_fs = None
                 _fs_df = load_fee_schedule()
