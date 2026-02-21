@@ -3596,7 +3596,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                     <td style="padding:8px 12px;font-size:0.8rem;font-weight:600;color:#64748b;text-align:center;">{pct}</td>
                                 </tr>"""
                             
-                            peer_html = f"""
+                            summary_html = f"""
                             <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
                             <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">📊 {cn3} vs. Peer Boards</div>
                             <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:0.5rem;">{len(_peers)} peer companies | Independent directors only</div>
@@ -3609,7 +3609,142 @@ if sel3 and sel3 != PLACEHOLDER:
                                 <tbody>{comp_rows}</tbody>
                             </table>
                             </div>"""
-                            components.html(peer_html, height=300, scrolling=False)
+                            components.html(summary_html, height=300, scrolling=False)
+                            
+                            # ================================================================
+                            # COMPANY-BY-COMPANY RETAINER TABLE (Ferguson Ex. 3 equivalent)
+                            # ================================================================
+                            _bpc_fs_df = load_fee_schedule()
+                            _bpc_all_tks = list(peer_tickers) + [stk3] if peer_tickers else [stk3]
+                            _bpc_fs = _bpc_fs_df[_bpc_fs_df['ticker'].isin(_bpc_all_tks)] if not _bpc_fs_df.empty else pd.DataFrame()
+                            
+                            if not _bpc_fs.empty:
+                                for _fc in ['cash_retainer','equity_retainer','total_retainer','audit_chair','comp_chair','nomgov_chair','lead_director_premium']:
+                                    if _fc in _bpc_fs.columns:
+                                        _bpc_fs[_fc] = pd.to_numeric(_bpc_fs[_fc], errors='coerce')
+                                
+                                # Compute Scenario I: Standardized per-director estimate
+                                # Base retainer + 2 avg committee member fees + meeting fees (if any)
+                                def _calc_scenario_i(row):
+                                    tr = row.get('total_retainer')
+                                    if not tr or pd.isna(tr) or tr <= 0:
+                                        return None
+                                    # Scenario I = total retainer (since most modern companies are all-inclusive)
+                                    # Add avg of 2 committee member premiums if available
+                                    member_fees = []
+                                    for k in ['audit_member','comp_member','nomgov_member']:
+                                        v = row.get(k)
+                                        if v and not pd.isna(v) and v > 0:
+                                            member_fees.append(v)
+                                    member_add = 0
+                                    if member_fees:
+                                        avg_member = sum(member_fees) / len(member_fees)
+                                        member_add = avg_member * 2  # assume 2 committees
+                                    # Meeting fees
+                                    mtg_add = 0
+                                    brd_mtg = row.get('meeting_fee_board')
+                                    com_mtg = row.get('meeting_fee_committee')
+                                    if brd_mtg and not pd.isna(brd_mtg) and brd_mtg > 0:
+                                        mtg_add += brd_mtg * 6
+                                    if com_mtg and not pd.isna(com_mtg) and com_mtg > 0:
+                                        mtg_add += com_mtg * 6
+                                    return int(tr + member_add + mtg_add)
+                                
+                                _bpc_fs['scenario_i'] = _bpc_fs.apply(_calc_scenario_i, axis=1)
+                                
+                                # Compute Scenario II: Aggregate independent board cost excl. leadership premiums
+                                _bpc_fs['scenario_ii'] = None
+                                for idx, row in _bpc_fs.iterrows():
+                                    tk = row['ticker']
+                                    tk_dirs = _indep_only[_indep_only['ticker'] == tk]
+                                    if tk_dirs.empty:
+                                        continue
+                                    agg = tk_dirs['total_comp'].dropna().sum()
+                                    # Subtract chair/lead premiums
+                                    chair_p = row.get('chair_premium') or 0
+                                    lead_p = row.get('lead_director_premium') or 0
+                                    if pd.isna(chair_p): chair_p = 0
+                                    if pd.isna(lead_p): lead_p = 0
+                                    adj = agg - chair_p - lead_p
+                                    _bpc_fs.at[idx, 'scenario_ii'] = int(adj) if adj > 0 else int(agg)
+                                
+                                # Build the table — highlight subject company
+                                _d = lambda v: f"${int(v):,}" if v and not pd.isna(v) and v > 0 else "—"
+                                _bpc_rows_html = ""
+                                _bpc_sorted = _bpc_fs.sort_values('total_retainer', ascending=False, na_position='last')
+                                for _, row in _bpc_sorted.iterrows():
+                                    is_target = row['ticker'] == stk3
+                                    bg = "background:#fffbeb;" if is_target else ""
+                                    fw = "font-weight:700;" if is_target else ""
+                                    tk_display = f"<strong>{row['ticker']}</strong>" if is_target else row['ticker']
+                                    
+                                    _bpc_rows_html += f"""<tr style="border-bottom:1px solid #f1f5f9;{bg}">
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#1e293b;{fw}">{tk_display}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;{fw}">{_d(row.get('cash_retainer'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;{fw}">{_d(row.get('equity_retainer'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#1e293b;text-align:right;font-weight:600;">{_d(row.get('total_retainer'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;">{_d(row.get('audit_chair'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;">{_d(row.get('lead_director_premium'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#0f766e;text-align:right;font-weight:600;">{_d(row.get('scenario_i'))}</td>
+                                        <td style="padding:6px 10px;font-size:0.8rem;color:#334155;text-align:right;">{_d(row.get('scenario_ii'))}</td>
+                                    </tr>"""
+                                
+                                # Stats row
+                                def _stat_row(label, fn, bg_color="#f8fafc"):
+                                    vals = {}
+                                    for col in ['cash_retainer','equity_retainer','total_retainer','audit_chair','lead_director_premium','scenario_i','scenario_ii']:
+                                        s = _bpc_fs[_bpc_fs['ticker'] != stk3][col].dropna()
+                                        s = s[s > 0]
+                                        vals[col] = fn(s) if len(s) >= 2 else None
+                                    return f"""<tr style="background:{bg_color};border-bottom:1px solid #e2e8f0;">
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;font-weight:600;">{label}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['cash_retainer'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['equity_retainer'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;font-weight:600;">{_d(vals['total_retainer'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['audit_chair'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['lead_director_premium'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['scenario_i'])}</td>
+                                        <td style="padding:6px 10px;font-size:0.75rem;color:#64748b;text-align:right;">{_d(vals['scenario_ii'])}</td>
+                                    </tr>"""
+                                
+                                stats_html = _stat_row("25th Percentile", lambda s: s.quantile(0.25))
+                                stats_html += _stat_row("Median", lambda s: s.median(), "#f1f5f9")
+                                stats_html += _stat_row("75th Percentile", lambda s: s.quantile(0.75))
+                                
+                                _n_with_fs = len(_bpc_fs[_bpc_fs['total_retainer'].notna() & (_bpc_fs['total_retainer'] > 0)])
+                                _n_without = len(_bpc_all_tks) - _n_with_fs
+                                _no_data_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:6px;font-style:italic;">{_n_without} peer(s) without fee schedule data excluded from statistics.</div>' if _n_without > 0 else ""
+                                
+                                retainer_table_html = f"""
+                                <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin-top:1.5rem;">
+                                <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.3rem 0;font-family:Georgia,serif;">Peer Retainer Schedule Comparison</div>
+                                <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:0.5rem;">{_n_with_fs} companies with fee data | Scenario I: Est. per-director (base + 2 committees) | Scenario II: Aggregate excl. leadership premiums</div>
+                                <div style="overflow-x:auto;">
+                                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;min-width:700px;">
+                                    <thead><tr style="background:#0a1628;border-bottom:2px solid #e2e8f0;">
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:left;">Company</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Cash</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Equity</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Total Retainer</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Audit Chair</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Lead Dir.</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:rgba(16,185,129,0.8);font-weight:700;text-transform:uppercase;text-align:right;">Scenario I</th>
+                                        <th style="padding:8px 10px;font-size:0.6rem;color:#94a3b8;font-weight:600;text-transform:uppercase;text-align:right;">Scenario II</th>
+                                    </tr></thead>
+                                    <tbody>
+                                    {_bpc_rows_html}
+                                    <tr><td colspan="8" style="padding:2px;"></td></tr>
+                                    {stats_html}
+                                    </tbody>
+                                </table>
+                                </div>
+                                {_no_data_note}
+                                <div style="font-size:0.65rem;color:#94a3b8;margin-top:4px;font-style:italic;">Source: SEC DEF 14A proxy filings | FY{FY_YEAR}</div>
+                                </div>"""
+                                
+                                _rt_height = 80 + len(_bpc_sorted) * 32 + 130  # header + rows + stats + footer
+                                components.html(retainer_table_html, height=_rt_height, scrolling=False)
+                            
                         else:
                             st.info("Insufficient peer data for board comparison.")
                     else:
