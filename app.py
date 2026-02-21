@@ -4389,7 +4389,8 @@ if sel3 and sel3 != PLACEHOLDER:
                         board_sources.append(f"Velarion peer director compensation database ({n_peer_boards} peer companies)")
                         sources_footnote = chr(10).join(f"  {i+1}. {s}" for i, s in enumerate(board_sources))
                     
-                        _ai_context = f"""Company: {cn3} ({stk3}) | {pt3} | Mkt Cap ${co_d['market_cap'].iloc[0]/1e9:.2f}B
+                        _mcap = cd3['market_cap'].iloc[0] if 'market_cap' in cd3.columns and pd.notna(cd3['market_cap'].iloc[0]) else 0
+                        _ai_context = f"""Company: {cn3} ({stk3}) | {pt3} | Mkt Cap ${_mcap/1e9:.2f}B
                     
 BOARD COMPOSITION:
   Board Size: {n_dirs} directors | Independent: {n_independent} ({indep_pct}%)
