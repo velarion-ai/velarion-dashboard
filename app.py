@@ -3754,9 +3754,9 @@ if sel3 and sel3 != PLACEHOLDER:
                 components.html(_kpi_html, height=120, scrolling=False)
                 
                 # Sub-tabs
-                _bt_comp, _bt_fees, _bt_peers, _bt_sop, _bt_refresh, _bt_pgi, _bt_ai = st.tabs([
+                _bt_comp, _bt_fees, _bt_peers, _bt_sop, _bt_refresh, _bt_pgi = st.tabs([
                     "Composition", "Fees", "Peers",
-                    "Say-on-Pay", "Refreshment", "Peer Integrity", "AI Analysis"
+                    "Say-on-Pay", "Refreshment", "Peer Integrity"
                 ])
                 
                 with _bt_comp:
@@ -4248,272 +4248,272 @@ if sel3 and sel3 != PLACEHOLDER:
                             components.html(pgi_html, height=_pgi_height, scrolling=False)
                     
                 
-                with _bt_ai:
-                    _board_ai_key = f"board_ai_{stk3}"
-                    
-                    # Show button if no cached analysis
-                    if not st.session_state.get(_board_ai_key):
-                        st.markdown(f"""
-                        <div style="background:#f8f6f3;border:1px solid #e2e0db;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
-                            <div style="font-size:1.3rem;margin-bottom:0.5rem;">📋</div>
-                            <div style="font-size:1rem;font-weight:600;color:#1a365d;margin-bottom:0.5rem;">Board Compensation Analysis</div>
-                            <div style="font-size:0.85rem;color:#475569;line-height:1.6;max-width:500px;margin:0 auto;">
-                                Generate a Ferguson-style institutional board compensation benchmarking report with peer comparisons, fee schedule analysis, and governance considerations.
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        _gen_board = st.button("📋 Generate Board Compensation Analysis", key=f"gen_board_{stk3}", use_container_width=True)
-                    else:
-                        _gen_board = False
-                    
-                    if _gen_board:
-                      with st.spinner("Generating board compensation analysis..."):
-                        # Build comprehensive board context for AI
-                        _ai_dirs_info = []
-                        for _, d in co_dirs.iterrows():
-                            comms = []
-                            try:
-                                import json as _json2
-                                raw = d.get('committees')
-                                if isinstance(raw, str) and raw.startswith('['):
-                                    comms = _json2.loads(raw)
-                                elif isinstance(raw, list):
-                                    comms = raw
-                            except Exception:
-                                pass
-                            _ai_dirs_info.append({
-                                'name': d['director_name'],
-                                'age': int(d['age']) if pd.notna(d.get('age')) else None,
-                                'since': int(d['director_since']) if pd.notna(d.get('director_since')) else None,
-                                'independent': bool(d.get('is_independent', False)),
-                                'is_chair': bool(d.get('is_board_chair', False)),
-                                'is_lead': bool(d.get('is_lead_independent', False)),
-                                'cash': d.get('fees_earned_cash') if pd.notna(d.get('fees_earned_cash')) else None,
-                                'equity': d.get('stock_awards') if pd.notna(d.get('stock_awards')) else None,
-                                'options': d.get('option_awards') if pd.notna(d.get('option_awards')) else None,
-                                'total': d.get('total_comp') if pd.notna(d.get('total_comp')) else None,
-                                'committees': comms,
-                                'departed': bool(d.get('is_departed', False)),
-                            })
-                    
-                        # Build peer board comparison data
-                        peer_board_lines = []
-                        _peer_tickers = []
-                        if not dir_df.empty:
-                            # Get peer tickers from the same peer set used in exec tab
-                            try:
-                                _pg = load_proxy_peers()
-                                _co_peers = _pg[_pg['ticker'] == stk3]
-                                _peer_tickers = _co_peers[_co_peers['peer_ticker'].notna()]['peer_ticker'].unique().tolist()
-                            except Exception:
-                                pass
-                            if not _peer_tickers:
-                                # Fall back to same property type
-                                _peer_tickers = dir_df[(dir_df['property_type'] == pt3) & (dir_df['ticker'] != stk3)]['ticker'].unique().tolist()
-                    
-                            for ptk in _peer_tickers[:15]:
-                                pd_dirs = dir_df[dir_df['ticker'] == ptk]
-                                if pd_dirs.empty:
-                                    continue
-                                pd_indep = pd_dirs[pd_dirs['is_independent'] == True]
-                                pd_with_comp = pd_indep[pd_indep['total_comp'] > 0]
-                                pd_n = len(pd_dirs)
-                                pd_n_indep = len(pd_indep)
-                                pd_med = pd_with_comp['total_comp'].median() if not pd_with_comp.empty else 0
-                                pd_agg = pd_with_comp['total_comp'].sum() if not pd_with_comp.empty else 0
-                                pd_cash_med = pd_with_comp['fees_earned_cash'].median() if not pd_with_comp.empty and 'fees_earned_cash' in pd_with_comp.columns else 0
-                                pd_equity_med = pd_with_comp['stock_awards'].median() if not pd_with_comp.empty and 'stock_awards' in pd_with_comp.columns else 0
-                                # Chair/Lead premiums
-                                pd_chair = pd_dirs[pd_dirs['is_board_chair'] == True]
-                                pd_chair_comp = pd_chair['total_comp'].iloc[0] if not pd_chair.empty and pd.notna(pd_chair['total_comp'].iloc[0]) else None
-                                pd_lead = pd_dirs[pd_dirs['is_lead_independent'] == True]
-                                pd_lead_comp = pd_lead['total_comp'].iloc[0] if not pd_lead.empty and pd.notna(pd_lead['total_comp'].iloc[0]) else None
-                                # Committees
-                                pd_comms = set()
-                                for _, pdd in pd_dirs.iterrows():
-                                    try:
-                                        raw = pdd.get('committees')
-                                        if isinstance(raw, str) and raw.startswith('['):
-                                            pd_comms.update(_json2.loads(raw))
-                                        elif isinstance(raw, list):
-                                            pd_comms.update(raw)
-                                    except Exception:
-                                        pass
-                    
-                                line = f"  {ptk}: {pd_n} dirs, {pd_n_indep} indep, med=${pd_med:,.0f}, cash=${pd_cash_med:,.0f}, equity=${pd_equity_med:,.0f}, agg=${pd_agg:,.0f}"
-                                if pd_chair_comp: line += f", chair=${pd_chair_comp:,.0f}"
-                                if pd_lead_comp: line += f", lead=${pd_lead_comp:,.0f}"
-                                line += f", {len(pd_comms)} comms"
-                                peer_board_lines.append(line)
-                    
-                        peer_board_str = chr(10).join(peer_board_lines) if peer_board_lines else "  No peer board data available"
-                        n_peer_boards = len(peer_board_lines)
-                    
-                        # Calculate key differentials for the prompt
-                        # Chair premium
-                        chair_dir = next((d for d in _ai_dirs_info if d['is_chair']), None)
-                        lead_dir = next((d for d in _ai_dirs_info if d['is_lead']), None)
-                        indep_dirs = [d for d in _ai_dirs_info if d['independent'] and not d['is_chair'] and not d['is_lead'] and d.get('total')]
-                        reg_med = np.median([d['total'] for d in indep_dirs]) if indep_dirs else None
-                    
-                        chair_premium = ""
-                        if chair_dir and chair_dir.get('total') and reg_med:
-                            premium = chair_dir['total'] - reg_med
-                            chair_premium = f"\nChair Premium: ${premium:,.0f} above regular member median (${chair_dir['total']:,.0f} vs ${reg_med:,.0f})"
-                        lead_premium = ""
-                        if lead_dir and lead_dir.get('total') and reg_med:
-                            premium = lead_dir['total'] - reg_med
-                            lead_premium = f"\nLead Independent Premium: ${premium:,.0f} above regular member median (${lead_dir['total']:,.0f} vs ${reg_med:,.0f})"
-                    
-                        # Cash/equity split
-                        cash_vals = [d['cash'] for d in _ai_dirs_info if d.get('cash') and d['independent']]
-                        equity_vals = [d['equity'] for d in _ai_dirs_info if d.get('equity') and d['independent']]
-                        avg_cash = np.mean(cash_vals) if cash_vals else 0
-                        avg_equity = np.mean(equity_vals) if equity_vals else 0
-                        total_mix = avg_cash + avg_equity
-                        mix_str = f"Cash/Equity Mix: {avg_cash/total_mix*100:.0f}% cash / {avg_equity/total_mix*100:.0f}% equity" if total_mix > 0 else ""
-                    
-                        # Fetch enrichment data (same sources as exec analysis)
-                        _cik = _cik_val
-                        _say_on_pay = fetch_say_on_pay(_cik) if _cik else None
-                        _inst_owners = fetch_institutional_ownership(cn3, _cik, FY_YEAR) if _cik else None
-                        _proxy_alerts = fetch_proxy_advisory_alerts(cn3, _cik, FY_YEAR + 1) if _cik else None
-                    
-                        board_enrichment = ""
-                        board_sources = [f"DEF 14A Proxy Statement, FY{FY_YEAR}, SEC EDGAR"]
-                    
-                        if _say_on_pay:
-                            board_enrichment += f"\n\nSAY-ON-PAY VOTE: {_say_on_pay['pct']}% approval ({_say_on_pay['for']:,} For / {_say_on_pay['against']:,} Against)"
-                            if _say_on_pay['pct'] < 70:
-                                board_enrichment += " ⚠ LOW APPROVAL"
-                            board_sources.append(f"8-K Voting Results (Item 5.07), SEC EDGAR")
-                    
-                        if _proxy_alerts:
-                            board_enrichment += "\n\nPROXY ADVISORY ALERTS:"
-                            for alert in _proxy_alerts[:3]:
-                                advisory = []
-                                if alert.get('has_iss'): advisory.append('ISS')
-                                if alert.get('has_glass_lewis'): advisory.append('Glass Lewis')
-                                adv_str = ' & '.join(advisory) if advisory else 'Advisory'
-                                board_enrichment += f"\n  [{alert['date']}] {adv_str}: {'AGAINST' if alert.get('against') else 'noted'}"
-                            board_sources.append("DEFA14A Supplemental Proxy filings, SEC EDGAR")
-                    
-                        if _inst_owners:
-                            board_enrichment += "\n\nINSTITUTIONAL OWNERSHIP:"
-                            for o in _inst_owners[:5]:
-                                board_enrichment += f"\n  {o['institution']}: {o['pct']}%"
-                            board_sources.append("Beneficial Ownership disclosure from DEF 14A, SEC EDGAR")
-                    
-                        board_sources.append(f"Velarion peer director compensation database ({n_peer_boards} peer companies)")
-                        sources_footnote = chr(10).join(f"  {i+1}. {s}" for i, s in enumerate(board_sources))
-                    
-                        _mcap = cd3['market_cap'].iloc[0] if 'market_cap' in cd3.columns and pd.notna(cd3['market_cap'].iloc[0]) else 0
-                        _ai_context = f"""Company: {cn3} ({stk3}) | {pt3} | Mkt Cap ${_mcap/1e9:.2f}B
-                    
-BOARD COMPOSITION:
-  Board Size: {n_dirs} directors | Independent: {n_independent} ({indep_pct}%)
-  Avg Age: {avg_age} | Avg Tenure: {avg_tenure} yrs
-  Committees: {len(all_comms)} ({', '.join(sorted(all_comms))})
-  Chair: {chair_name or "N/A"} | Lead Independent: {lead_ind_name or "N/A"}
-                    
-COMPENSATION PROGRAM:
-  Median Independent Director Comp: {"${:,.0f}".format(median_total) if pd.notna(median_total) else "N/A"}
-  Aggregate Board Cost (all directors): ${total_board_comp:,.0f}
-  {mix_str}{chair_premium}{lead_premium}
-                    
-INDIVIDUAL DIRECTORS:
-"""
-                        for di in _ai_dirs_info:
-                            role = "INDEP" if di['independent'] else "MGMT"
-                            if di['is_chair']: role += " CHAIR"
-                            if di['is_lead']: role += " LEAD"
-                            if di['departed']: role += " [DEPARTED]"
-                            comms_str = f" | Committees: {', '.join(di['committees'])}" if di['committees'] else ""
-                            cash_str = f"cash=${di['cash']:,.0f}" if di.get('cash') else "cash=N/A"
-                            eq_str = f"equity=${di['equity']:,.0f}" if di.get('equity') else "equity=N/A"
-                            _ai_context += f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | {cash_str}, {eq_str}, total=${di['total']:,.0f}{comms_str}\n" if di.get('total') else f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | no comp data{comms_str}\n"
-                    
-                        _ai_context += f"""
-PEER BOARD BENCHMARKING ({n_peer_boards} companies):
-{peer_board_str}
-{board_enrichment}
-"""
-                    
-                        try:
-                            import anthropic
-                            client = anthropic.Anthropic()
-                            _board_prompt = f"""You are a senior board compensation consultant (like Ferguson Partners or Pearl Meyer) preparing a confidential benchmarking analysis for a compensation committee. This should match the depth and rigor of a professional consulting engagement.
-                    
-{_ai_context}
-                    
-CRITICAL FORMAT INSTRUCTIONS: Include these section markers on their own line before each section.
-                    
-[SECTION:COMPOSITION]
-<h4>Board Composition & Governance</h4>
-Board size vs peer median, independence ratio vs peers, average age and tenure, committee structure. If any director has tenure >15 years, note potential entrenchment concern. If average age >70 or <55, note the outlier. If independence ratio <67%, flag it. Compare number of committees to peer median. (3-4 sentences)
-                    
-[SECTION:PROGRAM]
-<h4>Director Compensation Program</h4>
-Median director comp vs peer group (percentile, % above/below). Cash/equity mix vs peer median mix — is the company more cash-heavy or equity-heavy? Board Chair premium vs peer chair premiums. Lead Independent Director premium vs peers. Comment on whether compensation structure incentivizes alignment with shareholders (higher equity = better alignment). Aggregate board cost vs peer aggregate. (4-5 sentences)
-                    
-[SECTION:PREMIUMS]
-<h4>Committee & Leadership Premiums</h4>
-Analyze committee chair premiums if detectable from the data (Audit chairs typically command the highest premium, followed by Comp, then Nom/Gov). Compare leadership premiums (Chair, Lead Independent) to peer companies. If a director serves on 3+ committees, note the workload premium question. If any director's comp is significantly above or below the median, explain why (leadership role, committee load, partial year). (3-4 sentences)
-                    
-[SECTION:WATCH]
-<h4>Board Considerations</h4>
-Based on the data: flag 2-3 items the comp committee should be prepared to address. Examples: say-on-pay concerns, ISS/Glass Lewis attention, board refreshment needs (age/tenure concentration), comp competitiveness vs peers (risk of director attrition if below market), governance optics if above market. If institutional ownership data is available, note implications for proxy voting. Frame as "the committee should be prepared to discuss..." (2-3 sentences)
-                    
-[SECTION:SOURCES]
-<h4>Sources</h4>
-{sources_footnote}
-                    
-No markdown (no asterisks, bold, headers, bullets). Plain flowing paragraphs only. No title above the first section. Write in a professional, consulting-report tone — confident, data-driven, with specific numbers throughout. Reference peer comparisons frequently.
-                    
-CRITICAL: Only use data explicitly provided above. Do not invent numbers, meeting counts, or fee schedules not shown in the data."""
-                    
-                            response = client.messages.create(
-                                model="claude-sonnet-4-20250514",
-                                max_tokens=2000,
-                                messages=[{"role": "user", "content": _board_prompt}]
-                            )
-                            analysis_text = clean_ai(response.content[0].text)
-                            st.session_state[_board_ai_key] = analysis_text
-                        except Exception as e:
-                            st.error(f"AI analysis error: {str(e)[:200]}")
-                    
-                    # Render cached analysis
-                    if st.session_state.get(_board_ai_key):
-                        analysis_text = st.session_state[_board_ai_key]
-                        
-                        # Parse sections and render with styled formatting
-                        import re as _re2
-                        section_pattern = r'\[SECTION:(COMPOSITION|PROGRAM|PREMIUMS|WATCH|SOURCES)\]'
-                        parts = _re2.split(section_pattern, analysis_text)
-                    
-                        st.markdown(f'<div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">', unsafe_allow_html=True)
-                        st.markdown(f'<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">\U0001F4CB Board Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
-                    
-                        idx = 0
-                        while idx < len(parts):
-                            text = parts[idx].strip()
-                            if text and text not in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH', 'SOURCES'):
-                                st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{text}</div>', unsafe_allow_html=True)
-                            elif text == 'SOURCES':
-                                if idx + 1 < len(parts):
-                                    src_html = parts[idx+1].strip()
-                                    st.markdown(f'<div style="margin-top:1rem;padding:0.8rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:6px;font-size:0.78rem;color:#64748b;">{src_html}</div>', unsafe_allow_html=True)
-                                    idx += 1
-                            elif text in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH'):
-                                if idx + 1 < len(parts):
-                                    st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{parts[idx+1].strip()}</div>', unsafe_allow_html=True)
-                                    idx += 1
-                            idx += 1
-                    
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        if st.button("\u2715 Close Board Analysis", key=f"close_board_ai_{stk3}"):
-                            del st.session_state[_board_ai_key]
-                            st.rerun()
+#                 with _bt_ai:
+#                     _board_ai_key = f"board_ai_{stk3}"
+#                     
+#                     # Show button if no cached analysis
+#                     if not st.session_state.get(_board_ai_key):
+#                         st.markdown(f"""
+#                         <div style="background:#f8f6f3;border:1px solid #e2e0db;border-radius:10px;padding:2rem 2.5rem;margin:1rem 0;text-align:center;">
+#                             <div style="font-size:1.3rem;margin-bottom:0.5rem;">📋</div>
+#                             <div style="font-size:1rem;font-weight:600;color:#1a365d;margin-bottom:0.5rem;">Board Compensation Analysis</div>
+#                             <div style="font-size:0.85rem;color:#475569;line-height:1.6;max-width:500px;margin:0 auto;">
+#                                 Generate a Ferguson-style institutional board compensation benchmarking report with peer comparisons, fee schedule analysis, and governance considerations.
+#                             </div>
+#                         </div>
+#                         """, unsafe_allow_html=True)
+#                         _gen_board = st.button("📋 Generate Board Compensation Analysis", key=f"gen_board_{stk3}", use_container_width=True)
+#                     else:
+#                         _gen_board = False
+#                     
+#                     if _gen_board:
+#                       with st.spinner("Generating board compensation analysis..."):
+#                         # Build comprehensive board context for AI
+#                         _ai_dirs_info = []
+#                         for _, d in co_dirs.iterrows():
+#                             comms = []
+#                             try:
+#                                 import json as _json2
+#                                 raw = d.get('committees')
+#                                 if isinstance(raw, str) and raw.startswith('['):
+#                                     comms = _json2.loads(raw)
+#                                 elif isinstance(raw, list):
+#                                     comms = raw
+#                             except Exception:
+#                                 pass
+#                             _ai_dirs_info.append({
+#                                 'name': d['director_name'],
+#                                 'age': int(d['age']) if pd.notna(d.get('age')) else None,
+#                                 'since': int(d['director_since']) if pd.notna(d.get('director_since')) else None,
+#                                 'independent': bool(d.get('is_independent', False)),
+#                                 'is_chair': bool(d.get('is_board_chair', False)),
+#                                 'is_lead': bool(d.get('is_lead_independent', False)),
+#                                 'cash': d.get('fees_earned_cash') if pd.notna(d.get('fees_earned_cash')) else None,
+#                                 'equity': d.get('stock_awards') if pd.notna(d.get('stock_awards')) else None,
+#                                 'options': d.get('option_awards') if pd.notna(d.get('option_awards')) else None,
+#                                 'total': d.get('total_comp') if pd.notna(d.get('total_comp')) else None,
+#                                 'committees': comms,
+#                                 'departed': bool(d.get('is_departed', False)),
+#                             })
+#                     
+#                         # Build peer board comparison data
+#                         peer_board_lines = []
+#                         _peer_tickers = []
+#                         if not dir_df.empty:
+#                             # Get peer tickers from the same peer set used in exec tab
+#                             try:
+#                                 _pg = load_proxy_peers()
+#                                 _co_peers = _pg[_pg['ticker'] == stk3]
+#                                 _peer_tickers = _co_peers[_co_peers['peer_ticker'].notna()]['peer_ticker'].unique().tolist()
+#                             except Exception:
+#                                 pass
+#                             if not _peer_tickers:
+#                                 # Fall back to same property type
+#                                 _peer_tickers = dir_df[(dir_df['property_type'] == pt3) & (dir_df['ticker'] != stk3)]['ticker'].unique().tolist()
+#                     
+#                             for ptk in _peer_tickers[:15]:
+#                                 pd_dirs = dir_df[dir_df['ticker'] == ptk]
+#                                 if pd_dirs.empty:
+#                                     continue
+#                                 pd_indep = pd_dirs[pd_dirs['is_independent'] == True]
+#                                 pd_with_comp = pd_indep[pd_indep['total_comp'] > 0]
+#                                 pd_n = len(pd_dirs)
+#                                 pd_n_indep = len(pd_indep)
+#                                 pd_med = pd_with_comp['total_comp'].median() if not pd_with_comp.empty else 0
+#                                 pd_agg = pd_with_comp['total_comp'].sum() if not pd_with_comp.empty else 0
+#                                 pd_cash_med = pd_with_comp['fees_earned_cash'].median() if not pd_with_comp.empty and 'fees_earned_cash' in pd_with_comp.columns else 0
+#                                 pd_equity_med = pd_with_comp['stock_awards'].median() if not pd_with_comp.empty and 'stock_awards' in pd_with_comp.columns else 0
+#                                 # Chair/Lead premiums
+#                                 pd_chair = pd_dirs[pd_dirs['is_board_chair'] == True]
+#                                 pd_chair_comp = pd_chair['total_comp'].iloc[0] if not pd_chair.empty and pd.notna(pd_chair['total_comp'].iloc[0]) else None
+#                                 pd_lead = pd_dirs[pd_dirs['is_lead_independent'] == True]
+#                                 pd_lead_comp = pd_lead['total_comp'].iloc[0] if not pd_lead.empty and pd.notna(pd_lead['total_comp'].iloc[0]) else None
+#                                 # Committees
+#                                 pd_comms = set()
+#                                 for _, pdd in pd_dirs.iterrows():
+#                                     try:
+#                                         raw = pdd.get('committees')
+#                                         if isinstance(raw, str) and raw.startswith('['):
+#                                             pd_comms.update(_json2.loads(raw))
+#                                         elif isinstance(raw, list):
+#                                             pd_comms.update(raw)
+#                                     except Exception:
+#                                         pass
+#                     
+#                                 line = f"  {ptk}: {pd_n} dirs, {pd_n_indep} indep, med=${pd_med:,.0f}, cash=${pd_cash_med:,.0f}, equity=${pd_equity_med:,.0f}, agg=${pd_agg:,.0f}"
+#                                 if pd_chair_comp: line += f", chair=${pd_chair_comp:,.0f}"
+#                                 if pd_lead_comp: line += f", lead=${pd_lead_comp:,.0f}"
+#                                 line += f", {len(pd_comms)} comms"
+#                                 peer_board_lines.append(line)
+#                     
+#                         peer_board_str = chr(10).join(peer_board_lines) if peer_board_lines else "  No peer board data available"
+#                         n_peer_boards = len(peer_board_lines)
+#                     
+#                         # Calculate key differentials for the prompt
+#                         # Chair premium
+#                         chair_dir = next((d for d in _ai_dirs_info if d['is_chair']), None)
+#                         lead_dir = next((d for d in _ai_dirs_info if d['is_lead']), None)
+#                         indep_dirs = [d for d in _ai_dirs_info if d['independent'] and not d['is_chair'] and not d['is_lead'] and d.get('total')]
+#                         reg_med = np.median([d['total'] for d in indep_dirs]) if indep_dirs else None
+#                     
+#                         chair_premium = ""
+#                         if chair_dir and chair_dir.get('total') and reg_med:
+#                             premium = chair_dir['total'] - reg_med
+#                             chair_premium = f"\nChair Premium: ${premium:,.0f} above regular member median (${chair_dir['total']:,.0f} vs ${reg_med:,.0f})"
+#                         lead_premium = ""
+#                         if lead_dir and lead_dir.get('total') and reg_med:
+#                             premium = lead_dir['total'] - reg_med
+#                             lead_premium = f"\nLead Independent Premium: ${premium:,.0f} above regular member median (${lead_dir['total']:,.0f} vs ${reg_med:,.0f})"
+#                     
+#                         # Cash/equity split
+#                         cash_vals = [d['cash'] for d in _ai_dirs_info if d.get('cash') and d['independent']]
+#                         equity_vals = [d['equity'] for d in _ai_dirs_info if d.get('equity') and d['independent']]
+#                         avg_cash = np.mean(cash_vals) if cash_vals else 0
+#                         avg_equity = np.mean(equity_vals) if equity_vals else 0
+#                         total_mix = avg_cash + avg_equity
+#                         mix_str = f"Cash/Equity Mix: {avg_cash/total_mix*100:.0f}% cash / {avg_equity/total_mix*100:.0f}% equity" if total_mix > 0 else ""
+#                     
+#                         # Fetch enrichment data (same sources as exec analysis)
+#                         _cik = _cik_val
+#                         _say_on_pay = fetch_say_on_pay(_cik) if _cik else None
+#                         _inst_owners = fetch_institutional_ownership(cn3, _cik, FY_YEAR) if _cik else None
+#                         _proxy_alerts = fetch_proxy_advisory_alerts(cn3, _cik, FY_YEAR + 1) if _cik else None
+#                     
+#                         board_enrichment = ""
+#                         board_sources = [f"DEF 14A Proxy Statement, FY{FY_YEAR}, SEC EDGAR"]
+#                     
+#                         if _say_on_pay:
+#                             board_enrichment += f"\n\nSAY-ON-PAY VOTE: {_say_on_pay['pct']}% approval ({_say_on_pay['for']:,} For / {_say_on_pay['against']:,} Against)"
+#                             if _say_on_pay['pct'] < 70:
+#                                 board_enrichment += " ⚠ LOW APPROVAL"
+#                             board_sources.append(f"8-K Voting Results (Item 5.07), SEC EDGAR")
+#                     
+#                         if _proxy_alerts:
+#                             board_enrichment += "\n\nPROXY ADVISORY ALERTS:"
+#                             for alert in _proxy_alerts[:3]:
+#                                 advisory = []
+#                                 if alert.get('has_iss'): advisory.append('ISS')
+#                                 if alert.get('has_glass_lewis'): advisory.append('Glass Lewis')
+#                                 adv_str = ' & '.join(advisory) if advisory else 'Advisory'
+#                                 board_enrichment += f"\n  [{alert['date']}] {adv_str}: {'AGAINST' if alert.get('against') else 'noted'}"
+#                             board_sources.append("DEFA14A Supplemental Proxy filings, SEC EDGAR")
+#                     
+#                         if _inst_owners:
+#                             board_enrichment += "\n\nINSTITUTIONAL OWNERSHIP:"
+#                             for o in _inst_owners[:5]:
+#                                 board_enrichment += f"\n  {o['institution']}: {o['pct']}%"
+#                             board_sources.append("Beneficial Ownership disclosure from DEF 14A, SEC EDGAR")
+#                     
+#                         board_sources.append(f"Velarion peer director compensation database ({n_peer_boards} peer companies)")
+#                         sources_footnote = chr(10).join(f"  {i+1}. {s}" for i, s in enumerate(board_sources))
+#                     
+#                         _mcap = cd3['market_cap'].iloc[0] if 'market_cap' in cd3.columns and pd.notna(cd3['market_cap'].iloc[0]) else 0
+#                         _ai_context = f"""Company: {cn3} ({stk3}) | {pt3} | Mkt Cap ${_mcap/1e9:.2f}B
+#                     
+# BOARD COMPOSITION:
+#   Board Size: {n_dirs} directors | Independent: {n_independent} ({indep_pct}%)
+#   Avg Age: {avg_age} | Avg Tenure: {avg_tenure} yrs
+#   Committees: {len(all_comms)} ({', '.join(sorted(all_comms))})
+#   Chair: {chair_name or "N/A"} | Lead Independent: {lead_ind_name or "N/A"}
+#                     
+# COMPENSATION PROGRAM:
+#   Median Independent Director Comp: {"${:,.0f}".format(median_total) if pd.notna(median_total) else "N/A"}
+#   Aggregate Board Cost (all directors): ${total_board_comp:,.0f}
+#   {mix_str}{chair_premium}{lead_premium}
+#                     
+# INDIVIDUAL DIRECTORS:
+# """
+#                         for di in _ai_dirs_info:
+#                             role = "INDEP" if di['independent'] else "MGMT"
+#                             if di['is_chair']: role += " CHAIR"
+#                             if di['is_lead']: role += " LEAD"
+#                             if di['departed']: role += " [DEPARTED]"
+#                             comms_str = f" | Committees: {', '.join(di['committees'])}" if di['committees'] else ""
+#                             cash_str = f"cash=${di['cash']:,.0f}" if di.get('cash') else "cash=N/A"
+#                             eq_str = f"equity=${di['equity']:,.0f}" if di.get('equity') else "equity=N/A"
+#                             _ai_context += f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | {cash_str}, {eq_str}, total=${di['total']:,.0f}{comms_str}\n" if di.get('total') else f"  {di['name']}: {role} | age={di['age']}, since={di['since']} | no comp data{comms_str}\n"
+#                     
+#                         _ai_context += f"""
+# PEER BOARD BENCHMARKING ({n_peer_boards} companies):
+# {peer_board_str}
+# {board_enrichment}
+# """
+#                     
+#                         try:
+#                             import anthropic
+#                             client = anthropic.Anthropic()
+#                             _board_prompt = f"""You are a senior board compensation consultant (like Ferguson Partners or Pearl Meyer) preparing a confidential benchmarking analysis for a compensation committee. This should match the depth and rigor of a professional consulting engagement.
+#                     
+# {_ai_context}
+#                     
+# CRITICAL FORMAT INSTRUCTIONS: Include these section markers on their own line before each section.
+#                     
+# [SECTION:COMPOSITION]
+# <h4>Board Composition & Governance</h4>
+# Board size vs peer median, independence ratio vs peers, average age and tenure, committee structure. If any director has tenure >15 years, note potential entrenchment concern. If average age >70 or <55, note the outlier. If independence ratio <67%, flag it. Compare number of committees to peer median. (3-4 sentences)
+#                     
+# [SECTION:PROGRAM]
+# <h4>Director Compensation Program</h4>
+# Median director comp vs peer group (percentile, % above/below). Cash/equity mix vs peer median mix — is the company more cash-heavy or equity-heavy? Board Chair premium vs peer chair premiums. Lead Independent Director premium vs peers. Comment on whether compensation structure incentivizes alignment with shareholders (higher equity = better alignment). Aggregate board cost vs peer aggregate. (4-5 sentences)
+#                     
+# [SECTION:PREMIUMS]
+# <h4>Committee & Leadership Premiums</h4>
+# Analyze committee chair premiums if detectable from the data (Audit chairs typically command the highest premium, followed by Comp, then Nom/Gov). Compare leadership premiums (Chair, Lead Independent) to peer companies. If a director serves on 3+ committees, note the workload premium question. If any director's comp is significantly above or below the median, explain why (leadership role, committee load, partial year). (3-4 sentences)
+#                     
+# [SECTION:WATCH]
+# <h4>Board Considerations</h4>
+# Based on the data: flag 2-3 items the comp committee should be prepared to address. Examples: say-on-pay concerns, ISS/Glass Lewis attention, board refreshment needs (age/tenure concentration), comp competitiveness vs peers (risk of director attrition if below market), governance optics if above market. If institutional ownership data is available, note implications for proxy voting. Frame as "the committee should be prepared to discuss..." (2-3 sentences)
+#                     
+# [SECTION:SOURCES]
+# <h4>Sources</h4>
+# {sources_footnote}
+#                     
+# No markdown (no asterisks, bold, headers, bullets). Plain flowing paragraphs only. No title above the first section. Write in a professional, consulting-report tone — confident, data-driven, with specific numbers throughout. Reference peer comparisons frequently.
+#                     
+# CRITICAL: Only use data explicitly provided above. Do not invent numbers, meeting counts, or fee schedules not shown in the data."""
+#                     
+#                             response = client.messages.create(
+#                                 model="claude-sonnet-4-20250514",
+#                                 max_tokens=2000,
+#                                 messages=[{"role": "user", "content": _board_prompt}]
+#                             )
+#                             analysis_text = clean_ai(response.content[0].text)
+#                             st.session_state[_board_ai_key] = analysis_text
+#                         except Exception as e:
+#                             st.error(f"AI analysis error: {str(e)[:200]}")
+#                     
+#                     # Render cached analysis
+#                     if st.session_state.get(_board_ai_key):
+#                         analysis_text = st.session_state[_board_ai_key]
+#                         
+#                         # Parse sections and render with styled formatting
+#                         import re as _re2
+#                         section_pattern = r'\[SECTION:(COMPOSITION|PROGRAM|PREMIUMS|WATCH|SOURCES)\]'
+#                         parts = _re2.split(section_pattern, analysis_text)
+#                     
+#                         st.markdown(f'<div style="border-left:5px solid #b8860b;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #f59e0b33;border-radius:8px;padding:1.5rem;margin:1rem 0;">', unsafe_allow_html=True)
+#                         st.markdown(f'<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;font-weight:700;margin-bottom:0.75rem;">\U0001F4CB Board Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
+#                     
+#                         idx = 0
+#                         while idx < len(parts):
+#                             text = parts[idx].strip()
+#                             if text and text not in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH', 'SOURCES'):
+#                                 st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{text}</div>', unsafe_allow_html=True)
+#                             elif text == 'SOURCES':
+#                                 if idx + 1 < len(parts):
+#                                     src_html = parts[idx+1].strip()
+#                                     st.markdown(f'<div style="margin-top:1rem;padding:0.8rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:6px;font-size:0.78rem;color:#64748b;">{src_html}</div>', unsafe_allow_html=True)
+#                                     idx += 1
+#                             elif text in ('COMPOSITION', 'PROGRAM', 'PREMIUMS', 'WATCH'):
+#                                 if idx + 1 < len(parts):
+#                                     st.markdown(f'<div style="font-size:0.88rem;color:#334155;line-height:1.7;">{parts[idx+1].strip()}</div>', unsafe_allow_html=True)
+#                                     idx += 1
+#                             idx += 1
+#                     
+#                         st.markdown('</div>', unsafe_allow_html=True)
+#                         if st.button("\u2715 Close Board Analysis", key=f"close_board_ai_{stk3}"):
+#                             del st.session_state[_board_ai_key]
+#                             st.rerun()
                     
 # MONTHLY INTELLIGENCE — placeholder, revisit placement later
                 
