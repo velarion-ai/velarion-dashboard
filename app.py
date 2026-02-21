@@ -3103,7 +3103,20 @@ if sel3 and sel3 != PLACEHOLDER:
                 agg_stock = 0
                 agg_total = 0
                 
-                sorted_dirs = co_dirs.sort_values('total_comp', ascending=False, na_position='last')
+                sorted_dirs = co_dirs.copy()
+                # Sort: Chair first (0), then Lead Independent (1), then active alpha (2), then retired/not-standing (3)
+                def _dir_sort_key(row):
+                    is_retired = bool(row.get('is_not_standing', False)) if 'is_not_standing' in row.index else False
+                    if row.get('is_board_chair', False) and not is_retired:
+                        return (0, row['director_name'].lower())
+                    elif row.get('is_lead_independent', False) and not is_retired:
+                        return (1, row['director_name'].lower())
+                    elif is_retired:
+                        return (3, row['director_name'].lower())
+                    else:
+                        return (2, row['director_name'].lower())
+                sorted_dirs['_sort'] = sorted_dirs.apply(_dir_sort_key, axis=1)
+                sorted_dirs = sorted_dirs.sort_values('_sort').drop(columns=['_sort'])
                 for row_idx, (_, d) in enumerate(sorted_dirs.iterrows()):
                     name = d['director_name']
                     age_str = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
