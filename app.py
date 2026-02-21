@@ -3497,6 +3497,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     board_refresh_btn = st.button("\U0001F504 Board Refreshment & Tenure Risk", key="board_refresh_btn", use_container_width=True)
                 with btn_col2:
                     board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
+                    board_pgi_btn = st.button("\U0001F50D Peer Group Integrity Audit", key="board_pgi_btn", use_container_width=True)
                     _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
                     _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
                     if _board_proxy_url:
@@ -3990,6 +3991,181 @@ if sel3 and sel3 != PLACEHOLDER:
                         components.html(full_html, height=_rf_height, scrolling=False)
                     else:
                         st.info("No director data available for refreshment analysis.")
+                
+                # ---- PEER GROUP INTEGRITY AUDIT ----
+                if board_pgi_btn:
+                    _pgi_peer_tks = list(peer_tickers) if peer_tickers else []
+                    
+                    if not _pgi_peer_tks:
+                        st.info("No proxy peer group found for this company. Peer Group Integrity requires a disclosed peer group.")
+                    else:
+                        with st.spinner("Analyzing peer group integrity..."):
+                            # 1. RECIPROCITY: Which of our peers name us back?
+                            _pg_df = load_peer_groups()
+                            _reciprocal = []
+                            _not_reciprocal = []
+                            for ptk in _pgi_peer_tks:
+                                # Check if ptk's peer list includes stk3
+                                ptk_peers = _pg_df[_pg_df['ticker'] == ptk]
+                                if not ptk_peers.empty:
+                                    ptk_peer_tickers = ptk_peers['peer_ticker'].dropna().unique().tolist()
+                                    if stk3 in ptk_peer_tickers:
+                                        _reciprocal.append(ptk)
+                                    else:
+                                        _not_reciprocal.append(ptk)
+                                else:
+                                    _not_reciprocal.append(ptk)  # No peer data = can't confirm
+                            
+                            recip_rate = len(_reciprocal) / len(_pgi_peer_tks) * 100 if _pgi_peer_tks else 0
+                            
+                            # 2. SIZE ALIGNMENT: Market cap comparison
+                            _pgi_stock_data = {}
+                            try:
+                                import yfinance as yf
+                                all_tks = [stk3] + _pgi_peer_tks
+                                for tk in all_tks:
+                                    try:
+                                        info = yf.Ticker(tk).fast_info
+                                        mcap = getattr(info, 'market_cap', None)
+                                        if mcap and mcap > 0:
+                                            _pgi_stock_data[tk] = mcap
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+                            
+                            subject_mcap = _pgi_stock_data.get(stk3)
+                            _size_flags = []
+                            _peer_mcaps = []
+                            if subject_mcap:
+                                for ptk in _pgi_peer_tks:
+                                    pmcap = _pgi_stock_data.get(ptk)
+                                    if pmcap:
+                                        _peer_mcaps.append((ptk, pmcap))
+                                        ratio = pmcap / subject_mcap if subject_mcap > 0 else 0
+                                        if ratio > 3.0 or ratio < 0.33:
+                                            _size_flags.append((ptk, pmcap, ratio))
+                            
+                            peer_med_mcap = np.median([m for _, m in _peer_mcaps]) if _peer_mcaps else None
+                            
+                            # 3. COMP SENSITIVITY: How does percentile change if we remove 2 smallest and 2 largest peers?
+                            _pgi_fs = load_fee_schedule()
+                            _sensitivity_html = ""
+                            if not _pgi_fs.empty:
+                                _pgi_peer_fs = _pgi_fs[_pgi_fs['ticker'].isin(_pgi_peer_tks)]
+                                _pgi_subj_fs = _pgi_fs[_pgi_fs['ticker'] == stk3]
+                                
+                                if not _pgi_subj_fs.empty and not _pgi_peer_fs.empty:
+                                    subj_total = _pgi_subj_fs['total_retainer'].iloc[0] if pd.notna(_pgi_subj_fs['total_retainer'].iloc[0]) else None
+                                    
+                                    if subj_total and subj_total > 0:
+                                        peer_totals = _pgi_peer_fs[['ticker','total_retainer']].dropna()
+                                        peer_totals = peer_totals[peer_totals['total_retainer'] > 0].copy()
+                                        
+                                        if len(peer_totals) >= 5:
+                                            # Full peer set percentile
+                                            full_vals = peer_totals['total_retainer'].values
+                                            full_pctile = (full_vals < subj_total).sum() / len(full_vals) * 100
+                                            
+                                            # Remove 2 smallest (percentile goes down)
+                                            trimmed_high = peer_totals.nlargest(len(peer_totals) - 2, 'total_retainer')
+                                            high_vals = trimmed_high['total_retainer'].values
+                                            high_pctile = (high_vals < subj_total).sum() / len(high_vals) * 100
+                                            removed_small = peer_totals.nsmallest(2, 'total_retainer')['ticker'].tolist()
+                                            
+                                            # Remove 2 largest (percentile goes up)
+                                            trimmed_low = peer_totals.nsmallest(len(peer_totals) - 2, 'total_retainer')
+                                            low_vals = trimmed_low['total_retainer'].values
+                                            low_pctile = (low_vals < subj_total).sum() / len(low_vals) * 100
+                                            removed_large = peer_totals.nlargest(2, 'total_retainer')['ticker'].tolist()
+                                            
+                                            _sensitivity_html = f'''
+                                            <div style="margin-top:1rem;">
+                                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Compensation Positioning Sensitivity</div>
+                                                <div style="font-size:0.8rem;color:#475569;line-height:1.6;">
+                                                    {cn3} total director retainer: <strong>${int(subj_total):,}</strong>
+                                                </div>
+                                                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-top:0.5rem;">
+                                                    <thead><tr style="background:#f8fafc;">
+                                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Scenario</th>
+                                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:center;">Percentile</th>
+                                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Change</th>
+                                                    </tr></thead>
+                                                    <tbody>
+                                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                                            <td style="padding:6px 10px;font-size:0.8rem;color:#475569;">Full peer group ({len(peer_totals)} cos)</td>
+                                                            <td style="padding:6px 10px;font-size:0.85rem;font-weight:700;color:#1e293b;text-align:center;">P{int(full_pctile)}</td>
+                                                            <td style="padding:6px 10px;font-size:0.78rem;color:#64748b;">Baseline</td>
+                                                        </tr>
+                                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                                            <td style="padding:6px 10px;font-size:0.8rem;color:#475569;">Remove 2 smallest ({", ".join(removed_small)})</td>
+                                                            <td style="padding:6px 10px;font-size:0.85rem;font-weight:700;color:{"#ef4444" if high_pctile < full_pctile - 10 else "#1e293b"};text-align:center;">P{int(high_pctile)}</td>
+                                                            <td style="padding:6px 10px;font-size:0.78rem;color:#ef4444;">{int(high_pctile - full_pctile):+d} pts</td>
+                                                        </tr>
+                                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                                            <td style="padding:6px 10px;font-size:0.8rem;color:#475569;">Remove 2 largest ({", ".join(removed_large)})</td>
+                                                            <td style="padding:6px 10px;font-size:0.85rem;font-weight:700;color:{"#10b981" if low_pctile > full_pctile + 10 else "#1e293b"};text-align:center;">P{int(low_pctile)}</td>
+                                                            <td style="padding:6px 10px;font-size:0.78rem;color:#10b981;">{int(low_pctile - full_pctile):+d} pts</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">A swing of &gt;15 pts indicates the peer group may be sensitive to composition changes.</div>
+                                            </div>'''
+                            
+                            # 4. RENDER
+                            # Reciprocity visual
+                            recip_color = "#10b981" if recip_rate >= 50 else "#f59e0b" if recip_rate >= 25 else "#ef4444"
+                            
+                            recip_list = ""
+                            for ptk in sorted(_pgi_peer_tks):
+                                is_recip = ptk in _reciprocal
+                                icon = "✓" if is_recip else "✗"
+                                color = "#10b981" if is_recip else "#ef4444"
+                                # Add market cap flag if applicable
+                                size_note = ""
+                                for ftk, fmcap, fratio in _size_flags:
+                                    if ftk == ptk:
+                                        size_note = f' <span style="color:#f59e0b;font-size:0.7rem;">({fratio:.1f}x)</span>'
+                                recip_list += f'<span style="display:inline-block;margin:2px 6px 2px 0;padding:3px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;font-size:0.78rem;"><span style="color:{color};font-weight:700;">{icon}</span> {ptk}{size_note}</span>'
+                            
+                            # Metrics
+                            def _pgi_metric(label, value, sublabel="", alert=False):
+                                border_color = "#ef4444" if alert else "#e2e8f0"
+                                return f'''<div style="border:1px solid {border_color};border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:0.65rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">{label}</div>
+                                    <div style="font-size:1.3rem;font-weight:700;color:#1e293b;margin:4px 0;">{value}</div>
+                                    <div style="font-size:0.7rem;color:#94a3b8;">{sublabel}</div>
+                                </div>'''
+                            
+                            mcap_display = f"${subject_mcap/1e9:.1f}B" if subject_mcap and subject_mcap >= 1e9 else f"${subject_mcap/1e6:.0f}M" if subject_mcap else "—"
+                            peer_mcap_display = f"${peer_med_mcap/1e9:.1f}B" if peer_med_mcap and peer_med_mcap >= 1e9 else f"${peer_med_mcap/1e6:.0f}M" if peer_med_mcap else "—"
+                            mcap_ratio = subject_mcap / peer_med_mcap if subject_mcap and peer_med_mcap and peer_med_mcap > 0 else None
+                            mcap_sub = f"Peer median: {peer_mcap_display}" if peer_med_mcap else ""
+                            
+                            pgi_metrics = f'''<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem;">
+                                {_pgi_metric("Reciprocity", f"{recip_rate:.0f}%", f"{len(_reciprocal)} of {len(_pgi_peer_tks)} name you back", recip_rate < 25)}
+                                {_pgi_metric("Peer Count", str(len(_pgi_peer_tks)), "from proxy DEF 14A")}
+                                {_pgi_metric(f"{stk3} Market Cap", mcap_display, mcap_sub, mcap_ratio is not None and (mcap_ratio < 0.4 or mcap_ratio > 2.5))}
+                                {_pgi_metric("Size Outliers", str(len(_size_flags)), f"&gt;3x or &lt;0.33x market cap", len(_size_flags) >= 3)}
+                            </div>'''
+                            
+                            pgi_html = f'''
+                            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                            <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🔍 Peer Group Integrity Audit — {cn3}</div>
+                            <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:1rem;">{len(_pgi_peer_tks)} proxy-disclosed peers | Reciprocity checks whether each peer names {stk3} in their proxy</div>
+                            {pgi_metrics}
+                            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Peer Reciprocity — <span style="color:{recip_color};">{len(_reciprocal)} of {len(_pgi_peer_tks)} confirmed</span></div>
+                                <div style="line-height:2;">{recip_list}</div>
+                                <div style="font-size:0.7rem;color:#64748b;margin-top:6px;">✓ = names {stk3} as a peer in their proxy &nbsp;&nbsp; ✗ = does not &nbsp;&nbsp; <span style="color:#f59e0b;">(Nx)</span> = market cap ratio</div>
+                            </div>
+                            {_sensitivity_html}
+                            <div style="font-size:0.65rem;color:#94a3b8;margin-top:0.75rem;font-style:italic;">Source: SEC DEF 14A proxy filings | Market data via Yahoo Finance | FY{FY_YEAR}</div>
+                            </div>'''
+                            
+                            _pgi_height = 350
+                            if _sensitivity_html: _pgi_height += 220
+                            components.html(pgi_html, height=_pgi_height, scrolling=False)
                 
                 # ---- SECTION 6: AI BOARD ANALYSIS ----
                 if board_ai_btn:
