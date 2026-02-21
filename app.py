@@ -3494,6 +3494,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 with btn_col1:
                     board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
                     board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
+                    board_refresh_btn = st.button("\U0001F504 Board Refreshment & Tenure Risk", key="board_refresh_btn", use_container_width=True)
                 with btn_col2:
                     board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
                     _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
@@ -3762,6 +3763,233 @@ if sel3 and sel3 != PLACEHOLDER:
                             st.info("Insufficient peer data for board comparison.")
                     else:
                         st.info("No independent director data available for peer comparison.")
+                
+                # ---- BOARD REFRESHMENT & TENURE RISK ----
+                if board_refresh_btn:
+                    _rf_dirs = co_dirs.copy()
+                    _rf_active = _rf_dirs[_rf_dirs.get('is_not_standing', False) != True] if 'is_not_standing' in _rf_dirs.columns else _rf_dirs
+                    _rf_indep = _rf_active[_rf_active['is_independent'] == True]
+                    
+                    if not _rf_active.empty:
+                        _cur_year = 2025
+                        
+                        # --- Tenure Distribution ---
+                        _rf_active = _rf_active.copy()
+                        _rf_active['tenure'] = _rf_active['director_since'].apply(lambda x: _cur_year - int(x) if pd.notna(x) and x > 0 else None)
+                        _tenures = _rf_active['tenure'].dropna()
+                        
+                        band_0_3 = len(_tenures[_tenures <= 3])
+                        band_4_7 = len(_tenures[(_tenures >= 4) & (_tenures <= 7)])
+                        band_8_12 = len(_tenures[(_tenures >= 8) & (_tenures <= 12)])
+                        band_13 = len(_tenures[_tenures >= 13])
+                        total_with_tenure = len(_tenures)
+                        
+                        # ISS long-tenure flag (>12 years)
+                        _iss_flagged = _rf_active[_rf_active['tenure'].notna() & (_rf_active['tenure'] > 12)]
+                        
+                        # Refreshment rate: directors joined in last 3 years
+                        _recent = _rf_active[_rf_active['tenure'].notna() & (_rf_active['tenure'] <= 3)]
+                        refresh_rate = len(_recent) / len(_rf_active) * 100 if len(_rf_active) > 0 else 0
+                        
+                        # Age distribution
+                        _ages = _rf_active['age'].dropna()
+                        avg_age = _ages.mean() if not _ages.empty else None
+                        age_70_plus = len(_ages[_ages >= 70])
+                        
+                        # Chair/Lead succession exposure
+                        _chair = _rf_active[_rf_active['is_board_chair'] == True]
+                        _lead = _rf_active[_rf_active['is_lead_independent'] == True]
+                        chair_age = int(_chair['age'].iloc[0]) if not _chair.empty and pd.notna(_chair['age'].iloc[0]) else None
+                        chair_tenure = int(_chair['tenure'].iloc[0]) if not _chair.empty and pd.notna(_chair.get('tenure', pd.Series()).iloc[0] if not _chair.empty else None) else None
+                        lead_age = int(_lead['age'].iloc[0]) if not _lead.empty and pd.notna(_lead['age'].iloc[0]) else None
+                        lead_tenure = int(_lead['tenure'].iloc[0]) if not _lead.empty and pd.notna(_lead.get('tenure', pd.Series()).iloc[0] if not _lead.empty else None) else None
+                        
+                        # Tenure concentration: >50% in one band
+                        _bands = {'0-3 yrs': band_0_3, '4-7 yrs': band_4_7, '8-12 yrs': band_8_12, '13+ yrs': band_13}
+                        _max_band = max(_bands, key=_bands.get) if total_with_tenure > 0 else None
+                        _max_pct = _bands[_max_band] / total_with_tenure * 100 if _max_band and total_with_tenure > 0 else 0
+                        concentration_flag = _max_pct > 50 and total_with_tenure >= 4
+                        
+                        # --- Peer Comparison ---
+                        _peer_refresh = []
+                        _peer_iss_counts = []
+                        _peer_avg_tenures = []
+                        if not dir_df.empty:
+                            _peer_tks = list(peer_tickers) if peer_tickers else []
+                            for ptk in _peer_tks:
+                                pd_dirs = dir_df[(dir_df['ticker'] == ptk) & (dir_df['is_independent'] == True)]
+                                if pd_dirs.empty:
+                                    continue
+                                pd_tenures = pd_dirs['director_since'].apply(lambda x: _cur_year - int(x) if pd.notna(x) and x > 0 else None).dropna()
+                                if pd_tenures.empty:
+                                    continue
+                                pd_recent = len(pd_tenures[pd_tenures <= 3])
+                                pd_rate = pd_recent / len(pd_dirs) * 100
+                                pd_iss = len(pd_tenures[pd_tenures > 12])
+                                _peer_refresh.append(pd_rate)
+                                _peer_iss_counts.append(pd_iss)
+                                _peer_avg_tenures.append(pd_tenures.mean())
+                        
+                        peer_med_refresh = np.median(_peer_refresh) if _peer_refresh else None
+                        peer_med_tenure = np.median(_peer_avg_tenures) if _peer_avg_tenures else None
+                        avg_tenure = _tenures.mean() if not _tenures.empty else None
+                        
+                        # --- Render ---
+                        # Tenure distribution bar chart
+                        _bar_max = max(band_0_3, band_4_7, band_8_12, band_13, 1)
+                        def _bar(count, color, label):
+                            pct = count / _bar_max * 100
+                            n_pct = count / total_with_tenure * 100 if total_with_tenure > 0 else 0
+                            return f'''<div style="margin-bottom:8px;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                                    <span style="font-size:0.78rem;color:#475569;">{label}</span>
+                                    <span style="font-size:0.78rem;font-weight:600;color:#1e293b;">{count} <span style="color:#94a3b8;font-weight:400;">({n_pct:.0f}%)</span></span>
+                                </div>
+                                <div style="background:#f1f5f9;border-radius:4px;height:20px;overflow:hidden;">
+                                    <div style="background:{color};height:100%;width:{pct}%;border-radius:4px;transition:width 0.3s;"></div>
+                                </div>
+                            </div>'''
+                        
+                        tenure_chart = _bar(band_0_3, '#10b981', '0–3 years (New)')
+                        tenure_chart += _bar(band_4_7, '#3b82f6', '4–7 years')
+                        tenure_chart += _bar(band_8_12, '#f59e0b', '8–12 years')
+                        tenure_chart += _bar(band_13, '#ef4444', '13+ years (ISS Flag)')
+                        
+                        # Key metrics cards
+                        def _metric(label, value, sublabel="", alert=False):
+                            border_color = "#ef4444" if alert else "#e2e8f0"
+                            return f'''<div style="border:1px solid {border_color};border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:0.65rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">{label}</div>
+                                <div style="font-size:1.3rem;font-weight:700;color:#1e293b;margin:4px 0;">{value}</div>
+                                <div style="font-size:0.7rem;color:#94a3b8;">{sublabel}</div>
+                            </div>'''
+                        
+                        refresh_vs_peer = f"Peer median: {peer_med_refresh:.0f}%" if peer_med_refresh is not None else ""
+                        tenure_vs_peer = f"Peer median: {peer_med_tenure:.1f} yrs" if peer_med_tenure is not None else ""
+                        
+                        metrics_html = f'''<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1rem;">
+                            {_metric("Refreshment Rate", f"{refresh_rate:.0f}%", refresh_vs_peer, refresh_rate < 15)}
+                            {_metric("Avg Tenure", f"{avg_tenure:.1f} yrs" if avg_tenure else "—", tenure_vs_peer)}
+                            {_metric("ISS Flagged", f"{len(_iss_flagged)}", f"of {total_with_tenure} directors (&gt;12 yrs)", len(_iss_flagged) >= 3)}
+                            {_metric("Age 70+", f"{age_70_plus}", f"Avg age: {avg_age:.0f}" if avg_age else "", age_70_plus >= 3)}
+                        </div>'''
+                        
+                        # Leadership succession
+                        succession_html = ""
+                        _succession_items = []
+                        if chair_age or chair_tenure:
+                            chair_name = _chair['director_name'].iloc[0] if not _chair.empty else "—"
+                            parts = []
+                            if chair_age: parts.append(f"Age {chair_age}")
+                            if chair_tenure: parts.append(f"{chair_tenure} yrs tenure")
+                            _succession_items.append(("Board Chair", chair_name, ", ".join(parts), 
+                                (chair_age and chair_age >= 72) or (chair_tenure and chair_tenure >= 15)))
+                        if lead_age or lead_tenure:
+                            lead_name = _lead['director_name'].iloc[0] if not _lead.empty else "—"
+                            parts = []
+                            if lead_age: parts.append(f"Age {lead_age}")
+                            if lead_tenure: parts.append(f"{lead_tenure} yrs tenure")
+                            _succession_items.append(("Lead Independent", lead_name, ", ".join(parts),
+                                (lead_age and lead_age >= 72) or (lead_tenure and lead_tenure >= 15)))
+                        
+                        # Committee chair succession exposure
+                        for _, d in _rf_active.iterrows():
+                            try:
+                                comms_raw = d.get('committees')
+                                if isinstance(comms_raw, str) and comms_raw.startswith('['):
+                                    import json as _jsc
+                                    comms_list = _jsc.loads(comms_raw)
+                                elif isinstance(comms_raw, list):
+                                    comms_list = comms_raw
+                                else:
+                                    comms_list = []
+                            except Exception:
+                                comms_list = []
+                            for c in comms_list:
+                                if '(Chair)' in str(c) or '(chair)' in str(c):
+                                    d_age = int(d['age']) if pd.notna(d.get('age')) else None
+                                    d_tenure = int(_cur_year - d['director_since']) if pd.notna(d.get('director_since')) and d['director_since'] > 0 else None
+                                    comm_name = str(c).replace(' (Chair)', '').replace(' (chair)', '')
+                                    parts = []
+                                    if d_age: parts.append(f"Age {d_age}")
+                                    if d_tenure: parts.append(f"{d_tenure} yrs")
+                                    alert = (d_age and d_age >= 72) or (d_tenure and d_tenure >= 15)
+                                    _succession_items.append((f"{comm_name} Chair", d['director_name'], ", ".join(parts), alert))
+                        
+                        if _succession_items:
+                            succ_rows = ""
+                            for role, name, detail, alert in _succession_items:
+                                alert_icon = ' <span style="color:#ef4444;">⚠</span>' if alert else ''
+                                succ_rows += f'''<tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:6px 10px;font-size:0.8rem;color:#475569;">{role}</td>
+                                    <td style="padding:6px 10px;font-size:0.8rem;font-weight:600;color:#1e293b;">{name.split()[-1]}{alert_icon}</td>
+                                    <td style="padding:6px 10px;font-size:0.78rem;color:#64748b;">{detail}</td>
+                                </tr>'''
+                            succession_html = f'''
+                            <div style="margin-top:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Leadership Succession Exposure</div>
+                                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                                    <thead><tr style="background:#f8fafc;">
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Role</th>
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Director</th>
+                                        <th style="padding:6px 10px;font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;text-align:left;">Profile</th>
+                                    </tr></thead>
+                                    <tbody>{succ_rows}</tbody>
+                                </table>
+                                <div style="font-size:0.65rem;color:#94a3b8;margin-top:4px;">⚠ = Age ≥ 72 or tenure ≥ 15 years — succession planning recommended</div>
+                            </div>'''
+                        
+                        # Concentration warning
+                        concentration_html = ""
+                        if concentration_flag:
+                            concentration_html = f'''<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 1rem;margin-top:0.75rem;font-size:0.8rem;color:#991b1b;">
+                                <strong>Tenure Concentration:</strong> {_bands[_max_band]} of {total_with_tenure} directors ({_max_pct:.0f}%) are in the {_max_band} band. ISS and Glass Lewis flag concentrated tenure as a board refreshment concern.
+                            </div>'''
+                        
+                        # ISS flagged directors list
+                        iss_html = ""
+                        if not _iss_flagged.empty:
+                            iss_names = []
+                            for _, d in _iss_flagged.iterrows():
+                                t = int(d['tenure']) if pd.notna(d.get('tenure')) else 0
+                                iss_names.append(f"{d['director_name'].split()[-1]} ({t} yrs)")
+                            iss_html = f'''<div style="font-size:0.75rem;color:#64748b;margin-top:0.5rem;">
+                                <span style="color:#ef4444;font-weight:600;">ISS long-tenure flagged:</span> {", ".join(iss_names)}
+                            </div>'''
+                        
+                        full_html = f'''
+                        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                        <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">🔄 Board Refreshment & Tenure Risk — {cn3}</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:1rem;">Independent directors | Tenure calculated from director_since year</div>
+                        {metrics_html}
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Tenure Distribution</div>
+                                {tenure_chart}
+                                {iss_html}
+                            </div>
+                            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Profile</div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Board Size (Independent)</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{len(_rf_indep)}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Avg Director Age</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{f"{avg_age:.0f}" if avg_age else "—"}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Avg Tenure</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{f"{avg_tenure:.1f} yrs" if avg_tenure else "—"}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">New Directors (≤3 yrs)</span><span style="font-size:0.8rem;font-weight:700;color:#1e293b;">{len(_recent)}</span></div>
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.8rem;color:#475569;">Long-Tenured (&gt;12 yrs)</span><span style="font-size:0.8rem;font-weight:700;color:{"#ef4444" if len(_iss_flagged) >= 3 else "#1e293b"};">{len(_iss_flagged)}</span></div>
+                            </div>
+                        </div>
+                        {concentration_html}
+                        {succession_html}
+                        <div style="font-size:0.65rem;color:#94a3b8;margin-top:0.5rem;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR} | ISS flags directors with &gt;12 years tenure</div>
+                        </div>'''
+                        
+                        _rf_height = 250  # base
+                        _rf_height += 200  # tenure chart + board profile
+                        if concentration_flag: _rf_height += 60
+                        if _succession_items: _rf_height += 50 + len(_succession_items) * 35
+                        if not _iss_flagged.empty: _rf_height += 30
+                        components.html(full_html, height=_rf_height, scrolling=False)
+                    else:
+                        st.info("No director data available for refreshment analysis.")
                 
                 # ---- SECTION 6: AI BOARD ANALYSIS ----
                 if board_ai_btn:
