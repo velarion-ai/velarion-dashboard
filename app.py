@@ -4400,7 +4400,7 @@ BOARD COMPOSITION:
                     
 COMPENSATION PROGRAM:
   Median Independent Director Comp: {"${:,.0f}".format(median_total) if pd.notna(median_total) else "N/A"}
-  Aggregate Board Cost (all directors): ${agg_total:,.0f}
+  Aggregate Board Cost (all directors): ${total_board_comp:,.0f}
   {mix_str}{chair_premium}{lead_premium}
                     
 INDIVIDUAL DIRECTORS:
