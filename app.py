@@ -15,26 +15,30 @@ st.set_page_config(page_title="Velarion Company Intelligence", page_icon="📊",
 # ============================================================
 # INSTITUTIONAL CSS THEME
 # ============================================================
-st.markdown("""<style>
-    /* Import distinctive serif + sans pair */
-    @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&family=Source+Serif+4:wght@400;600;700&display=swap');
-    
+st.markdown("""<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
     /* Global typography override */
-    html, body, [class*="css"], .stMarkdown, .stText { font-family: 'Libre Franklin', -apple-system, sans-serif !important; }
+    html, body, [class*="css"], .stMarkdown, .stText, p, span, div, td, th, li, label, input, button { 
+        font-family: 'Libre Franklin', -apple-system, sans-serif !important; 
+    }
     h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif !important; color: #1b2a3d !important; }
     
     /* Muted earth tone palette — not Streamlit blue */
-    .stTabs [data-baseweb="tab-list"] { gap: 0; border-bottom: 2px solid #e4e0d8; }
+    .stTabs [data-baseweb="tab-list"] { gap: 0; border-bottom: 2px solid #e4e0d8; background: transparent; }
     .stTabs [data-baseweb="tab"] { 
         font-family: 'Libre Franklin', sans-serif !important;
         font-size: 13px; font-weight: 500; letter-spacing: 0.3px;
-        color: #8a8577; padding: 10px 20px;
+        color: #8a8577 !important; padding: 10px 20px;
         border-bottom: 2px solid transparent; margin-bottom: -2px;
+        background: transparent !important;
     }
     .stTabs [aria-selected="true"] { 
-        color: #1b2a3d !important; font-weight: 600;
-        border-bottom: 2px solid #2d7d46 !important; 
+        color: #2d7d46 !important; font-weight: 600 !important;
+        border-bottom: 2px solid #2d7d46 !important;
+        background: transparent !important;
     }
+    .stTabs [data-baseweb="tab-highlight"] { display: none; }
+    .stTabs [data-baseweb="tab-border"] { display: none; }
     
     /* Button styling — muted, professional */
     .stButton > button {
@@ -936,6 +940,215 @@ def render_peer_table(exec_row, peers_df, position):
     <thead><tr style="background:#f8f6f3;position:sticky;top:0;"><th style="padding:6px;text-align:left;">Rank</th><th style="padding:6px;text-align:left;">Ticker</th><th style="padding:6px;text-align:left;">Company</th><th style="padding:6px;text-align:left;">Executive</th><th style="padding:6px;text-align:right;">Salary</th><th style="padding:6px;text-align:right;">Cash Bonus</th><th style="padding:6px;text-align:right;">Stock</th><th style="padding:6px;text-align:right;color:#64748b;">Other</th><th style="padding:6px;text-align:right;">Total Comp</th><th style="padding:6px;text-align:right;">Mkt Cap</th></tr></thead>
     <tbody>{''.join(rows)}</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
+
+# ============================================================
+# INSTITUTIONAL BOARD TAB — RENDER FUNCTIONS
+# ============================================================
+_COMM_COLORS = {
+    'Audit': '#1a73a7', 'Compensation': '#7b5ea7', 'Comp': '#7b5ea7',
+    'Corporate Governance': '#2d7d46', 'Nom/Gov': '#2d7d46',
+    'Nominating/Governance': '#2d7d46', 'Nominating and Corporate Governance': '#2d7d46',
+    'Executive': '#8a7a5a', 'Investment': '#b87333', 'Finance': '#4a7c8a',
+}
+
+def _comm_color(name):
+    base = re.sub(r'\s*\(Chair\)', '', name).strip()
+    for key, color in _COMM_COLORS.items():
+        if key.lower() in base.lower():
+            return color
+    return '#8a8577'
+
+def render_board_header(ticker, company_name, prop_type, n_peers, fee_sched, agg_board, n_indep):
+    """Dark institutional header band with KPI cards."""
+    fs = fee_sched or {}
+    total_ret = fs.get('total_retainer') or 0
+    return f"""
+    <div style="background:linear-gradient(135deg, #1b2a3d 0%, #2d4156 100%);padding:28px 32px 20px;color:#fff;margin:-1rem -1rem 0 -1rem;font-family:'Libre Franklin',sans-serif;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fb8d4;margin-bottom:4px;">Velarion Company Intelligence</div>
+                <div style="font-size:28px;font-weight:700;margin:4px 0;font-family:'Source Serif 4',Georgia,serif;">
+                    {ticker} <span style="font-weight:300;color:#b8d4e8;">Board of Directors Compensation</span>
+                </div>
+                <div style="font-size:14px;color:#8fb8d4;margin-top:4px;">
+                    {company_name} &bull; {prop_type or 'REIT'} &bull; FY {FY_YEAR} &bull; {n_peers} Proxy Peers
+                </div>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:8px;">
+                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
+                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Total Retainer</div>
+                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{"${:,.0f}".format(total_ret) if total_ret else "—"}</div>
+                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">annual per director</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 20px;min-width:140px;text-align:center;">
+                    <div style="font-size:11px;color:#8fb8d4;letter-spacing:1px;text-transform:uppercase;">Aggregate Board</div>
+                    <div style="font-size:22px;font-weight:700;margin-top:4px;color:#fff;">{"${:,.0f}".format(agg_board) if agg_board else "—"}</div>
+                    <div style="font-size:11px;color:#6a9ab8;margin-top:2px;">{n_indep} independent dirs</div>
+                </div>
+            </div>
+        </div>
+    </div>"""
+
+def render_board_kpi_row(n_board, n_indep, avg_age, avg_tenure, median_comp, equity_pct, n_comms):
+    cards = [
+        ("Board Size", str(n_board), "active trustees"),
+        ("Independent", f"{n_indep} of {n_board}", f"{round(n_indep/n_board*100)}%" if n_board > 0 else "—"),
+        ("Avg Age", str(avg_age), "years"),
+        ("Avg Tenure", f"{avg_tenure} yrs", f"since ~{FY_YEAR - avg_tenure}" if isinstance(avg_tenure, int) else ""),
+        ("Median Comp", "${:,.0f}".format(median_comp) if pd.notna(median_comp) and median_comp > 0 else "—", "per independent dir"),
+        ("Equity Mix", f"{equity_pct}%", "stock / total"),
+        ("Committees", str(n_comms), "standing"),
+    ]
+    items = []
+    for label, value, sub in cards:
+        items.append(f'<div style="flex:1;background:#fff;border-radius:8px;padding:14px 18px;border:1px solid #e4e0d8;box-shadow:0 1px 3px rgba(0,0,0,0.04);min-width:120px;"><div style="font-size:11px;color:#8a8577;letter-spacing:1px;text-transform:uppercase;font-weight:600;">{label}</div><div style="font-size:22px;font-weight:700;color:#1b2a3d;margin-top:4px;">{value}</div><div style="font-size:11px;color:#a09b8e;">{sub}</div></div>')
+    return f'<div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap;font-family:\'Libre Franklin\',sans-serif;">{"".join(items)}</div>'
+
+def render_board_director_table(directors_df, valid_comms):
+    """Institutional director roster with colored committee chips and aggregate row."""
+    _INDEP_ONLY = {'Audit', 'Compensation', 'Nominating/Governance', 'Nominating and Corporate Governance', 'Corporate Governance'}
+    
+    def sort_key(row):
+        is_r = bool(row.get('is_not_standing', False)) if 'is_not_standing' in row.index else False
+        is_mgmt = not row.get('is_independent', False)
+        if row.get('is_board_chair') and not is_r: return (0, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+        if row.get('is_lead_independent') and not is_r: return (1, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+        if is_mgmt and not is_r: return (4, 0)
+        if is_r: return (5, 0)
+        return (2, -(row.get('total_comp', 0) if pd.notna(row.get('total_comp')) else 0))
+    
+    sorted_dirs = directors_df.copy()
+    sorted_dirs['_sk'] = sorted_dirs.apply(sort_key, axis=1)
+    sorted_dirs = sorted_dirs.sort_values('_sk').drop(columns=['_sk'])
+    
+    hdr_style = "padding:10px 12px;font-size:11px;font-weight:600;color:#5a5549;letter-spacing:0.8px;text-transform:uppercase;"
+    rows_html = []
+    
+    for i, (_, d) in enumerate(sorted_dirs.iterrows()):
+        is_mgmt = not d.get('is_independent', False)
+        is_r = bool(d.get('is_not_standing', False)) if 'is_not_standing' in d.index else False
+        is_n = bool(d.get('is_newly_elected', False)) if 'is_newly_elected' in d.index else False
+        opacity = "0.45" if is_r else "0.5" if is_mgmt else "1"
+        bg = "#faf9f6" if is_r else ("#f8f8f6" if i % 2 == 0 else "transparent")
+        
+        badges = []
+        if d.get('is_board_chair'):
+            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">CHAIR</span>')
+        if d.get('is_lead_independent'):
+            badges.append('<span style="font-size:10px;color:#92400e;margin-left:6px;background:#fffbeb;padding:1px 6px;border-radius:3px;font-weight:600;">LEAD</span>')
+        if is_mgmt:
+            badges.append('<span style="font-size:10px;color:#888;margin-left:6px;background:#eee;padding:1px 6px;border-radius:3px;font-weight:600;">MGMT</span>')
+        if is_r:
+            badges.append('<span style="font-size:10px;color:#991b1b;margin-left:6px;background:#fee2e2;padding:1px 6px;border-radius:3px;font-weight:600;">RETIRED</span>')
+        if is_n:
+            badges.append('<span style="font-size:10px;color:#2d7d46;margin-left:6px;background:#e6f4ea;padding:1px 6px;border-radius:3px;font-weight:600;">NEW</span>')
+        
+        comms_raw = d.get('committees_list', []) if isinstance(d.get('committees_list'), list) else (d.get('committees', []) if isinstance(d.get('committees'), list) else [])
+        if is_mgmt:
+            comms_raw = [c for c in comms_raw if re.sub(r'\s*\(Chair\)', '', c).strip() not in _INDEP_ONLY]
+        comms_raw = [c for c in comms_raw if re.sub(r'\s*\(Chair\)', '', c).strip() in valid_comms]
+        
+        chips = []
+        for c in comms_raw:
+            is_chair = '(Chair)' in c
+            c_clean = re.sub(r'\s*\(Chair\)', '', c).strip()
+            abbrev = c_clean.replace("Nominating and Corporate Governance", "Nom/Gov").replace("Nominating/Governance", "Nom/Gov").replace("Corporate Governance", "Nom/Gov").replace("Compensation", "Comp")
+            color = _comm_color(c)
+            if is_chair:
+                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{color};color:#fff;font-weight:600;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev} (Chair)</span>')
+            else:
+                chips.append(f'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:transparent;color:{color};border:1px solid {color};font-weight:400;white-space:nowrap;display:inline-block;margin:1px 2px;">{abbrev}</span>')
+        
+        age = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
+        since = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
+        cash = "${:,.0f}".format(d['fees_earned_cash']) if pd.notna(d.get('fees_earned_cash')) else "—"
+        stock = "${:,.0f}".format(d['stock_awards']) if pd.notna(d.get('stock_awards')) else ("" if not pd.notna(d.get('option_awards')) else "")
+        if stock == "" and pd.notna(d.get('option_awards')):
+            stock = f"${d['option_awards']:,.0f} <span style='font-size:10px;color:#999;'>(opt)</span>"
+        if not stock: stock = "—"
+        total = "${:,.0f}".format(d['total_comp']) if pd.notna(d.get('total_comp')) else "—"
+        total_w = "font-weight:700;" if pd.notna(d.get('total_comp')) else ""
+        
+        rows_html.append(f'<tr style="border-bottom:1px solid #eeeae3;opacity:{opacity};background:{bg};"><td style="padding:10px 12px;font-weight:500;">{d["director_name"]} {"".join(badges)}</td><td style="padding:10px 12px;text-align:center;color:#777;">{age}</td><td style="padding:10px 12px;text-align:center;color:#777;">{since}</td><td style="padding:10px 12px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{"".join(chips)}</div></td><td style="padding:10px 12px;text-align:right;">{cash}</td><td style="padding:10px 12px;text-align:right;">{stock}</td><td style="padding:10px 12px;text-align:right;{total_w}">{total}</td></tr>')
+    
+    # Aggregate row
+    agg_c = sum(d['fees_earned_cash'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('fees_earned_cash')))
+    agg_s = sum(d['stock_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('stock_awards'))) + sum(d['option_awards'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('option_awards')))
+    agg_t = sum(d['total_comp'] for _, d in sorted_dirs.iterrows() if pd.notna(d.get('total_comp')))
+    totals_row = f'<tr style="border-top:2px solid #1b2a3d;background:#f5f4f0;"><td style="padding:10px 12px;font-weight:700;color:#1b2a3d;">AGGREGATE</td><td></td><td></td><td></td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">${agg_c:,.0f}</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;">${agg_s:,.0f}</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1b2a3d;font-size:14px;">${agg_t:,.0f}</td></tr>'
+    
+    return f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow-x:auto;font-family:\'Libre Franklin\',sans-serif;"><table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;"><th style="{hdr_style}text-align:left;min-width:180px;">Director</th><th style="{hdr_style}text-align:center;width:45px;">Age</th><th style="{hdr_style}text-align:center;width:50px;">Since</th><th style="{hdr_style}text-align:left;min-width:200px;">Committees</th><th style="{hdr_style}text-align:right;min-width:100px;">Cash</th><th style="{hdr_style}text-align:right;min-width:100px;">Stock</th><th style="{hdr_style}text-align:right;min-width:100px;">Total</th></tr></thead><tbody>{"".join(rows_html)}{totals_row}</tbody></table></div>'
+
+def render_board_fee_schedule(fs, peer_fs_list):
+    """Fee schedule with peer percentile badges — two-column layout."""
+    if not fs:
+        return '<div style="padding:20px;color:#999;text-align:center;">No fee schedule data available.</div>'
+    
+    def _pb(key, val):
+        if not val or val <= 0: return ""
+        peers = [p.get(key) for p in peer_fs_list if p.get(key) and p[key] > 0]
+        if len(peers) < 3: return ""
+        pct = percentile_rank(val, pd.Series(peers))
+        if pct is None: return ""
+        bg = "#fdf0e6" if pct >= 75 else "#e6f4f0" if pct <= 25 else "#f0f0f0"
+        color = "#c27a30" if pct >= 75 else "#2d7d5a" if pct <= 25 else "#777"
+        return f' <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:{bg};color:{color};margin-left:4px;">P{pct}</span>'
+    
+    ret_rows = []
+    for label, key in [("Cash Retainer","cash_retainer"),("Equity Retainer","equity_retainer")]:
+        val = fs.get(key)
+        if val and val > 0:
+            ret_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">${val:,.0f}{_pb(key,val)}</span></div>')
+    tot = fs.get('total_retainer')
+    if tot and tot > 0:
+        ret_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;"><span style="font-weight:700;color:#1b2a3d;">Total Retainer</span><span style="font-weight:700;font-size:18px;">${tot:,.0f}{_pb("total_retainer",tot)}</span></div>')
+    vehicle = fs.get('equity_vehicle','—')
+    
+    prem_rows = []
+    for label, key in [("Board Chair Premium","chair_premium"),("Lead Independent Director","lead_director_premium")]:
+        val = fs.get(key)
+        if val and val > 0:
+            prem_rows.append(f'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4;"><span style="color:#5a5549;">{label}</span><span style="font-weight:500;">${val:,.0f}{_pb(key,val)}</span></div>')
+    
+    comm_rows = []
+    for name, ck, mk, color in [("Audit","audit_chair","audit_member","#1a73a7"),("Compensation","comp_chair","comp_member","#7b5ea7"),("Nom/Gov","nomgov_chair","nomgov_member","#2d7d46")]:
+        cv, mv = fs.get(ck), fs.get(mk)
+        if cv or mv:
+            comm_rows.append(f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:8px 0;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{color};margin-right:8px;"></span>{name}</td><td style="text-align:right;">{"${:,.0f}".format(cv) if cv else "—"}</td><td style="text-align:right;">{"${:,.0f}".format(mv) if mv else "—"}</td></tr>')
+    
+    comm_table = ""
+    if comm_rows:
+        comm_table = f'<div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:24px 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">COMMITTEE FEES</div><table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="border-bottom:2px solid #e4e0d8;"><th style="padding:6px 0;text-align:left;font-size:11px;color:#8a8577;">Committee</th><th style="text-align:right;font-size:11px;color:#8a8577;">Chair</th><th style="text-align:right;font-size:11px;color:#8a8577;">Member</th></tr></thead><tbody>{"".join(comm_rows)}</tbody></table>'
+    
+    left = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">ANNUAL RETAINER</div>{"".join(ret_rows)}<div style="margin-top:16px;padding:10px 14px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#6a6358;"><strong>Equity Vehicle:</strong> {vehicle}</div></div>'
+    right = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 16px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">LEADERSHIP PREMIUMS</div>{"".join(prem_rows) if prem_rows else "<div style=color:#999;font-size:13px;>No premium data.</div>"}{comm_table}</div>'
+    return f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-family:\'Libre Franklin\',sans-serif;">{left}{right}</div>'
+
+def render_board_retainer_bars(ticker, my_retainer, peer_fs_list):
+    """Horizontal bar chart — subject company highlighted."""
+    all_bars = [{'ticker': ticker, 'retainer': my_retainer, 'subject': True}]
+    for p in peer_fs_list:
+        r = p.get('total_retainer')
+        if r and r > 0 and not (isinstance(r, float) and np.isnan(r)):
+            all_bars.append({'ticker': p['ticker'], 'retainer': r, 'subject': False})
+    all_bars.sort(key=lambda x: -x['retainer'])
+    max_val = max(b['retainer'] for b in all_bars) * 1.1 if all_bars else 1
+    peer_rets = [b['retainer'] for b in all_bars if not b['subject']]
+    median_ret = sorted(peer_rets)[len(peer_rets)//2] if peer_rets else 0
+    
+    bar_rows = []
+    for b in all_bars:
+        pct = (b['retainer'] / max_val) * 100
+        is_s = b['subject']
+        bar_bg = "linear-gradient(90deg, #1b2a3d, #2d5a7b)" if is_s else "#c8d8e4"
+        fw = "700" if is_s else "400"
+        clr = "#1b2a3d" if is_s else "#777"
+        bar_rows.append(f'<div style="display:flex;align-items:center;margin-bottom:6px;"><div style="width:50px;font-size:12px;font-weight:{fw};color:{clr};">{b["ticker"]}</div><div style="flex:1;height:22px;background:#f5f4f0;border-radius:4px;overflow:hidden;"><div style="width:{pct}%;height:100%;border-radius:4px;background:{bar_bg};"></div></div><div style="width:90px;text-align:right;font-size:12px;font-weight:{fw};">${b["retainer"]:,.0f}</div></div>')
+    
+    my_pctl = percentile_rank(my_retainer, pd.Series(peer_rets)) if peer_rets else None
+    pctl_str = f"P{my_pctl}" if my_pctl is not None else ""
+    
+    return f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:24px;margin:20px 0;font-family:\'Libre Franklin\',sans-serif;"><div style="font-size:14px;font-weight:700;color:#1b2a3d;margin:0 0 20px 0;letter-spacing:0.5px;font-family:\'Source Serif 4\',Georgia,serif;">TOTAL ANNUAL RETAINER — {ticker} vs PROXY PEERS</div>{"".join(bar_rows)}<div style="margin-top:12px;font-size:11px;color:#8a8577;">{ticker} at {pctl_str} &bull; Peer median: ${median_ret:,.0f} &bull; {len(peer_rets)} peers with data</div></div>'
 
 # ============================================================
 # AI — COMPENSATION CONSULTANT TONE
@@ -3132,435 +3345,44 @@ if sel3 and sel3 != PLACEHOLDER:
                 _valid_comms = {c for c, n in _raw_comm_counts.items() if n >= 2}
                 all_comms = {c: {'members': n, 'chair': None} for c, n in _raw_comm_counts.items() if c in _valid_comms}
                 
-                # ---- SECTION 1: BOARD SNAPSHOT (6 metrics) ----
-                # Built as HTML string, rendered together with roster below
-                snapshot_html = f"""
-                <div style="margin:0.5rem 0 0.5rem 0;">
-                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.8rem;">
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Board Size</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_dirs}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Independent</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{n_independent} of {n_dirs}</div>
-                            <div style="font-size:0.7rem;color:#94a3b8;">{indep_pct}%</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Age</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_age}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Avg Tenure</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{avg_tenure} yrs</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Median Total Comp</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{"${:,.0f}".format(median_total) if pd.notna(median_total) else "—"}</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Committees</div>
-                            <div style="font-size:1.3rem;font-weight:700;color:#1e293b;">{len(all_comms)}</div>
-                        </div>
-                    </div>
-                </div>
-                <hr style="border:none;border-top:1px solid #e2e8f0;margin:0.8rem 0;">
-                <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Board of Directors</div>
-                """
-                
-                # ---- SECTION 2: DIRECTOR ROSTER ----
-                
-                # Build roster rows with committee chips and alternating shading
-                roster_rows = []
-                agg_cash = 0
-                agg_stock = 0
-                agg_total = 0
-                
-                sorted_dirs = co_dirs.copy()
-                # Sort: Chair first (0), then Lead Independent (1), then active alpha (2), then retired/not-standing (3)
-                def _dir_sort_key(row):
-                    is_retired = bool(row.get('is_not_standing', False)) if 'is_not_standing' in row.index else False
-                    if row.get('is_board_chair', False) and not is_retired:
-                        return (0, row['director_name'].lower())
-                    elif row.get('is_lead_independent', False) and not is_retired:
-                        return (1, row['director_name'].lower())
-                    elif is_retired:
-                        return (3, row['director_name'].lower())
-                    else:
-                        return (2, row['director_name'].lower())
-                sorted_dirs['_sort'] = sorted_dirs.apply(_dir_sort_key, axis=1)
-                sorted_dirs = sorted_dirs.sort_values('_sort').drop(columns=['_sort'])
-                for row_idx, (_, d) in enumerate(sorted_dirs.iterrows()):
-                    name = d['director_name']
-                    age_str = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
-                    since_str = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
-                    is_mgmt = not d.get('is_independent', False)
-                    
-                    # Badge HTML
-                    badges = []
-                    if is_mgmt:
-                        badges.append('<span style="background:#fef3c7;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">MGMT</span>')
-                    else:
-                        badges.append('<span style="background:#ecfdf5;color:#065f46;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">INDEP</span>')
-                    if d.get('is_lead_independent'):
-                        badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">LEAD</span>')
-                    if d.get('is_board_chair'):
-                        badges.append('<span style="background:#fffbeb;color:#92400e;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;">CHAIR</span>')
-                    # R badge: not standing for re-election (served during comp year but off the board now)
-                    _is_r = bool(d.get('is_not_standing', False))
-                    _is_n = bool(d.get('is_newly_elected', False))
-                    if _is_r:
-                        badges.append('<span style="background:#fee2e2;color:#991b1b;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;" title="Did not stand for re-election">R</span>')
-                    if _is_n:
-                        badges.append('<span style="background:#dbeafe;color:#1e40af;font-size:0.6rem;padding:1px 5px;border-radius:3px;font-weight:600;" title="Newly elected">N</span>')
-                    badge_html = " ".join(badges)
-                    
-                    cash = f"${d['fees_earned_cash']:,.0f}" if pd.notna(d.get('fees_earned_cash')) else "—"
-                    stock = f"${d['stock_awards']:,.0f}" if pd.notna(d.get('stock_awards')) else "—"
-                    total = f"${d['total_comp']:,.0f}" if pd.notna(d.get('total_comp')) else "—"
-                    total_weight = "font-weight:700;" if pd.notna(d.get('total_comp')) else "color:#cbd5e1;"
-                    
-                    if pd.notna(d.get('fees_earned_cash')): agg_cash += d['fees_earned_cash']
-                    if pd.notna(d.get('stock_awards')): agg_stock += d['stock_awards']
-                    # Use total_comp if available, otherwise sum components
-                    if pd.notna(d.get('total_comp')):
-                        agg_total += d['total_comp']
-                    else:
-                        row_total = sum(v for v in [d.get('fees_earned_cash'), d.get('stock_awards'), d.get('option_awards'), d.get('all_other_comp')] if pd.notna(v))
-                        if row_total > 0: agg_total += row_total
-                    
-                    # Committee chips with ★ for chairs
-                    comms = d.get('committees_list', []) if 'committees_list' in d.index else []
-                    # Management directors cannot serve on Audit/Comp/Nom-Gov (NYSE/NASDAQ rules)
-                    if is_mgmt:
-                        comms = [c for c in comms if re.sub(r'\s*\(Chair\)', '', c).strip() not in _INDEP_ONLY_COMMS]
-                    # Only show committees with 2+ members (filter scraper noise)
-                    comms = [c for c in comms if re.sub(r'\s*\(Chair\)', '', c).strip() in _valid_comms]
-                    comm_chips = []
-                    for c in comms:
-                        is_chair = '(Chair)' in c
-                        c_clean = re.sub(r'\s*\(Chair\)', '', c).strip()
-                        abbrev = c_clean.replace("Nominating and Corporate Governance", "Nom/Gov").replace("Nominating/Governance", "Nom/Gov").replace("Compensation", "Comp")
-                        chair_star = "★ " if is_chair else ""
-                        comm_chips.append(f'<span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:0.65rem;padding:1px 5px;border-radius:3px;margin:1px 2px;">{chair_star}{abbrev}</span>')
-                    comm_html = "".join(comm_chips) if comm_chips else '<span style="color:#cbd5e1;">—</span>'
-                    
-                    # Row background: R directors get subtle strikethrough feel, N get light blue, MGMT amber
-                    if _is_r:
-                        bg = "background:rgba(241,245,249,0.7);opacity:0.7;"  # Faded for departing
-                    elif _is_n:
-                        bg = "background:rgba(219,234,254,0.25);"  # Light blue tint for new
-                    elif is_mgmt:
-                        bg = "background:rgba(254,243,199,0.3);"
-                    elif row_idx % 2 == 0:
-                        bg = "background:white;"
-                    else:
-                        bg = "background:rgba(248,250,252,0.5);"
-                    
-                    roster_rows.append(f"""
-                    <tr style="border-bottom:1px solid #f1f5f9;{bg}">
-                        <td style="padding:7px 10px;"><div style="font-weight:600;color:#1e293b;font-size:0.85rem;">{name}</div></td>
-                        <td style="padding:7px 6px;">{badge_html}</td>
-                        <td style="padding:7px 6px;text-align:center;color:#64748b;font-size:0.85rem;">{age_str}</td>
-                        <td style="padding:7px 6px;text-align:center;color:#64748b;font-size:0.85rem;">{since_str}</td>
-                        <td style="padding:7px 8px;">{comm_html}</td>
-                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;color:#334155;">{cash}</td>
-                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;color:#334155;">{stock}</td>
-                        <td style="padding:7px 10px;text-align:right;font-size:0.85rem;{total_weight}color:#1e293b;">{total}</td>
-                    </tr>""")
-                
-                # Aggregate footer row
-                agg_row = f"""
-                <tr style="border-top:2px solid #1e293b;background:#1e293b;">
-                    <td style="padding:10px 10px;font-weight:700;color:white;font-size:0.85rem;" colspan="5">Aggregate Board Compensation</td>
-                    <td style="padding:10px 10px;text-align:right;font-weight:700;color:white;font-size:0.85rem;">${agg_cash:,.0f}</td>
-                    <td style="padding:10px 10px;text-align:right;font-weight:700;color:white;font-size:0.85rem;">${agg_stock:,.0f}</td>
-                    <td style="padding:10px 10px;text-align:right;font-weight:800;color:white;font-size:0.9rem;">${agg_total:,.0f}</td>
-                </tr>"""
-                
-                hdr_style = "padding:8px 10px;font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;"
-                roster_table_html = f"""
-                <div style="overflow-x:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-                    <thead>
-                        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
-                            <th style="{hdr_style}text-align:left;">Director</th>
-                            <th style="{hdr_style}text-align:left;">Role</th>
-                            <th style="{hdr_style}text-align:center;">Age</th>
-                            <th style="{hdr_style}text-align:center;">Since</th>
-                            <th style="{hdr_style}text-align:left;">Committees</th>
-                            <th style="{hdr_style}text-align:right;">Cash</th>
-                            <th style="{hdr_style}text-align:right;">Equity</th>
-                            <th style="{hdr_style}text-align:right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {"".join(roster_rows)}
-                    </tbody>
-                    <tfoot>
-                        {agg_row}
-                    </tfoot>
-                </table>
-                </div>
-                <div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;font-style:italic;">
-                    Source: FY{FY_YEAR} DEF 14A proxy filing
-                </div>
-                """
-                roster_table_html = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{snapshot_html}{roster_table_html}</div>"""
-                table_height = max(250, 150 + (len(roster_rows) + 1) * 40)
-                components.html(roster_table_html, height=table_height, scrolling=True)
-                
-                # ---- SECTIONS 3+4 COMBINED: COMMITTEE + FEE SCHEDULE ----
-                # Single render to eliminate Streamlit iframe gaps
-                
-                comm_section_html = ""
-                if all_comms:
-                    top_comms = sorted(all_comms.items(), key=lambda x: x[1]['members'], reverse=True)[:4]
-                    n_comm_cols = min(len(top_comms), 4)
-                    comm_cards = []
-                    for comm_name, comm_data in top_comms:
-                        abbrev = comm_name.replace("Nominating/Governance", "Nom/Gov")
-                        comm_cards.append(f"""
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:0.5rem;">{abbrev} Committee</div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                                <span style="font-size:0.75rem;color:#64748b;">Members</span>
-                                <span style="font-size:0.85rem;font-weight:600;color:#334155;">{comm_data['members']}</span>
-                            </div>
-                        </div>""")
-                    grid_cols = f"repeat({n_comm_cols},1fr)"
-                    comm_section_html = f"""
-                    <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Committee Structure</div>
-                    <div style="display:grid;grid-template-columns:{grid_cols};gap:0.75rem;margin-bottom:1rem;">
-                        {"".join(comm_cards)}
-                    </div>"""
-                
-                # Section 4: Fee Schedule
+                # ---- INSTITUTIONAL HEADER + KPI + DIRECTOR TABLE + FEE SCHEDULE ----
+                # Load fee schedule and peer data for header KPIs
+                _co_fs = None
                 _fs_df = load_fee_schedule()
-                _co_fs = _fs_df[_fs_df['ticker'] == stk3].iloc[0].to_dict() if not _fs_df.empty and stk3 in _fs_df['ticker'].values else {}
-                import math
-                for _k, _v in list(_co_fs.items()):
-                    if isinstance(_v, float) and (math.isnan(_v) or _v == 0):
-                        _co_fs[_k] = None
-                    elif isinstance(_v, float):
-                        _co_fs[_k] = int(_v)
+                if not _fs_df.empty and stk3 in _fs_df['ticker'].values:
+                    _co_fs = _fs_df[_fs_df['ticker'] == stk3].iloc[0].to_dict()
                 
-                fee_section_html = ""
-                peer_bar_html = ""
-                if _co_fs and any(_co_fs.get(k) for k in ['cash_retainer','equity_retainer','total_retainer']):
-                    _board_peer_tks = set(proxy_tickers) if proxy_tickers else set()
-                    _peer_fs = _fs_df[_fs_df['ticker'].isin(_board_peer_tks)] if _board_peer_tks and not _fs_df.empty else pd.DataFrame()
-                    for _col in ['cash_retainer','equity_retainer','total_retainer','lead_director_premium','chair_premium','audit_chair','comp_chair','nomgov_chair']:
-                        if _col in _peer_fs.columns:
-                            _peer_fs[_col] = pd.to_numeric(_peer_fs[_col], errors='coerce')
-                    
-                    def _fs_pctl(df, key, val):
-                        if df.empty or not val: return ""
-                        vals = df[key].dropna()
-                        vals = vals[vals > 0]
-                        if len(vals) < 2: return ""
-                        rank = (vals < val).sum() / len(vals) * 100
-                        return f"<span style='font-size:0.7rem;color:#64748b;'>{rank:.0f}%ile</span>"
-                    
-                    cash_r = _co_fs.get('cash_retainer')
-                    eq_r = _co_fs.get('equity_retainer')
-                    tot_r = _co_fs.get('total_retainer')
-                    lead_p = _co_fs.get('lead_director_premium')
-                    chair_p = _co_fs.get('chair_premium')
-                    eq_vehicle = _co_fs.get('equity_vehicle', '') or ''
-                    eq_vesting = _co_fs.get('equity_vesting', '') or ''
-                    
-                    # Fallback: derive missing retainers from actual director_comp data
-                    # (fee schedule scraper may have missed the dollar amount)
-                    _indep_dirs = co_dirs[co_dirs['is_independent'] == True] if not co_dirs.empty else pd.DataFrame()
-                    _dirs_with_comp = _indep_dirs[_indep_dirs['total_comp'].notna() & (_indep_dirs['total_comp'] > 0)] if not _indep_dirs.empty else pd.DataFrame()
-                    if not eq_r and not _dirs_with_comp.empty:
-                        _eq_vals = _dirs_with_comp['stock_awards'].dropna()
-                        _eq_vals = _eq_vals[_eq_vals > 0]
-                        if len(_eq_vals) >= 2:
-                            # Use mode (most common value) since retainers are usually uniform
-                            eq_r = int(_eq_vals.mode().iloc[0]) if not _eq_vals.mode().empty else int(_eq_vals.median())
-                    if not tot_r and cash_r and eq_r:
-                        tot_r = cash_r + eq_r
-                    elif not tot_r and not _dirs_with_comp.empty:
-                        _tot_vals = _dirs_with_comp['total_comp'].dropna()
-                        _tot_vals = _tot_vals[_tot_vals > 0]
-                        if len(_tot_vals) >= 2:
-                            tot_r = int(_tot_vals.mode().iloc[0]) if not _tot_vals.mode().empty else int(_tot_vals.median())
-                    if not cash_r and tot_r and eq_r:
-                        cash_r = tot_r - eq_r
-                    
-                    pct_eq = (eq_r / tot_r * 100) if eq_r and tot_r and tot_r > 0 else 0
-                    
-                    retainer_html = ""
-                    if cash_r:
-                        retainer_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Cash Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${cash_r:,} {_fs_pctl(_peer_fs, "cash_retainer", cash_r)}</span></div>'
-                    if eq_r:
-                        retainer_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Equity Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${eq_r:,} {_fs_pctl(_peer_fs, "equity_retainer", eq_r)}</span></div>'
-                    if tot_r:
-                        retainer_html += f'<div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;"><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">Total Retainer</span><span style="font-size:0.85rem;font-weight:800;color:#1e293b;">${tot_r:,} {_fs_pctl(_peer_fs, "total_retainer", tot_r)}</span></div>'
-                    
-                    eq_detail = ""
-                    if eq_vehicle or eq_vesting:
-                        parts = [p for p in [eq_vehicle, f"{eq_vesting} vest" if eq_vesting else "", f"{pct_eq:.0f}% equity" if pct_eq > 0 else ""] if p]
-                        eq_detail = f'<div style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">{"&nbsp;|&nbsp;".join(parts)}</div>'
-                    
-                    premium_html = ""
-                    if lead_p:
-                        premium_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Lead Independent Director</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${lead_p:,}</span></div>'
-                    if chair_p:
-                        premium_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Chair of the Board</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${chair_p:,}</span></div>'
-                    
-                    comm_chair_html = ""
-                    for label, key in [('Audit Chair', 'audit_chair'), ('Compensation Chair', 'comp_chair'), ('Nom/Gov Chair', 'nomgov_chair')]:
-                        v = _co_fs.get(key)
-                        if v:
-                            comm_chair_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">{label}</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${v:,}</span></div>'
-                    
-                    # Peer stats for committee chairs
-                    peer_comm_chair_html = ""
-                    if not _peer_fs.empty and len(_peer_fs) >= 2:
-                        for label, key in [('Audit Chair', 'audit_chair'), ('Comp Chair', 'comp_chair'), ('Nom/Gov Chair', 'nomgov_chair')]:
-                            vals = _peer_fs[key].dropna()
-                            vals = vals[vals > 0]
-                            if len(vals) >= 2:
-                                peer_comm_chair_html += f"""<div style="margin-bottom:4px;">
-                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
-                                        <span style="font-size:0.75rem;color:#475569;font-weight:600;">{label}:</span>
-                                        &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
-                                    </div></div>"""
-                    
-                    comm_member_html = ""
-                    for label, key in [('Audit Member', 'audit_member'), ('Compensation Member', 'comp_member'), ('Nom/Gov Member', 'nomgov_member')]:
-                        v = _co_fs.get(key)
-                        if v:
-                            comm_member_html += f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">{label}</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${v:,}</span></div>'
-                    
-                    # Peer stats
-                    peer_stats_html = ""
-                    peer_lead_premium_html = ""
-                    if not _peer_fs.empty and len(_peer_fs) >= 2:
-                        for label, key in [('Cash Retainer', 'cash_retainer'), ('Equity Retainer', 'equity_retainer'), ('Total Retainer', 'total_retainer')]:
-                            vals = _peer_fs[key].dropna()
-                            vals = vals[vals > 0]
-                            if len(vals) >= 2:
-                                peer_stats_html += f"""
-                                <div style="margin-bottom:4px;">
-                                    <div style="font-size:0.75rem;font-weight:600;color:#1e293b;margin-bottom:4px;border-bottom:1px solid #cbd5e1;padding-bottom:3px;">{label}</div>
-                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
-                                        <span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.25):,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${vals.median():,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${vals.quantile(0.75):,.0f}</span>
-                                    </div>
-                                </div>"""
-                        # Lead Director Premium — goes into Leadership Premiums box, not peer benchmarks
-                        _lead_vals = _peer_fs['lead_director_premium'].dropna()
-                        _lead_vals = _lead_vals[_lead_vals > 0]
-                        if len(_lead_vals) >= 2:
-                            peer_lead_premium_html = f"""<div style="margin-bottom:4px;">
-                                    <div style="font-size:0.8rem;line-height:1.6;white-space:nowrap;">
-                                        <span style="font-size:0.75rem;color:#475569;font-weight:600;">Lead Director:</span>
-                                        &nbsp;<span style="color:#94a3b8;">25th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.25):,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">Med</span> <span style="font-weight:700;color:#1e293b;">${_lead_vals.median():,.0f}</span>
-                                        &nbsp;&nbsp;<span style="color:#94a3b8;">75th</span> <span style="font-weight:600;color:#64748b;">${_lead_vals.quantile(0.75):,.0f}</span>
-                                    </div></div>"""
-                    
-                    # Right panel — company's own premiums and committee retainers only
-                    # (peer benchmarks go in the peer benchmarks box below)
-                    right_content = ""
-                    if premium_html:
-                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Leadership Premiums</div>{premium_html}'
-                    if comm_chair_html:
-                        sep = "0.8rem" if premium_html else "0"
-                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:{sep} 0 0.6rem 0;">Committee Chair Retainers</div>{comm_chair_html}'
-                    if comm_member_html:
-                        right_content += f'<div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:0.8rem 0 0.6rem 0;">Committee Member Retainers</div>{comm_member_html}'
-                    
-                    if right_content:
-                        right_panel = f'<div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">{right_content}</div>'
-                    else:
-                        right_panel = f"""<div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Directors with Comp</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">{n_with_comp} of {n_dirs}</span></div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span></div>
-                        </div>"""
-                    
-                    # Peer bar with footnote
-                    if peer_stats_html:
-                        _peers_with_data = _peer_fs[_peer_fs['total_retainer'].notna() & (_peer_fs['total_retainer'] > 0)]['ticker'].tolist() if not _peer_fs.empty else []
-                        _peers_with = sorted(_peers_with_data)
-                        _peers_without = sorted(_board_peer_tks - set(_peers_with))
-                        fn_parts = []
-                        if _peers_with:
-                            fn_parts.append("Included: " + ", ".join(_peers_with))
-                        if _peers_without:
-                            fn_parts.append("No fee data: " + ", ".join(_peers_without))
-                        footnote = '<div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;font-style:italic;">Proxy peer group: ' + " &nbsp;|&nbsp; ".join(fn_parts) + '. Use Custom Peer Group to add comparison companies.</div>'
-                        _premiums_combined = peer_lead_premium_html + peer_comm_chair_html
-                        _premiums_section = ''
-                        if _premiums_combined:
-                            _premiums_section = f'<div style="border-top:1px solid #e2e8f0;margin-top:0.8rem;padding-top:0.8rem;"><div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Premiums</div><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:0.5rem;">{_premiums_combined}</div></div>'
-                        peer_bar_html = f"""
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.2rem;margin-top:1rem;">
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Peer Benchmarks ({len(_peers_with)} companies)</div>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:1rem;">
-                            {peer_stats_html}
-                            </div>
-                            {_premiums_section}
-                            {footnote}
-                        </div>"""
-                    
-                    fee_section_html = f"""
-                    <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Director Compensation Program</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers</div>
-                            {retainer_html}
-                            {eq_detail}
-                        </div>
-                        {right_panel}
-                    </div>
-                    {peer_bar_html}
-                    """
+                _peer_fs_list = []
+                if peer_tickers and not _fs_df.empty:
+                    _peer_fs_list = _fs_df[_fs_df['ticker'].isin(peer_tickers)].to_dict('records')
                 
-                elif n_with_comp > 0:
-                    pct_cash = (avg_cash / avg_total * 100) if avg_total and avg_total > 0 else 0
-                    pct_stock = (avg_stock / avg_total * 100) if avg_total and avg_total > 0 else 0
-                    chair_row = f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Board Chair</span><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">{chair_name.split()[-1]}</span></div>' if chair_name else ""
-                    lead_row = f'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Lead Independent</span><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">{lead_ind_name.split()[-1]}</span></div>' if lead_ind_name else ""
-                    fee_section_html = f"""
-                    <div style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 0.5rem 0;font-family:Georgia,serif;">Director Compensation Program</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Annual Retainers (Avg)</div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Cash Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_cash:,.0f}</span></div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Equity Retainer</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${avg_stock:,.0f}</span></div>
-                            <div style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;"><span style="font-size:0.85rem;font-weight:600;color:#1e293b;">Total Retainer</span><span style="font-size:0.85rem;font-weight:800;color:#1e293b;">${avg_total:,.0f}</span></div>
-                            <div style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">Cash: {pct_cash:.0f}% &nbsp;|&nbsp; Equity: {pct_stock:.0f}%</div>
-                        </div>
-                        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;">
-                            <div style="font-size:0.65rem;color:#1e293b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.8rem;">Board Summary</div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Directors with Comp</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">{n_with_comp} of {n_dirs}</span></div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:0.85rem;color:#475569;">Aggregate Board Cost</span><span style="font-size:0.85rem;font-weight:700;color:#1e293b;">${agg_total:,.0f}</span></div>
-                            {chair_row}{lead_row}
-                        </div>
-                    </div>
-                    """
+                # Equity mix
+                _stock_total = comp_board['stock_awards'].fillna(0).sum()
+                _equity_pct = round(_stock_total / total_board_comp * 100) if total_board_comp > 0 else 0
                 
-                # Single combined render for sections 3+4
-                _source_note = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.3rem;font-style:italic;">Source: SEC DEF 14A proxy filing | FY{FY_YEAR}</div>'
-                combined_34 = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">{comm_section_html}{fee_section_html}{_source_note}</div>"""
-                _h34 = 10
-                if comm_section_html: _h34 += 85
-                if fee_section_html: _h34 += 160
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_chair','comp_chair','nomgov_chair']): _h34 += 50
-                if _co_fs and any(_co_fs.get(k) for k in ['audit_member','comp_member','nomgov_member']): _h34 += 40
-                if peer_bar_html: _h34 += 140
-                if peer_comm_chair_html: _h34 += 60
-                _h34 += 30  # source note
-                components.html(combined_34, height=_h34, scrolling=False)
+                # Header
+                _header_html = render_board_header(stk3, cn3, pt3, len(peer_tickers) if peer_tickers else 0, _co_fs, total_board_comp, n_independent)
+                components.html(_header_html, height=170, scrolling=False)
+                
+                # KPI Row
+                _kpi_html = render_board_kpi_row(n_dirs, n_independent, avg_age, avg_tenure, median_total, _equity_pct, len(all_comms))
+                components.html(_kpi_html, height=120, scrolling=False)
+                
+                # Director Table
+                _table_html = render_board_director_table(co_dirs, _valid_comms)
+                _n_rows = len(co_dirs)
+                components.html(_table_html, height=max(250, 60 + _n_rows * 48 + 50), scrolling=True)
+                
+                # Fee Schedule
+                _fee_html = render_board_fee_schedule(_co_fs, _peer_fs_list)
+                components.html(_fee_html, height=500, scrolling=False)
+                
+                # Retainer Bar Chart
+                if _co_fs and _co_fs.get('total_retainer') and _co_fs['total_retainer'] > 0:
+                    _bar_html = render_board_retainer_bars(stk3, _co_fs['total_retainer'], _peer_fs_list)
+                    _n_bars = 1 + len([p for p in _peer_fs_list if p.get('total_retainer') and p['total_retainer'] > 0 and not (isinstance(p['total_retainer'], float) and p['total_retainer'] != p['total_retainer'])])
+                    components.html(_bar_html, height=max(200, 100 + _n_bars * 32), scrolling=False)
+
                 
                 # ---- SECTION 5: ACTION BUTTONS ----
                 _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
