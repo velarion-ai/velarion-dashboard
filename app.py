@@ -778,7 +778,7 @@ def render_board_kpi_row(n_board, n_indep, avg_age, avg_tenure, median_comp, equ
         ("Board Size", str(n_board), "active trustees"),
         ("Independent", f"{n_indep} of {n_board}", f"{round(n_indep/n_board*100)}%" if n_board > 0 else "—"),
         ("Avg Age", str(avg_age), "years"),
-        ("Avg Tenure", f"{avg_tenure} yrs", f"since ~{2024 - avg_tenure}" if isinstance(avg_tenure, int) else ""),
+        ("Avg Tenure", f"{avg_tenure} yrs", f"since ~{2025 - avg_tenure}" if isinstance(avg_tenure, int) else ""),
         ("Median Comp", board_fmt(median_comp), "per independent dir"),
         ("Equity Mix", f"{equity_pct}%", "stock / total"),
         ("Committees", str(n_comms), "standing"),
@@ -1049,7 +1049,7 @@ def render_board_refreshment(directors_df, ticker):
     # Tenure bars
     tenure_rows = []
     for _, d in active.sort_values('director_since').iterrows():
-        tenure = 2024 - int(d['director_since']) if pd.notna(d.get('director_since')) else 0
+        tenure = 2025 - int(d['director_since']) if pd.notna(d.get('director_since')) else 0
         pct = min(tenure / 20 * 100, 100)
         color = "#e8c34a" if tenure > 12 else "#8bc4a0"
         last_name = d['director_name'].split()[-1] if d['director_name'] else "?"
@@ -1088,7 +1088,7 @@ def render_board_refreshment(directors_df, ticker):
     </div>"""
     
     # Risk summary
-    long_tenure = active[active['director_since'].notna() & ((2024 - active['director_since']) > 12)]
+    long_tenure = active[active['director_since'].notna() & ((2025 - active['director_since']) > 12)]
     old_dirs = active[active['age'] > 72]
     new_dirs = directors_df[directors_df.get('is_newly_elected', False) == True] if 'is_newly_elected' in directors_df.columns else pd.DataFrame()
     
@@ -3764,7 +3764,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     _n_rows = len(co_dirs)
                     components.html(_table_html, height=max(250, 60 + _n_rows * 48 + 50), scrolling=True)
                     if _board_proxy_url:
-                        st.link_button("📄 View Proxy Filing", _board_proxy_url, use_container_width=False)
+                        st.markdown(f'<a href="{_board_proxy_url}" target="_blank" style="display:inline-block;margin-top:-0.5rem;font-size:0.78rem;color:#1a365d;font-weight:500;text-decoration:none;">📄 View Proxy Filing →</a>', unsafe_allow_html=True)
                 
                 with _bt_fees:
                     _fee_html = render_board_fee_schedule(_co_fs, _peer_fs_list)
@@ -3784,15 +3784,30 @@ if sel3 and sel3 != PLACEHOLDER:
                     else:
                         _peer_dirs = _peer_dirs[_peer_dirs['property_type'] == pt3] if 'property_type' in _peer_dirs.columns else _peer_dirs
                     
-                    _indep_only = _peer_dirs[_peer_dirs['is_independent'] == True]
-                    if not _indep_only.empty:
-                        _peer_board_stats = _indep_only.groupby('ticker').agg(
+                    # Current board = exclude R (not standing) directors for board size
+                    _current_dirs = _peer_dirs.copy()
+                    if 'is_not_standing' in _current_dirs.columns:
+                        _current_dirs = _current_dirs[_current_dirs['is_not_standing'] != True]
+                    _indep_current = _current_dirs[_current_dirs['is_independent'] == True]
+                    
+                    # For comp stats, use all directors with comp but annualize partial-year
+                    _indep_all = _peer_dirs[_peer_dirs['is_independent'] == True].copy()
+                    
+                    if not _indep_current.empty:
+                        # Board size from CURRENT directors only
+                        _board_sizes = _indep_current.groupby('ticker').agg(
                             board_size=('director_name', 'count'),
                             avg_age=('age', 'mean'),
                             avg_tenure_since=('director_since', 'mean'),
+                        ).reset_index()
+                        
+                        # Comp stats from ALL directors with comp (including R who have comp year data)
+                        _comp_stats = _indep_all.groupby('ticker').agg(
                             avg_comp=('total_comp', 'mean'),
                             total_cost=('total_comp', 'sum'),
                         ).reset_index()
+                        
+                        _peer_board_stats = _board_sizes.merge(_comp_stats, on='ticker', how='left')
                         _peer_board_stats['avg_tenure'] = 2025 - _peer_board_stats['avg_tenure_since']
                     
                         # Target company stats
@@ -3884,7 +3899,7 @@ if sel3 and sel3 != PLACEHOLDER:
                                 _bpc_fs['scenario_ii'] = None
                                 for idx, row in _bpc_fs.iterrows():
                                     tk = row['ticker']
-                                    tk_dirs = _indep_only[_indep_only['ticker'] == tk]
+                                    tk_dirs = _indep_all[_indep_all['ticker'] == tk]
                                     if tk_dirs.empty:
                                         continue
                                     agg = tk_dirs['total_comp'].dropna().sum()
@@ -3987,8 +4002,12 @@ if sel3 and sel3 != PLACEHOLDER:
                         _league_dirs = _league_dirs[_league_dirs['property_type'] == pt3] if 'property_type' in _league_dirs.columns else _league_dirs
                     
                     if not _league_dirs.empty:
-                        # Aggregate by company: avg total director comp
-                        _board_agg = _league_dirs[_league_dirs['is_independent'] == True].groupby(['ticker', 'company_name']).agg(
+                        # Filter to current directors for board size count
+                        _league_current = _league_dirs.copy()
+                        if 'is_not_standing' in _league_current.columns:
+                            _league_current = _league_current[_league_current['is_not_standing'] != True]
+                        # Aggregate by company: avg total director comp (current independent only)
+                        _board_agg = _league_current[_league_current['is_independent'] == True].groupby(['ticker', 'company_name']).agg(
                             n_directors=('director_name', 'count'),
                             avg_comp=('total_comp', 'mean'),
                             median_comp=('total_comp', 'median'),
@@ -4337,7 +4356,7 @@ if sel3 and sel3 != PLACEHOLDER:
                         mix_str = f"Cash/Equity Mix: {avg_cash/total_mix*100:.0f}% cash / {avg_equity/total_mix*100:.0f}% equity" if total_mix > 0 else ""
                     
                         # Fetch enrichment data (same sources as exec analysis)
-                        _cik = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
+                        _cik = _cik_val
                         _say_on_pay = fetch_say_on_pay(_cik) if _cik else None
                         _inst_owners = fetch_institutional_ownership(cn3, _cik, FY_YEAR) if _cik else None
                         _proxy_alerts = fetch_proxy_advisory_alerts(cn3, _cik, FY_YEAR + 1) if _cik else None
