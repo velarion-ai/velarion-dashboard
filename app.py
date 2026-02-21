@@ -13,6 +13,77 @@ from supabase import create_client
 st.set_page_config(page_title="Velarion Company Intelligence", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 # ============================================================
+# INSTITUTIONAL CSS THEME
+# ============================================================
+st.markdown("""<style>
+    /* Import distinctive serif + sans pair */
+    @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&family=Source+Serif+4:wght@400;600;700&display=swap');
+    
+    /* Global typography override */
+    html, body, [class*="css"], .stMarkdown, .stText { font-family: 'Libre Franklin', -apple-system, sans-serif !important; }
+    h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif !important; color: #1b2a3d !important; }
+    
+    /* Muted earth tone palette — not Streamlit blue */
+    .stTabs [data-baseweb="tab-list"] { gap: 0; border-bottom: 2px solid #e4e0d8; }
+    .stTabs [data-baseweb="tab"] { 
+        font-family: 'Libre Franklin', sans-serif !important;
+        font-size: 13px; font-weight: 500; letter-spacing: 0.3px;
+        color: #8a8577; padding: 10px 20px;
+        border-bottom: 2px solid transparent; margin-bottom: -2px;
+    }
+    .stTabs [aria-selected="true"] { 
+        color: #1b2a3d !important; font-weight: 600;
+        border-bottom: 2px solid #2d7d46 !important; 
+    }
+    
+    /* Button styling — muted, professional */
+    .stButton > button {
+        font-family: 'Libre Franklin', sans-serif !important;
+        font-weight: 500; letter-spacing: 0.3px;
+        border: 1px solid #d4d0c8 !important; background: #fff !important;
+        color: #4a4740 !important; border-radius: 6px !important;
+        transition: all 0.15s ease;
+    }
+    .stButton > button:hover {
+        background: #f5f4f0 !important; border-color: #b8b4aa !important;
+        color: #1b2a3d !important;
+    }
+    
+    /* Metric cards */
+    [data-testid="stMetric"] { font-family: 'Libre Franklin', sans-serif !important; }
+    [data-testid="stMetricValue"] { font-weight: 700 !important; color: #1b2a3d !important; }
+    [data-testid="stMetricLabel"] { 
+        font-size: 11px !important; font-weight: 600 !important;
+        letter-spacing: 1px !important; text-transform: uppercase !important;
+        color: #8a8577 !important;
+    }
+    
+    /* Sidebar refinement */
+    [data-testid="stSidebar"] { background: #1b2a3d !important; }
+    [data-testid="stSidebar"] * { color: #c8d4e0 !important; }
+    [data-testid="stSidebar"] .stSelectbox label { 
+        font-size: 11px !important; font-weight: 600 !important;
+        letter-spacing: 1px !important; text-transform: uppercase !important;
+        color: #8fb8d4 !important;
+    }
+    
+    /* Table-like HTML components */
+    .stHtml { margin-bottom: -0.5rem !important; }
+    
+    /* Tabular numbers for financial data */
+    td, th { font-variant-numeric: tabular-nums !important; }
+    
+    /* Remove Streamlit default branding */
+    #MainMenu, footer, header { visibility: hidden; }
+    .stDeployButton { display: none; }
+    
+    /* Subtle shadows for cards */
+    [data-testid="stHorizontalBlock"] > div > div[data-testid="column"] > div {
+        border-radius: 8px;
+    }
+</style>""", unsafe_allow_html=True)
+
+# ============================================================
 # AUTH GATE
 # ============================================================
 _LOGIN_SUPA_URL = "https://fhnffpgotkxxtwmwbizy.supabase.co"
@@ -3492,20 +3563,22 @@ if sel3 and sel3 != PLACEHOLDER:
                 components.html(combined_34, height=_h34, scrolling=False)
                 
                 # ---- SECTION 5: ACTION BUTTONS ----
-                btn_col1, btn_col2 = st.columns(2)
+                _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
+                _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
+                
+                btn_col1, btn_col2, btn_col3 = st.columns(3)
                 with btn_col1:
-                    board_ai_btn = st.button("\U0001F4CB Generate Board Compensation Analysis", key="board_ai_btn", use_container_width=True)
-                    board_peer_btn = st.button("\U0001F4CA Peer Board Comparison", key="board_peer_btn", use_container_width=True)
-                    board_refresh_btn = st.button("\U0001F504 Board Refreshment & Tenure Risk", key="board_refresh_btn", use_container_width=True)
+                    board_peer_btn = st.button("📊 Peer Comparison", key="board_peer_btn", use_container_width=True)
+                    board_ai_btn = st.button("📋 AI Analysis", key="board_ai_btn", use_container_width=True)
                 with btn_col2:
-                    board_league_btn = st.button("\U0001F3C6 Board Comp League Tables", key="board_league_btn", use_container_width=True)
-                    board_pgi_btn = st.button("\U0001F50D Peer Group Integrity Audit", key="board_pgi_btn", use_container_width=True)
-                    _cik_val = cd3['cik'].iloc[0] if 'cik' in cd3.columns else None
-                    _board_proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=_cik_val)
+                    board_refresh_btn = st.button("🔄 Refreshment & Tenure", key="board_refresh_btn", use_container_width=True)
+                    board_league_btn = st.button("🏆 League Tables", key="board_league_btn", use_container_width=True)
+                with btn_col3:
+                    board_pgi_btn = st.button("🔍 Peer Group Integrity", key="board_pgi_btn", use_container_width=True)
                     if _board_proxy_url:
-                        st.link_button("\U0001F4C4 View Proxy Filing", _board_proxy_url, use_container_width=True)
+                        st.link_button("📄 View Proxy Filing", _board_proxy_url, use_container_width=True)
                     else:
-                        st.button("\U0001F4C4 View Proxy Filing", key="board_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found on SEC EDGAR")
+                        st.button("📄 View Proxy Filing", key="board_proxy_btn", disabled=True, use_container_width=True, help="Proxy filing not found")
                 
                 # ---- Board League Tables handler ----
                 if board_league_btn:
