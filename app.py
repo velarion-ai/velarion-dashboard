@@ -1726,70 +1726,6 @@ def fetch_current_stock(ticker):
         return None
 
 @st.cache_data(ttl=86400)
-def fetch_say_on_pay(company_name, cik, fy_year):
-    """Fetch say-on-pay vote results from 8-K Item 5.07 filing."""
-    import requests as _req
-    import re
-    try:
-        _headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
-        # Search for voting results 8-K
-        clean_name = company_name.replace(',', '').replace('.', '').replace("'", '')
-        query = f'%22{clean_name.replace(" ", "+")}%22+%22Item+5.07%22'
-        url = f'https://efts.sec.gov/LATEST/search-index?q={query}&forms=8-K&dateRange=custom&startdt={fy_year}-01-01&enddt={fy_year+1}-12-31'
-        resp = _req.get(url, headers=_headers, timeout=10)
-        if resp.status_code != 200:
-            return None
-        import json
-        data = json.loads(resp.text)
-        hits = data.get('hits', {}).get('hits', [])
-        if not hits:
-            return None
-        # Get the first (most recent) hit
-        hit = hits[0]
-        doc_id = hit['_id']
-        parts = doc_id.split(':')
-        accession = parts[0]
-        filename = parts[1]
-        cik_clean = str(hit['_source']['ciks'][0]).lstrip('0')
-        filing_url = f'https://www.sec.gov/Archives/edgar/data/{cik_clean}/{accession.replace("-","")}/{filename}'
-        filing_date = hit['_source'].get('file_date', '')
-        
-        filing_resp = _req.get(filing_url, headers=_headers, timeout=15)
-        if filing_resp.status_code != 200:
-            return None
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(filing_resp.text, 'html.parser')
-        text = soup.get_text(separator=' ', strip=True)
-        tl = text.lower()
-        
-        # Find say-on-pay / advisory comp vote
-        result = {'filing_date': filing_date, 'filing_url': filing_url}
-        
-        # Look for patterns like "For 540,290,905 Against 34,635,610"
-        # near "advisory" or "compensation of" or "say-on-pay"
-        for marker in ['advisory basis, the compensation', 'advisory vote on executive compensation',
-                        'say-on-pay', 'advisory vote on compensation']:
-            idx = tl.find(marker)
-            if idx >= 0:
-                chunk = text[idx:idx+800]
-                # Extract For/Against numbers
-                for_match = re.search(r'For\s+([\d,]+)', chunk)
-                against_match = re.search(r'Against\s+([\d,]+)', chunk)
-                if for_match and against_match:
-                    votes_for = int(for_match.group(1).replace(',', ''))
-                    votes_against = int(against_match.group(1).replace(',', ''))
-                    total = votes_for + votes_against
-                    if total > 0:
-                        result['votes_for'] = votes_for
-                        result['votes_against'] = votes_against
-                        result['approval_pct'] = round(votes_for / total * 100, 1)
-                        result['approved'] = result['approval_pct'] > 50
-                        return result
-        return None
-    except Exception:
-        return None
-
-@st.cache_data(ttl=86400)
 def fetch_10k_financials(cik):
     """Fetch key financial metrics from XBRL structured data (10-K)."""
     import requests as _req
@@ -2279,7 +2215,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     earnings_text = fetch_earnings_data(cn, tk)
     current_stock = fetch_current_stock(tk)
     cik_val = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
-    say_on_pay = fetch_say_on_pay(cn, cik_val, FY_YEAR + 1) if cik_val else None
+    say_on_pay = fetch_say_on_pay(cik_val) if cik_val else None
     financials_10k = fetch_10k_financials(cik_val) if cik_val else None
     financials_10q = fetch_10q_financials(cik_val) if cik_val else None
     material_events = fetch_material_8k_events(cn, cik_val) if cik_val else None
@@ -2324,10 +2260,10 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         enrichment += f"\n\nRECENT QUARTERLY EARNINGS (use for operational context — FFO/AFFO, revenue, occupancy, same-store NOI):\n{earnings_snippet}"
     if say_on_pay:
         enrichment += f"\n\nSAY-ON-PAY VOTE RESULTS ({say_on_pay.get('filing_date', '')}):"
-        enrichment += f"\n  Approval: {say_on_pay['approval_pct']}% ({say_on_pay['votes_for']:,} For / {say_on_pay['votes_against']:,} Against)"
-        if say_on_pay['approval_pct'] < 70:
+        enrichment += f"\n  Approval: {say_on_pay['pct']}% ({say_on_pay['for']:,} For / {say_on_pay['against']:,} Against)"
+        if say_on_pay['pct'] < 70:
             enrichment += "\n  ⚠ LOW APPROVAL — This is a significant governance risk. Below 70% typically triggers enhanced engagement with shareholders and potential comp structure changes."
-        elif say_on_pay['approval_pct'] >= 95:
+        elif say_on_pay['pct'] >= 95:
             enrichment += "\n  Strong shareholder support for current compensation program."
     if financials_10k:
         enrichment += f"\n\n10-K FINANCIAL HIGHLIGHTS (most recent annual filing, SEC EDGAR XBRL):"
@@ -4398,7 +4334,7 @@ if sel3 and sel3 != PLACEHOLDER:
                     
                         # Fetch enrichment data (same sources as exec analysis)
                         _cik = co_d['cik'].iloc[0] if 'cik' in co_d.columns else None
-                        _say_on_pay = fetch_say_on_pay(cn3, _cik, FY_YEAR + 1) if _cik else None
+                        _say_on_pay = fetch_say_on_pay(_cik) if _cik else None
                         _inst_owners = fetch_institutional_ownership(cn3, _cik, FY_YEAR) if _cik else None
                         _proxy_alerts = fetch_proxy_advisory_alerts(cn3, _cik, FY_YEAR + 1) if _cik else None
                     
@@ -4406,8 +4342,8 @@ if sel3 and sel3 != PLACEHOLDER:
                         board_sources = [f"DEF 14A Proxy Statement, FY{FY_YEAR}, SEC EDGAR"]
                     
                         if _say_on_pay:
-                            board_enrichment += f"\n\nSAY-ON-PAY VOTE: {_say_on_pay['approval_pct']}% approval ({_say_on_pay['votes_for']:,} For / {_say_on_pay['votes_against']:,} Against)"
-                            if _say_on_pay['approval_pct'] < 70:
+                            board_enrichment += f"\n\nSAY-ON-PAY VOTE: {_say_on_pay['pct']}% approval ({_say_on_pay['for']:,} For / {_say_on_pay['against']:,} Against)"
+                            if _say_on_pay['pct'] < 70:
                                 board_enrichment += " ⚠ LOW APPROVAL"
                             board_sources.append(f"8-K Voting Results (Item 5.07), SEC EDGAR")
                     
