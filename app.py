@@ -432,9 +432,9 @@ st.markdown("""
     /* Force sidebar always visible */
     section[data-testid="stSidebar"] { min-width: 280px !important; }
     /* HEADER — deep navy */
-    .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 60%, #234578 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: #ffffff; box-shadow: 0 4px 20px rgba(10,22,40,0.3); }
-    .main-header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; color: #ffffff; }
-    .main-header p { margin: 0.3rem 0 0 0; opacity: 0.9; font-size: 0.92rem; color: #e2e8f0; }
+    .main-header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 60%, #234578 100%); padding: 2rem 2.5rem; border-radius: 12px; margin-bottom: 0.3rem; color: #ffffff !important; box-shadow: 0 4px 20px rgba(10,22,40,0.3); }
+    .main-header h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; color: #ffffff !important; }
+    .main-header p { margin: 0.3rem 0 0 0; font-size: 0.92rem; color: #cbd5e1 !important; }
     .intro-text { color: #334155; font-size: 0.9rem; line-height: 1.55; padding: 0.4rem 0 0.8rem 0; }
     /* INSTRUCTION BOXES — warm cream/gold tint */
     .tab-instruction { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #d4a017; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; font-size: 0.83rem; color: #78350f; font-weight: 500; }
