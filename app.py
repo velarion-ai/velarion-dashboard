@@ -2364,6 +2364,7 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
     material_events = fetch_material_8k_events(cn, cik_val) if cik_val else None
     proxy_alerts = fetch_proxy_advisory_alerts(cn, cik_val, FY_YEAR + 1) if cik_val else None
     inst_owners = fetch_institutional_ownership(cn, cik_val, FY_YEAR) if cik_val else None
+    employment_agreements = fetch_employment_agreement_links(cik_val) if cik_val else []
     
     # Build source list for footnotes
     sources = []
@@ -2385,6 +2386,8 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         sources.append(f"DEFA14A Supplemental Proxy filings (proxy advisory firm recommendations/responses), SEC EDGAR")
     if inst_owners:
         sources.append(f"Beneficial Ownership disclosure from DEF 14A (institutional holders >5%), SEC EDGAR")
+    if employment_agreements:
+        sources.append(f"Executive Employment Agreements (Exhibit 10.x from 10-K/8-K filings), SEC EDGAR")
     if current_stock:
         sources.append(f"Current stock data via Yahoo Finance (as of {current_stock.get('as_of', 'today')})")
     sources.append(f"Historical stock returns (1-yr, 3-yr, YTD) via Yahoo Finance, through Dec 31, {RETURNS_YEAR}")
@@ -2450,6 +2453,11 @@ def gen_full(co_d, filt, ret_data, excluded_tks=None, added_tks=None, all_df=Non
         if index_funds:
             idx_pct = sum(o['pct'] for o in index_funds)
             enrichment += f"\n  NOTE: Passive index funds ({', '.join(o['institution'] for o in index_funds)}) hold ~{idx_pct:.0f}% — these investors typically follow ISS vote recommendations on say-on-pay."
+    if employment_agreements:
+        enrichment += f"\n\nEXECUTIVE EMPLOYMENT AGREEMENTS ON FILE (from SEC EDGAR Exhibit 10.x filings):"
+        for ea in employment_agreements:
+            enrichment += f"\n  {ea['executive_name']}: {ea['agreement_type']} (filed {ea['filed_date']}, {ea['form']}) — {ea['url']}"
+        enrichment += "\n  NOTE: Reference these agreements when discussing severance protections, change-in-control provisions, or employment terms. If a NEO's agreement is not listed, note that no filed agreement was identified in recent SEC filings."
     if current_stock:
         enrichment += f"\n\nCURRENT STOCK DATA (as of {current_stock['as_of']}):"
         enrichment += f"\n  {tk}: ${current_stock['current_price']:.2f} | YTD {RETURNS_YEAR+1}: {current_stock['ytd_return']:+.1f}%" if current_stock.get('ytd_return') is not None else ""
