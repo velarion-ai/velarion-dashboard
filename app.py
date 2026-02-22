@@ -3436,23 +3436,8 @@ if sel3 and sel3 != PLACEHOLDER:
             # ═══════════════════════════════════════════════════════
             with sub_peers:
                 co_peers_display, proxy_tks_display, _ = _build_proxy_peer_data(stk3, peer_groups_df, df)
-                if not co_peers_display.empty:
-                    in_univ = co_peers_display[co_peers_display['in_universe'] == True]
-                    st.markdown(f"##### Proxy-Disclosed Peer Group ({len(in_univ)} of {len(co_peers_display)} in database)")
-                    st.markdown(f'<div style="font-size:0.78rem;color:#475569;margin-bottom:0.5rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing.</div>', unsafe_allow_html=True)
-                    peer_html_rows = []
-                    for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
-                        tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
-                        if pr.get('in_universe'):
-                            badge = '\u2705'
-                        else:
-                            reason = pr.get('not_in_reason', '')
-                            badge = f'\u274C <span style="color:#94a3b8;font-size:0.72rem;">{reason}</span>' if reason else '\u274C'
-                        peer_html_rows.append(f'<div style="display:flex;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid #f0ece4;font-size:0.82rem;"><span style="flex:1;">{pr["peer_name_as_disclosed"]}{tk_display}</span><span>{badge}</span></div>')
-                    st.markdown(''.join(peer_html_rows), unsafe_allow_html=True)
 
-                # League Tables
-                st.markdown("---")
+                # League Tables (main content)
                 st.markdown("##### League Tables")
                 lt_pos_col, lt_spacer = st.columns([1, 3])
                 with lt_pos_col:
@@ -3503,6 +3488,23 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.dataframe(summary_df, use_container_width=True, hide_index=True)
                 else:
                     st.info(f"No {pos_label} data for the current peer group.")
+
+                # Peer group footnote
+                is_custom = st.session_state.get('peer_mode') == 'custom'
+                if is_custom:
+                    footnote_parts = [f"<strong>Custom peer group:</strong> {', '.join(peer_tks)}"]
+                    if proxy_tickers:
+                        removed = sorted(set(proxy_tickers) - set(peer_tks))
+                        added = sorted(set(peer_tks) - set(proxy_tickers))
+                        if removed: footnote_parts.append(f"Removed from proxy peers: {', '.join(removed)}")
+                        if added: footnote_parts.append(f"Added beyond proxy peers: {', '.join(added)}")
+                    st.markdown(f'<div class="footnote">{" | ".join(footnote_parts)}</div>', unsafe_allow_html=True)
+                else:
+                    if not co_peers_display.empty:
+                        not_in_db = co_peers_display[co_peers_display['in_universe'] != True]
+                        if not not_in_db.empty:
+                            missing_names = [f"{r['peer_name_as_disclosed']} ({r['peer_ticker']})" if pd.notna(r.get('peer_ticker')) and r['peer_ticker'] else r['peer_name_as_disclosed'] for _, r in not_in_db.iterrows()]
+                            st.markdown(f'<div class="footnote">Proxy-disclosed peers not in database: {", ".join(missing_names)}</div>', unsafe_allow_html=True)
 
             # ═══════════════════════════════════════════════════════
             #  SUB-TAB 3: PAY-FOR-PERFORMANCE
