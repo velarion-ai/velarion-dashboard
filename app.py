@@ -2843,12 +2843,15 @@ with st.sidebar:
         if prev_mode == 'proxy' and new_mode == 'custom':
             st.session_state['custom_peer_sel'] = proxy_peer_labels
             st.session_state['_custom_mcap_preset'] = 'All Market Caps'
+            # Clear any stale custom range inputs
+            for stale_key in ['_custom_mcap_min', '_custom_mcap_max']:
+                st.session_state.pop(stale_key, None)
         # Detect toggle from custom to proxy — reset custom state
         elif prev_mode == 'custom' and new_mode == 'proxy':
             if 'custom_peer_sel' in st.session_state:
                 del st.session_state['custom_peer_sel']
-            if '_custom_mcap_preset' in st.session_state:
-                del st.session_state['_custom_mcap_preset']
+            for stale_key in ['_custom_mcap_preset', '_custom_mcap_min', '_custom_mcap_max']:
+                st.session_state.pop(stale_key, None)
         
         st.session_state['peer_mode'] = new_mode
         
@@ -2910,12 +2913,13 @@ with st.sidebar:
             with cc1:
                 mcap_min_b = st.number_input("Min ($B)", min_value=0.0, value=0.0, step=0.5, key="_custom_mcap_min")
             with cc2:
-                mcap_max_b = st.number_input("Max ($B)", min_value=0.0, value=50.0, step=0.5, key="_custom_mcap_max")
+                mcap_max_b = st.number_input("Max ($B)", min_value=0.0, value=0.0, step=0.5, key="_custom_mcap_max",
+                                              help="Set to 0 for no upper limit")
                 if mcap_max_b == 0: mcap_max_b = None
         
         # Convert to raw values for downstream (billions to raw)
         mcap_min = mcap_min_b if mcap_min_b is not None else 0.0
-        mcap_max = mcap_max_b if mcap_max_b is not None else 50.0
+        mcap_max = mcap_max_b
         
         # Filter selected companies by market cap range (no rerun — just filter downstream)
         if mcap_choice != 'All Market Caps':
