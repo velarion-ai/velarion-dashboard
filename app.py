@@ -1620,40 +1620,174 @@ CRITICAL RULES: No markdown (no asterisks, bold, headers, bullets). Plain flowin
 
 @st.cache_data(ttl=86400)
 def fetch_cda_text(company_name, fy_year):
-    """Extract CD&A section text from the DEF 14A proxy filing."""
+    """Extract CD&A section text from the DEF 14A proxy filing.
+    Uses multi-strategy approach: (1) find explicit body-opening sentences,
+    (2) find standalone section headings followed by prose,
+    (3) fallback scoring of all CD&A mentions."""
     import requests as _req
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup as _BS
     try:
         proxy_url = lookup_proxy_url(company_name, fy_year)
         if not proxy_url:
             return None
-        resp = _req.get(proxy_url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=20)
+        resp = _req.get(proxy_url, headers={'User-Agent': 'Velarion Research andy@velarion.ai'}, timeout=25)
         if resp.status_code != 200:
             return None
-        soup = BeautifulSoup(resp.text, 'html.parser')
+        import warnings as _w; _w.filterwarnings("ignore")
+        soup = _BS(resp.text, 'html.parser')
         text = soup.get_text(separator='\n', strip=True)
-        # Find CD&A section
-        cda_start = None
-        cda_end = None
-        lines = text.split('\n')
-        for i, line in enumerate(lines):
-            ll = line.lower().strip()
-            if cda_start is None and ('compensation discussion and analysis' in ll or 'compensation discussion & analysis' in ll):
-                cda_start = i
-            elif cda_start is not None and i > cda_start + 10:
-                # Look for end markers
-                if any(marker in ll for marker in ['compensation committee report', 'report of the compensation committee',
-                    'summary compensation table', 'executive compensation tables']):
-                    cda_end = i
-                    break
-        if cda_start is not None:
-            end = cda_end if cda_end else min(cda_start + 500, len(lines))
-            cda_text = '\n'.join(lines[cda_start:end])
-            # Truncate to ~50K chars to fit in context
-            return cda_text[:50000] if len(cda_text) > 50000 else cda_text
+        joined = re.sub(r'\n\s*\n', '\n\n', text)
+
+        def _find_end(t):
+            ends = [
+                r'(?:^|\n)\s*(?:REPORT OF THE )?COMPENSATION\s+COMMITTEE\s+REPORT\s*(?:\n|$)',
+                r'The\s+Compensation\s+Committee\s+has\s+reviewed\s+and\s+discussed\s+(?:the\s+Compensation|with)',
+                r'(?:^|\n)\s*Report\s+of\s+the\s+Compensation\s+Committee\s*(?:\n|$)',
+            ]
+            best = min(len(t), 50000)
+            for ep in ends:
+                m = re.search(ep, t[1000:], re.IGNORECASE | re.MULTILINE)
+                if m and (1000 + m.start()) < best:
+                    best = 1000 + m.start()
+            return best
+
+        # Strategy 1: explicit body-opening sentences
+        openers = [
+            r'(?:This|The\s+following)\s+(?:Compensation\s+Discussion\s+and\s+Analysis|CD&?A)[\s,]*(?:\(\s*(?:"|")?CD&?A(?:"|")?\s*\)[\s,]*)?\s*(?:explains|provides|describes|summarizes|discusses|reviews|sets\s+forth|is\s+designed|addresses)\s+(?:our|the|how|\w+\'s)',
+            r'This\s+CD&?A\s+(?:explains|provides|describes|summarizes|discusses)',
+            r'This\s+section\s+of\s+our\s+proxy\s+statement\s+discusses\s+the\s+principles',
+        ]
+        for op in openers:
+            m = re.search(op, joined, re.IGNORECASE)
+            if m:
+                pre = joined[max(0, m.start()-500):m.start()].lower()
+                if 'committee has reviewed' in pre or 'recommended to the board' in pre:
+                    continue
+                back = joined[max(0, m.start()-800):m.start()]
+                hm = re.search(r'(?:EXECUTIVE\s+COMPENSATION\s+)?COMPENSATION\s+DISCUSSION\s+(?:AND|&)\s*ANALYSIS', back, re.IGNORECASE)
+                sp = (max(0, m.start()-800) + hm.start()) if hm else m.start()
+                rem = joined[sp:]
+                return rem[:_find_end(rem)].strip()[:50000]
+
+        # Strategy 2: standalone heading + prose
+        for m in re.finditer(r'(?:^|\n)\s*(?:EXECUTIVE\s+COMPENSATION\s+)?COMPENSATION\s+DISCUSSION\s+(?:AND|&)\s*ANALYSIS\s*(?:\n|$)', joined, re.I | re.MULTILINE):
+            w = joined[m.start():m.start()+2000].lower()
+            if 'table of contents' in w[:500] or 'hereby approved' in w[:500]: continue
+            hits = sum(1 for kw in ['committee','executive','philosophy','program','incentive','salary','equity','performance','NEO','stockholder'] if kw.lower() in w)
+            if hits >= 3:
+                rem = joined[m.start():]
+                return rem[:_find_end(rem)].strip()[:50000]
+
+        # Strategy 3: best-scored CD&A mention
+        best_pos, best_sc = None, -999
+        for m in re.finditer(r'compensation\s+discussion\s+(?:and|&)\s*analysis', joined, re.I):
+            w = joined[m.start():m.start()+3000].lower(); sc = 0
+            for kw in ['committee','executive','philosophy','program','incentive','salary','equity','peer group','performance','long-term']: 
+                if kw in w: sc += 4
+            for pk in ['table of contents','hereby approved','affirmative vote','recommended to the board','has reviewed and discussed','(continued)']:
+                if pk in w[:500]: sc -= 25
+            pre = joined[max(0,m.start()-100):m.start()].lower()
+            if any(r in pre for r in ['see ','refer to','described in','set forth in']): sc -= 20
+            if sc > best_sc: best_sc = sc; best_pos = m.start()
+        if best_pos is not None:
+            rem = joined[best_pos:]
+            return rem[:_find_end(rem)].strip()[:50000]
         return None
     except Exception:
         return None
+
+@st.cache_data(ttl=86400)
+def fetch_employment_agreement_links(cik):
+    """Find SEC filing links to executive employment/severance agreements.
+    Scans recent 10-K and 8-K exhibit files (EX-10.x) for employment-related documents.
+    Returns list of dicts with: executive_name, agreement_type, filed_date, url."""
+    import requests as _req
+    if not cik: return []
+    try:
+        cik_str = str(cik); cik_padded = cik_str.zfill(10)
+        headers = {'User-Agent': 'Velarion Research andy@velarion.ai'}
+        
+        # Get recent filings
+        sub_url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
+        resp = _req.get(sub_url, headers=headers, timeout=10)
+        if resp.status_code != 200: return []
+        data = resp.json()
+        
+        recent = data.get('filings', {}).get('recent', {})
+        agreements = []
+        checked = 0
+        
+        # Scan recent 10-K and 8-K filings for exhibit files
+        for i in range(min(len(recent.get('form', [])), 30)):
+            form = recent['form'][i]
+            if form not in ('10-K', '8-K'): continue
+            
+            acc = recent['accessionNumber'][i]
+            filed = recent['filingDate'][i]
+            acc_clean = acc.replace('-', '')
+            
+            # Get filing document list
+            import time as _t; _t.sleep(0.12)
+            idx_resp = _req.get(f"https://www.sec.gov/Archives/edgar/data/{cik_str}/{acc_clean}/index.json",
+                               headers=headers, timeout=10)
+            if idx_resp.status_code != 200: continue
+            
+            items = idx_resp.json().get('directory', {}).get('item', [])
+            exhibit_files = [it['name'] for it in items 
+                          if it['name'].endswith(('.htm', '.html')) and 'ex10' in it['name'].replace('-','').replace('_','').lower()]
+            
+            for ex_file in exhibit_files[:10]:
+                _t.sleep(0.12)
+                ex_url = f"https://www.sec.gov/Archives/edgar/data/{cik_str}/{acc_clean}/{ex_file}"
+                ex_resp = _req.get(ex_url, headers=headers, timeout=10)
+                if ex_resp.status_code != 200: continue
+                
+                # Check first 1500 chars for employment agreement indicators
+                snippet = re.sub(r'<[^>]+>', ' ', ex_resp.text[:5000])
+                snippet = re.sub(r'&#\d+;', ' ', snippet)
+                snippet = re.sub(r'\s+', ' ', snippet).strip()[:1500]
+                snippet_lower = snippet.lower()
+                
+                is_employment = any(kw in snippet_lower for kw in [
+                    'employment agreement', 'executive employment', 'severance agreement',
+                    'separation agreement', 'change in control agreement', 'change-in-control',
+                    'amendment to executive employment', 'amended and restated executive employment',
+                ])
+                
+                if not is_employment: continue
+                
+                # Extract agreement type
+                type_match = re.search(r'((?:AMENDED\s+AND\s+RESTATED\s+)?(?:EXECUTIVE\s+)?EMPLOYMENT\s+AGREEMENT|'
+                                       r'SEVERANCE\s+(?:AND\s+)?(?:CHANGE\s+IN\s+CONTROL\s+)?AGREEMENT|'
+                                       r'AMENDMENT\s+(?:NO\.\s*\d\s+)?TO\s+(?:EXECUTIVE\s+)?EMPLOYMENT\s+AGREEMENT|'
+                                       r'SEPARATION\s+AGREEMENT)', snippet, re.I)
+                agreement_type = type_match.group(0).strip().title() if type_match else 'Employment Agreement'
+                
+                # Extract executive name (look for "Dear [Name]" or "between...and [Name]")
+                name = None
+                dear_match = re.search(r'Dear\s+([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s*(?::|\s))', snippet)
+                if dear_match:
+                    name = dear_match.group(1).strip().rstrip(':')
+                else:
+                    between_match = re.search(r'(?:between|by and between)\s+.{5,80}?\s+and\s+([A-Z][a-z]+\s+(?:[A-Z]\.\s+)?[A-Z][a-z]+)', snippet[:500])
+                    if between_match:
+                        name = between_match.group(1)
+                
+                agreements.append({
+                    'executive_name': name or 'Unknown',
+                    'agreement_type': agreement_type,
+                    'filed_date': filed,
+                    'form': form,
+                    'exhibit': ex_file,
+                    'url': ex_url,
+                })
+            
+            checked += 1
+            if checked >= 5: break  # Limit to 5 filings to avoid rate limits
+        
+        return agreements
+    except Exception:
+        return []
 
 @st.cache_data(ttl=86400)
 def fetch_earnings_data(company_name, ticker):
