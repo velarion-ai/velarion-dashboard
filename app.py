@@ -3196,22 +3196,17 @@ if sel3 and sel3 != PLACEHOLDER:
                     if ip: badges_html += ' <span style="font-size:0.65rem;color:#1a73a7;margin-left:5px;background:#eff6ff;padding:1px 5px;border-radius:3px;border:1px solid #93c5fd;">PARTIAL YEAR</span>'
                     pos_bg = '#1b2a3d' if pos == 'CEO' else '#1a73a7' if pos == 'CFO' else '#7b5ea7' if pos == 'CIO' else '#2d7d46' if pos == 'PRESIDENT' else '#b8860b' if pos == 'COO' else '#f5f4f0'
                     pos_color = '#fff' if pos in ('CEO','CFO','CIO','PRESIDENT','COO') else '#5a5549'
-                    arrow_html = '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;background:#f5f4f0;color:#8a8577;font-size:7px;border:1px solid #e4e0d8;">&#9654;</span>' if is_expandable else ''
-                    neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:5px 3px 5px 8px;">{arrow_html}</td><td style="padding:5px 6px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:5px 6px;text-align:center;"><span style="font-size:0.72rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
+                    neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:5px 8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:5px 6px;text-align:center;"><span style="font-size:0.72rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
 
                 neo_html = f'''<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow:hidden;margin-bottom:0.3rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:linear-gradient(90deg, rgba(27,42,61,0.03), rgba(27,42,61,0.01));border-bottom:1px solid #e4e0d8;">
                     <span style="font-size:0.9rem;font-weight:600;color:#1b2a3d;">Named Executive Officers</span>
-                    <span style="font-size:0.72rem;color:#8a8577;display:flex;align-items:center;gap:5px;">
-                        <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:3px;background:#1b2a3d;color:#fff;font-size:6px;">&#9654;</span>
-                        Select executive to expand
-                    </span>
+                    <span style="font-size:0.72rem;color:#8a8577;">Select an executive below to benchmark</span>
                 </div>
                 <table style="width:100%;border-collapse:collapse;font-size:0.88rem;table-layout:fixed;">
-                <colgroup><col style="width:28px;"><col style="width:22%;"><col style="width:9%;"><col style="width:12%;"><col style="width:12%;"><col style="width:14%;"><col style="width:10%;"><col style="width:14%;"></colgroup>
+                <colgroup><col style="width:24%;"><col style="width:9%;"><col style="width:12%;"><col style="width:13%;"><col style="width:14%;"><col style="width:11%;"><col style="width:14%;"></colgroup>
                 <thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;">
-                    <th style="padding:5px 3px 5px 8px;"></th>
-                    <th style="padding:5px 6px;text-align:left;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
+                    <th style="padding:5px 8px;text-align:left;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
                     <th style="padding:5px 6px;text-align:center;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Position</th>
                     <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Salary</th>
                     <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Cash Bonus</th>
@@ -3221,7 +3216,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 </tr></thead>
                 <tbody>{neo_rows_html}</tbody>
                 <tfoot><tr style="border-top:2px solid #d4d0c8;background:#f5f4f0;">
-                    <td colspan="3" style="padding:5px 6px 5px 8px;font-weight:700;color:#5a5549;font-size:0.85rem;">Total NEO Compensation</td>
+                    <td colspan="2" style="padding:5px 8px;font-weight:700;color:#5a5549;font-size:0.85rem;">Total NEO Compensation</td>
                     <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_sal)}</td>
                     <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_bonus)}</td>
                     <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_stock)}</td>
