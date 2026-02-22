@@ -852,9 +852,18 @@ def render_board_director_table(directors_df, valid_comms):
         age = str(int(d['age'])) if pd.notna(d.get('age')) else "—"
         since = str(int(d['director_since'])) if pd.notna(d.get('director_since')) else "—"
         cash = board_fmt(d['fees_earned_cash']) if pd.notna(d.get('fees_earned_cash')) else "—"
-        stock = board_fmt(d['stock_awards']) if pd.notna(d.get('stock_awards')) else ("" if not pd.notna(d.get('option_awards')) else "")
-        if stock == "—" and pd.notna(d.get('option_awards')):
-            stock = f"{board_fmt(d['option_awards'])} <span style='font-size:10px;color:#999;'>(opt)</span>"
+        # Combine stock awards + option awards into single Equity column
+        stock_val = d.get('stock_awards') if pd.notna(d.get('stock_awards')) else 0
+        option_val = d.get('option_awards') if pd.notna(d.get('option_awards')) else 0
+        equity_total = (stock_val or 0) + (option_val or 0)
+        if equity_total > 0:
+            equity_display = board_fmt(equity_total)
+            if option_val and not stock_val:
+                equity_display += " <span style='font-size:10px;color:#999;'>(options)</span>"
+            elif option_val and stock_val:
+                equity_display += " <span style='font-size:10px;color:#999;'>(incl. options)</span>"
+        else:
+            equity_display = "—"
         total = board_fmt(d['total_comp']) if pd.notna(d.get('total_comp')) else "—"
         total_weight = "font-weight:700;" if pd.notna(d.get('total_comp')) else ""
         
@@ -865,7 +874,7 @@ def render_board_director_table(directors_df, valid_comms):
             <td style="padding:10px 12px;color:#777;">{since}</td>
             <td style="padding:10px 12px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{"".join(chips)}</div></td>
             <td style="padding:10px 12px;text-align:right;">{cash}</td>
-            <td style="padding:10px 12px;text-align:right;">{stock}</td>
+            <td style="padding:10px 12px;text-align:right;">{equity_display}</td>
             <td style="padding:10px 12px;text-align:right;{total_weight}">{total}</td>
         </tr>""")
     
@@ -894,7 +903,7 @@ def render_board_director_table(directors_df, valid_comms):
                     <th style="{hdr_style}text-align:center;width:50px;">Since</th>
                     <th style="{hdr_style}text-align:left;min-width:200px;">Committees</th>
                     <th style="{hdr_style}text-align:right;min-width:100px;">Cash</th>
-                    <th style="{hdr_style}text-align:right;min-width:100px;">Stock</th>
+                    <th style="{hdr_style}text-align:right;min-width:100px;">Equity</th>
                     <th style="{hdr_style}text-align:right;min-width:100px;">Total</th>
                 </tr>
             </thead>
@@ -3660,7 +3669,7 @@ if sel3 and sel3 != PLACEHOLDER:
                 avg_total = comp_board['total_comp'].dropna().mean()
                 median_total = comp_board['total_comp'].dropna().median()
                 avg_cash = comp_board['fees_earned_cash'].dropna().mean()
-                avg_stock = comp_board['stock_awards'].dropna().mean()
+                avg_stock = (comp_board['stock_awards'].fillna(0) + (comp_board['option_awards'].fillna(0) if 'option_awards' in comp_board.columns else 0)).replace(0, pd.NA).dropna().mean() if not comp_board.empty else 0
                 total_board_comp = comp_board['total_comp'].dropna().sum()
                 
                 # Avg age and tenure — CURRENT BOARD
@@ -3708,8 +3717,8 @@ if sel3 and sel3 != PLACEHOLDER:
                 if peer_tickers and not _fs_df.empty:
                     _peer_fs_list = _fs_df[_fs_df["ticker"].isin(peer_tickers)].to_dict("records")
                 
-                # Equity mix
-                _stock_total = comp_board["stock_awards"].fillna(0).sum()
+                # Equity mix (stock awards + option awards)
+                _stock_total = comp_board["stock_awards"].fillna(0).sum() + (comp_board["option_awards"].fillna(0).sum() if "option_awards" in comp_board.columns else 0)
                 _equity_pct = round(_stock_total / total_board_comp * 100) if total_board_comp > 0 else 0
                 
                 # CIK for SEC lookups
