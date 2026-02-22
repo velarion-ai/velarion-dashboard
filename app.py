@@ -3151,7 +3151,9 @@ if sel3 and sel3 != PLACEHOLDER:
             if st.session_state.get('peer_mode') == 'proxy':
                 n_proxy_total = len(proxy_tickers) if proxy_tickers else 0
                 if n_co < n_proxy_total:
-                    peer_line = f"Compared to <strong>{n_co} of {n_proxy_total} proxy-disclosed peers</strong> from {cn3}'s FY{FY_YEAR} DEF 14A ({', '.join(peer_tks)})"
+                    missing_tks = sorted(set(proxy_tickers) - set(peer_tks))
+                    missing_str = f' <span style="color:#dc2626;">(missing: {", ".join(missing_tks)})</span>' if missing_tks else ""
+                    peer_line = f"Compared to <strong>{n_co} of {n_proxy_total} proxy-disclosed peers</strong> from {cn3}'s FY{FY_YEAR} DEF 14A ({', '.join(peer_tks)}){missing_str}"
                 else:
                     peer_line = f"Compared to <strong>{n_co} proxy-disclosed peers</strong> from {cn3}'s FY{FY_YEAR} DEF 14A ({', '.join(peer_tks)})"
             else:
