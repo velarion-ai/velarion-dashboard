@@ -287,29 +287,24 @@ def check_password():
         </div>
         """, unsafe_allow_html=True)
 
-        email = st.text_input("EMAIL", key="auth_email", placeholder="you@company.com")
         pw = st.text_input("PASSWORD", type="password", key="auth_pw", placeholder="Enter your password")
 
         if st.button("Sign In", use_container_width=True):
-            email_clean = email.strip().lower()
-            if email_clean and "@" in email_clean and pw == "demo2026":
+            if pw == "demo2026":
                 st.session_state['authenticated'] = True
-                st.session_state['user_email'] = email_clean
-                _log_login(email_clean)
-                # Set auth token in URL so login survives refresh
+                st.session_state['user_email'] = 'demo_user'
+                _log_login('demo_user')
                 import base64
-                token = base64.b64encode(email_clean.encode('utf-8')).decode('utf-8')
+                token = base64.b64encode(b'demo_user').decode('utf-8')
                 st.query_params["auth"] = token
                 st.rerun()
-            elif not email_clean or "@" not in email_clean:
-                st.error("Please enter a valid email address.")
             else:
-                st.error("Invalid credentials. Please try again.")
+                st.error("Invalid password. Please try again.")
 
         st.markdown("""
         <div style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
             <p style="font-size:11px;color:rgba(255,255,255,0.5);margin:0 0 4px 0;">Early beta access through March 31, 2026</p>
-            <p style="font-size:11px;color:#22b89a;margin:0 0 4px 0;">🔄 New features and data updates added daily</p>
+            <p style="font-size:11px;color:#22b89a;margin:0 0 4px 0;">\U0001F504 New features and data updates added daily</p>
             <p style="font-size:11px;color:rgba(255,255,255,0.4);margin:0;">Questions? <a href="mailto:andy@velarion.ai" style="color:#d4a84b;text-decoration:none;">andy@velarion.ai</a></p>
         </div>
         """, unsafe_allow_html=True)
