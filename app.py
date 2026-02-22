@@ -1432,6 +1432,8 @@ def detect_partial(row, peers_df):
     # Former exec = always partial year
     title = str(row.get('title', '')).lower()
     if 'former' in title: return True
+    # Mid-year appointment signals in title
+    if any(kw in title for kw in ['effective ', 'through ', 'appointed ', 'interim', 'beginning ', 'commencing ']): return True
     # Check if we have 8-K data flag (populated by load_supabase when 8-K data is available)
     if row.get('partial_year_8k'): return True
     # Heuristic: compare to peers
@@ -3486,7 +3488,13 @@ if sel3 and sel3 != PLACEHOLDER:
                     lshow['Company'] = ldf['company_name'].values
                     if lpos == 'ALL':
                         lshow['Position'] = ldf['position'].apply(lambda x: POSITION_DISPLAY.get(x, x)).values
-                    lshow['Executive'] = (ldf['first_name'] + ' ' + ldf['last_name']).values
+                    # Flag partial year execs in Executive name column
+                    def _exec_name_with_flags(row):
+                        name = f"{row['first_name']} {row['last_name']}"
+                        if detect_partial(row, filt):
+                            name += " ^"
+                        return name
+                    lshow['Executive'] = ldf.apply(_exec_name_with_flags, axis=1).values
                     lshow['Salary'] = ldf['base_salary'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                     lshow['Cash Bonus'] = ldf['cash_bonus_incentive'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                     lshow['Non-Cash Equity \u00B9'] = ldf['stock_based_comp'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
@@ -3500,17 +3508,24 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.dataframe(styled, use_container_width=True, hide_index=True, height=400)
                     else:
                         st.dataframe(lshow, use_container_width=True, hide_index=True, height=400)
-                    # Peer stats (excl subject)
+                    # Peer stats (excl subject AND partial year execs)
                     peer_ldf = ldf[ldf['ticker'] != stk3]
-                    st.markdown(f"##### {pos_label} Statistics ({len(peer_ldf)} peers, excl. {stk3})")
+                    partial_mask = peer_ldf.apply(lambda r: detect_partial(r, filt), axis=1)
+                    partial_names = peer_ldf[partial_mask].apply(lambda r: f"{r['first_name']} {r['last_name']} ({r['ticker']})", axis=1).tolist()
+                    peer_ldf_full_yr = peer_ldf[~partial_mask]
+                    n_excluded = partial_mask.sum()
+                    stats_label = f"{pos_label} Statistics ({len(peer_ldf_full_yr)} peers, excl. {stk3})"
+                    st.markdown(f"##### {stats_label}")
                     comp_cols = [('base_salary','Salary'),('cash_bonus_incentive','Cash Bonus'),('stock_based_comp','Non-Cash Equity'),('total_comp','Total Comp')]
                     mean_row = {'': 'Mean'}; med_row = {'': 'Median'}
                     for col, label in comp_cols:
-                        vals = peer_ldf[col].dropna(); vals = vals[vals > 0]
+                        vals = peer_ldf_full_yr[col].dropna(); vals = vals[vals > 0]
                         mean_row[label] = fmt_dollars(vals.mean()) if not vals.empty else "\u2014"
                         med_row[label] = fmt_dollars(vals.median()) if not vals.empty else "\u2014"
                     summary_df = pd.DataFrame([med_row, mean_row])
                     st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                    if n_excluded > 0:
+                        st.markdown(f'<div style="font-size:0.75rem;color:#78350f;background:#fef3c7;padding:6px 10px;border-radius:4px;margin-top:4px;">^ Partial-year compensation — excluded from mean/median calculations: {", ".join(partial_names)}</div>', unsafe_allow_html=True)
                 else:
                     st.info(f"No {pos_label} data for the current peer group.")
 
