@@ -3127,68 +3127,40 @@ if sel3 and sel3 != PLACEHOLDER:
             n_co, mcr, peer_tks, _ = peer_context_str(peers_only, pt3)
             auto_peers = get_peer_stats(peers_only)
         
-            # Show peer source context
+            # Show peer source context (compact)
             no_proxy = not proxy_tickers or len(proxy_tickers) == 0
             if st.session_state.get('peer_mode') == 'proxy':
                 n_proxy_total = len(proxy_tickers) if proxy_tickers else 0
                 if n_co < n_proxy_total:
-                    peer_line = f"Compared to <strong>{n_co} of {n_proxy_total} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
+                    peer_line = f"Compared to <strong>{n_co} of {n_proxy_total} proxy-disclosed peers</strong> from {cn3}'s FY{FY_YEAR} DEF 14A ({', '.join(peer_tks)})"
                 else:
-                    peer_line = f"Compared to <strong>{n_co} proxy-disclosed peer companies</strong> from {cn3}'s FY{FY_YEAR} DEF 14A filing ({', '.join(peer_tks)})"
+                    peer_line = f"Compared to <strong>{n_co} proxy-disclosed peers</strong> from {cn3}'s FY{FY_YEAR} DEF 14A ({', '.join(peer_tks)})"
             else:
-                # Check if this is a no-proxy-peer company defaulting to property type
                 if no_proxy:
-                    peer_line = f'<div style="background:#fffbeb;border:1px solid #d4a017;border-radius:6px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;font-size:0.85rem;color:#92400e;">\u26A0\uFE0F <strong>No proxy-defined compensation peer group found</strong> in {cn3}\'s FY{FY_YEAR} DEF 14A filing. Defaulted to {pt3} companies.</div>'
-                    peer_line += f"Compared to <strong>{n_co} {pt3} peer companies</strong> ({', '.join(peer_tks)})"
+                    peer_line = f'\u26A0\uFE0F No proxy peers found. Compared to <strong>{n_co} {pt3} companies</strong> ({", ".join(peer_tks)})'
                 else:
-                    peer_line = f"Compared to <strong>{n_co} custom peer companies</strong> ({', '.join(peer_tks)})"
-                # Show changes vs proxy baseline
+                    peer_line = f"Compared to <strong>{n_co} custom peers</strong> ({', '.join(peer_tks)})"
                 changes = []
                 if hasattr(st.session_state, '__contains__') and proxy_tickers:
                     r_from_p = [t for t in (set(proxy_tickers) - set(peer_tks))] if proxy_tickers else []
                     a_beyond_p = [t for t in peer_tks if t not in proxy_tickers] if proxy_tickers else []
-                    if r_from_p:
-                        changes.append(f'<span style="color:#dc2626;font-size:0.85rem;">Removed from proxy peers: {", ".join(sorted(r_from_p))}</span>')
-                    if a_beyond_p:
-                        changes.append(f'<span style="color:#1a365d;font-size:0.85rem;">Added beyond proxy peers: {", ".join(sorted(a_beyond_p))}</span>')
-                if changes:
-                    peer_line += "<br>" + "<br>".join(changes)
-            st.markdown(f"<div style='font-size:1.0rem;color:#475569;margin:0.5rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
-        
+                    if r_from_p: changes.append(f'<span style="color:#dc2626;">Removed: {", ".join(sorted(r_from_p))}</span>')
+                    if a_beyond_p: changes.append(f'<span style="color:#1a365d;">Added: {", ".join(sorted(a_beyond_p))}</span>')
+                if changes: peer_line += " | " + " | ".join(changes)
+            st.markdown(f"<div style='font-size:0.82rem;color:#475569;margin:0.3rem 0 0.2rem 0;'>{peer_line}</div>", unsafe_allow_html=True)
+
             if st.session_state.get('peer_mode') == 'custom':
                 if no_proxy:
-                    st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 Use <strong>Custom Peer Group Filters</strong> in the sidebar to further refine this peer group.</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:6px;padding:0.3rem 0.6rem;margin:0 0 0.3rem 0;font-size:0.75rem;color:#78350f;">\U0001F527 Use <strong>Custom Peer Group Filters</strong> in the sidebar.</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:8px;padding:0.6rem 1rem;margin:0.5rem 0 1rem 0;font-size:0.83rem;color:#78350f;">\U0001F527 <strong>Custom Mode:</strong> Adjust filters in the sidebar to refine your comparison set. Switch to Proxy Peers in the sidebar to use the board\'s disclosed peer group.</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="background:#f8f6f3;border:1px solid #d4a017;border-radius:6px;padding:0.3rem 0.6rem;margin:0 0 0.3rem 0;font-size:0.75rem;color:#78350f;">\U0001F527 <strong>Custom Mode</strong> \u2014 adjust filters in the sidebar.</div>', unsafe_allow_html=True)
             cur_fp0 = filter_fingerprint(peers_only)
             custom_removed = sorted(set(proxy_tickers) - set(peer_tks)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
             custom_added = sorted(set(peer_tks) - set(proxy_tickers)) if proxy_tickers and st.session_state.get('peer_mode') == 'custom' else []
 
-            # ---- PROXY-DISCLOSED PEER GROUP ----
-            co_peers_display, proxy_tks_display, _ = _build_proxy_peer_data(stk3, peer_groups_df, df)
-            if not co_peers_display.empty:
-                is_proxy_mode_pg = st.session_state.get('peer_mode') == 'proxy'
-                in_univ = co_peers_display[co_peers_display['in_universe'] == True]
-                active_tag = " \u2705 ACTIVE" if is_proxy_mode_pg else ""
-                with st.expander(f"Proxy-Disclosed Compensation Peer Group ({len(in_univ)} of {len(co_peers_display)} in database){active_tag}", expanded=False):
-                    st.markdown(f'<div style="font-size:0.85rem;color:#475569;margin-bottom:0.7rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing.</div>', unsafe_allow_html=True)
-                    peer_html_rows = []
-                    for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
-                        tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
-                        if pr.get('in_universe'):
-                            badge = '<span style="background:#e8edf5;color:#1a365d;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">IN DATABASE</span>'
-                            reason_col = ""
-                        else:
-                            badge = '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">NOT IN DATABASE</span>'
-                            reason = pr.get('not_in_reason', '')
-                            reason_col = f' <span style="color:#94a3b8;font-size:0.75rem;">\u2014 {reason}</span>' if reason else ''
-                        peer_html_rows.append(f'<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f0ece4;font-size:0.85rem;"><span style="flex:1;">{pr["peer_name_as_disclosed"]}{tk_display}</span>{badge}{reason_col}</div>')
-                    st.markdown(''.join(peer_html_rows), unsafe_allow_html=True)
-
             # ===============================================================
-            #  NEO SUMMARY TABLE (styled HTML)
+            #  3 SUB-TABS: Compensation | Peers | Pay-for-Performance
             # ===============================================================
-            st.markdown("---")
             sorted_execs = sort_by_position(cd3)
             is_proxy_mode = st.session_state.get('peer_mode') == 'proxy'
             pt_peers_base = reit_df[reit_df['ticker'] != stk3]
@@ -3196,207 +3168,326 @@ if sel3 and sel3 != PLACEHOLDER:
             pt_peers = get_peer_stats(pt_peers_base)
             MIN_PEERS = 4 if not is_proxy_mode else 3
 
-            neo_rows_html = ''
-            tot_sal = 0; tot_bonus = 0; tot_stock = 0; tot_other = 0; tot_total = 0
-            for idx, (_, rw) in enumerate(sorted_execs.iterrows()):
-                if 'former' in str(rw.get('title', '')).lower(): continue
-                ie = rw['comp_source'] == 'external_manager'
-                ip = detect_partial(rw, df)
-                pos = rw['position']
-                is_expandable = pos in EXPANDABLE_POSITIONS and not ie
-                pd2 = POSITION_DISPLAY.get(pos, pos)
-                sal = float(rw.get('base_salary') or 0) if pd.notna(rw.get('base_salary')) else 0
-                bonus = float(rw.get('cash_bonus_incentive') or 0) if pd.notna(rw.get('cash_bonus_incentive')) else 0
-                stock = float(rw.get('stock_based_comp') or 0) if pd.notna(rw.get('stock_based_comp')) else 0
-                total = float(rw.get('total_comp') or 0) if pd.notna(rw.get('total_comp')) else 0
-                other = max(0, total - sal - bonus - stock)
-                tot_sal += sal; tot_bonus += bonus; tot_stock += stock; tot_other += other; tot_total += total
-                badges_html = ''
-                if ie: badges_html += ' <span style="font-size:0.65rem;color:#92400e;margin-left:5px;background:#fffbeb;padding:1px 5px;border-radius:3px;border:1px solid #fcd34d;">EXT. MANAGED</span>'
-                if ip: badges_html += ' <span style="font-size:0.65rem;color:#1a73a7;margin-left:5px;background:#eff6ff;padding:1px 5px;border-radius:3px;border:1px solid #93c5fd;">PARTIAL YEAR</span>'
-                pos_bg = '#1b2a3d' if pos == 'CEO' else '#1a73a7' if pos == 'CFO' else '#7b5ea7' if pos == 'CIO' else '#2d7d46' if pos == 'PRESIDENT' else '#f5f4f0'
-                pos_color = '#fff' if pos in ('CEO','CFO','CIO','PRESIDENT') else '#5a5549'
-                arrow_html = '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;background:#f5f4f0;color:#8a8577;font-size:7px;border:1px solid #e4e0d8;">&#9654;</span>' if is_expandable else ''
-                neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:5px 3px 5px 8px;">{arrow_html}</td><td style="padding:5px 6px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:5px 6px;text-align:center;"><span style="font-size:0.72rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
+            sub_comp, sub_peers, sub_pfp = st.tabs(["Compensation", "Peers", "Pay-for-Performance"])
 
-            neo_html = f'''<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow:hidden;margin-bottom:0.3rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:linear-gradient(90deg, rgba(27,42,61,0.03), rgba(27,42,61,0.01));border-bottom:1px solid #e4e0d8;">
-                <span style="font-size:0.9rem;font-weight:600;color:#1b2a3d;">Named Executive Officers</span>
-                <span style="font-size:0.72rem;color:#8a8577;display:flex;align-items:center;gap:5px;">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:3px;background:#1b2a3d;color:#fff;font-size:6px;">&#9654;</span>
-                    Select executive to expand
-                </span>
-            </div>
-            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;table-layout:fixed;">
-            <colgroup>
-                <col style="width:28px;">
-                <col style="width:22%;">
-                <col style="width:9%;">
-                <col style="width:12%;">
-                <col style="width:12%;">
-                <col style="width:14%;">
-                <col style="width:10%;">
-                <col style="width:14%;">
-            </colgroup>
-            <thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;">
-                <th style="padding:5px 3px 5px 8px;"></th>
-                <th style="padding:5px 6px;text-align:left;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
-                <th style="padding:5px 6px;text-align:center;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Position</th>
-                <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Salary</th>
-                <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Cash Bonus</th>
-                <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Stock Awards</th>
-                <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Other</th>
-                <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Total Comp</th>
-            </tr></thead>
-            <tbody>{neo_rows_html}</tbody>
-            <tfoot><tr style="border-top:2px solid #d4d0c8;background:#f5f4f0;">
-                <td colspan="3" style="padding:5px 6px 5px 8px;font-weight:700;color:#5a5549;font-size:0.85rem;">Total NEO Compensation</td>
-                <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_sal)}</td>
-                <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_bonus)}</td>
-                <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_stock)}</td>
-                <td style="padding:5px 6px;text-align:right;font-weight:600;color:#8a8577;">{fmt_dollars(tot_other)}</td>
-                <td style="padding:5px 6px;text-align:right;font-weight:800;">{fmt_dollars(tot_total)}</td>
-            </tr></tfoot></table></div>'''
-            n_rows = len([1 for _, r in sorted_execs.iterrows() if 'former' not in str(r.get('title','')).lower()])
-            components.html(neo_html, height=max(170, 52 + n_rows * 36 + 40), scrolling=False)
-            st.markdown(f'<div class="footnote">Stock Awards = grant date fair value per ASC Topic 718 | Other = total comp less salary, bonus, and stock</div>', unsafe_allow_html=True)
+            with sub_comp:
+                expandable_execs = [(idx, rw) for idx, (_, rw) in enumerate(sorted_execs.iterrows())
+                                    if rw['position'] in EXPANDABLE_POSITIONS
+                                    and rw['comp_source'] != 'external_manager'
+                                    and 'former' not in str(rw.get('title', '')).lower()]
 
-            # ===============================================================
-            #  ACTION BUTTONS (compact row below table)
-            # ===============================================================
-            st.markdown("""<style>
-                div[data-testid="stHorizontalBlock"].action-btns .stButton > button,
-                div[data-testid="stHorizontalBlock"].action-btns .stLinkButton > a {
-                    font-size: 0.78rem !important; padding: 0.4rem 0.8rem !important;
-                }
-            </style>""", unsafe_allow_html=True)
-            btn_c1, btn_c2, btn_c3, btn_spacer = st.columns([2, 1.5, 1.5, 3])
-            with btn_c1:
-                if st.button("\U0001F4CB Generate Analysis", key="cv_lookup_rpt", use_container_width=True):
-                    with st.spinner("\u23F3 Report generating \u2014 pulling CD&A, earnings, and stock data..."):
-                        st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, peer_mode=st.session_state.get('peer_mode', 'proxy'))
-                        st.session_state['lk_tk'] = stk3
-                        st.session_state['fp_lk_rpt'] = cur_fp0
-                        st.session_state.pop('lk_addendum', None)
-                        st.session_state.pop('lk_user_context', None)
-            with btn_c2:
-                if st.button("\U0001F3C6 League Tables", key="cv_league_toggle", use_container_width=True):
-                    st.session_state['show_league'] = not st.session_state.get('show_league', False)
-            with btn_c3:
-                proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=cd3['cik'].iloc[0] if 'cik' in cd3.columns else None)
-                if proxy_url:
-                    st.link_button("\U0001F4C4 View Proxy", proxy_url, use_container_width=True)
-                else:
-                    st.button("\U0001F4C4 View Proxy", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Not found on SEC EDGAR")
+                neo_rows_html = ''
+                tot_sal = 0; tot_bonus = 0; tot_stock = 0; tot_other = 0; tot_total = 0
+                for idx, (_, rw) in enumerate(sorted_execs.iterrows()):
+                    if 'former' in str(rw.get('title', '')).lower(): continue
+                    ie = rw['comp_source'] == 'external_manager'
+                    ip = detect_partial(rw, df)
+                    pos = rw['position']
+                    is_expandable = pos in EXPANDABLE_POSITIONS and not ie
+                    pd2 = POSITION_DISPLAY.get(pos, pos)
+                    sal = float(rw.get('base_salary') or 0) if pd.notna(rw.get('base_salary')) else 0
+                    bonus = float(rw.get('cash_bonus_incentive') or 0) if pd.notna(rw.get('cash_bonus_incentive')) else 0
+                    stock = float(rw.get('stock_based_comp') or 0) if pd.notna(rw.get('stock_based_comp')) else 0
+                    total = float(rw.get('total_comp') or 0) if pd.notna(rw.get('total_comp')) else 0
+                    other = max(0, total - sal - bonus - stock)
+                    tot_sal += sal; tot_bonus += bonus; tot_stock += stock; tot_other += other; tot_total += total
+                    badges_html = ''
+                    if ie: badges_html += ' <span style="font-size:0.65rem;color:#92400e;margin-left:5px;background:#fffbeb;padding:1px 5px;border-radius:3px;border:1px solid #fcd34d;">EXT. MANAGED</span>'
+                    if ip: badges_html += ' <span style="font-size:0.65rem;color:#1a73a7;margin-left:5px;background:#eff6ff;padding:1px 5px;border-radius:3px;border:1px solid #93c5fd;">PARTIAL YEAR</span>'
+                    pos_bg = '#1b2a3d' if pos == 'CEO' else '#1a73a7' if pos == 'CFO' else '#7b5ea7' if pos == 'CIO' else '#2d7d46' if pos == 'PRESIDENT' else '#b8860b' if pos == 'COO' else '#f5f4f0'
+                    pos_color = '#fff' if pos in ('CEO','CFO','CIO','PRESIDENT','COO') else '#5a5549'
+                    arrow_html = '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;background:#f5f4f0;color:#8a8577;font-size:7px;border:1px solid #e4e0d8;">&#9654;</span>' if is_expandable else ''
+                    neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:5px 3px 5px 8px;">{arrow_html}</td><td style="padding:5px 6px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:5px 6px;text-align:center;"><span style="font-size:0.72rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:5px 6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
 
-            # ---- FULL ANALYSIS REPORT ----
-            if st.session_state.get('lk_rpt') and st.session_state.get('lk_tk') == stk3:
-                rt = st.session_state['lk_rpt']
-                if st.session_state.get('fp_lk_rpt') != cur_fp0:
-                    st.markdown(STALE_WARNING, unsafe_allow_html=True)
-                st.markdown('<div class="ai-narrative">', unsafe_allow_html=True)
-                st.markdown(f'<div class="ai-label">\U0001F4CA Executive Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
-                parts = rt.split('[SECTION:')
-                i = 0; peer_tks_ctx = peer_tks
-                while i < len(parts):
-                    part = parts[i]
-                    if not part.strip(): i += 1; continue
-                    sep_idx = part.find(']')
-                    if sep_idx == -1 or i == 0:
-                        st.markdown(part.strip(), unsafe_allow_html=True); i += 1; continue
-                    text = part[:sep_idx].strip(); content = part[sep_idx+1:].strip()
-                    if text == 'POSITIONING':
-                        if content: st.markdown(content, unsafe_allow_html=True)
-                        try:
-                            fig_pos = chart_exec_positioning(cd3, peers_only, all_df=df)
-                            st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
-                        except Exception: pass
-                    elif text == 'MIX':
-                        if content: st.markdown(content, unsafe_allow_html=True)
-                        try:
-                            fig_mix = chart_comp_mix(cd3, peers_only, pt3, all_df=df)
-                            st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
-                        except Exception: pass
-                    elif text == 'RETURNS':
-                        if content: st.markdown(content, unsafe_allow_html=True)
-                        try:
-                            ch1, ch2 = st.columns(2)
-                            with ch1:
-                                fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks_ctx, pt3)
-                                st.plotly_chart(fig_ret, use_container_width=True, key="rpt_ret_chart")
-                            with ch2:
-                                fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
-                                st.plotly_chart(fig_pfp, use_container_width=True, key="rpt_pfp_chart")
-                        except Exception: pass
-                    elif text == 'WATCH':
-                        if content: st.markdown(content, unsafe_allow_html=True)
-                    elif text == 'SOURCES':
-                        if content: st.markdown(f'<div style="margin-top:1.5rem;padding:1rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:8px;font-size:0.8rem;color:#64748b;">{content}</div>', unsafe_allow_html=True)
-                    i += 1
-                st.markdown('</div>', unsafe_allow_html=True)
-                if st.session_state.get('lk_user_context'):
-                    st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.5rem 0;">\U0001F504 Regenerated with additional context.</div>', unsafe_allow_html=True)
-                st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#fffbeb;border:1px solid #d4a017;border-left:4px solid #b8860b;border-radius:8px;"><div style="font-size:0.9rem;font-weight:700;color:#92400e;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div><div style="font-size:0.8rem;color:#475569;">Add exec accomplishments, transactions, recruiting context, etc.</div></div>', unsafe_allow_html=True)
-                user_context = st.text_area("Additional context", placeholder="e.g., 'The CEO led a $2B acquisition'", label_visibility="collapsed", key="user_analysis_context", height=100)
-                ctx_col1, ctx_col2 = st.columns([1, 4])
-                with ctx_col1:
-                    if st.button("\U0001F504 Regenerate", key="cv_gen_addendum", use_container_width=True, disabled=not user_context):
-                        with st.spinner("Regenerating..."):
-                            regen_prompt = f"You are a senior compensation consultant. Regenerate analysis for {cn3} ({stk3}) with user context.\n\nORIGINAL:\n{rt}\n\nUSER CONTEXT:\n{user_context}\n\nKeep [SECTION:] markers. Use same data. Add disclosure footnote.\n\n{AI_TONE}"
-                            try:
-                                cl = get_client()
-                                if cl:
-                                    resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=2500, messages=[{"role":"user","content":regen_prompt}])
-                                    st.session_state['lk_rpt'] = clean_ai(resp.content[0].text)
-                                    st.session_state['lk_user_context'] = user_context
-                                    st.rerun()
-                            except Exception as e: st.error(f"Error: {e}")
-                cl0, dl0 = st.columns([1,4])
-                with cl0:
-                    if st.button("\u2715 Close Report", key="cv_close_lk_rpt"):
-                        del st.session_state['lk_rpt']; st.session_state.pop('lk_addendum', None); st.session_state.pop('lk_user_context', None); st.rerun()
-                with dl0:
-                    try:
-                        pdf = make_pdf(cn3, stk3, rt, cd3, ret_data, peers_only)
-                        st.download_button("\U0001F4E5 Download PDF", data=pdf, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key="cv_lk_pdf")
-                    except Exception: pass
+                neo_html = f'''<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow:hidden;margin-bottom:0.3rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:linear-gradient(90deg, rgba(27,42,61,0.03), rgba(27,42,61,0.01));border-bottom:1px solid #e4e0d8;">
+                    <span style="font-size:0.9rem;font-weight:600;color:#1b2a3d;">Named Executive Officers</span>
+                    <span style="font-size:0.72rem;color:#8a8577;display:flex;align-items:center;gap:5px;">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:3px;background:#1b2a3d;color:#fff;font-size:6px;">&#9654;</span>
+                        Select executive to expand
+                    </span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.88rem;table-layout:fixed;">
+                <colgroup><col style="width:28px;"><col style="width:22%;"><col style="width:9%;"><col style="width:12%;"><col style="width:12%;"><col style="width:14%;"><col style="width:10%;"><col style="width:14%;"></colgroup>
+                <thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;">
+                    <th style="padding:5px 3px 5px 8px;"></th>
+                    <th style="padding:5px 6px;text-align:left;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
+                    <th style="padding:5px 6px;text-align:center;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Position</th>
+                    <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Salary</th>
+                    <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Cash Bonus</th>
+                    <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Stock Awards</th>
+                    <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Other</th>
+                    <th style="padding:5px 6px;text-align:right;font-weight:600;color:#5a5549;font-size:0.68rem;letter-spacing:0.5px;text-transform:uppercase;">Total Comp</th>
+                </tr></thead>
+                <tbody>{neo_rows_html}</tbody>
+                <tfoot><tr style="border-top:2px solid #d4d0c8;background:#f5f4f0;">
+                    <td colspan="3" style="padding:5px 6px 5px 8px;font-weight:700;color:#5a5549;font-size:0.85rem;">Total NEO Compensation</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_sal)}</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_bonus)}</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:600;">{fmt_dollars(tot_stock)}</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:600;color:#8a8577;">{fmt_dollars(tot_other)}</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:800;">{fmt_dollars(tot_total)}</td>
+                </tr></tfoot></table></div>'''
+                n_rows = len([1 for _, r in sorted_execs.iterrows() if 'former' not in str(r.get('title','')).lower()])
+                components.html(neo_html, height=max(170, 52 + n_rows * 36 + 40), scrolling=False)
+                st.markdown(f'<div class="footnote">Stock Awards = grant date fair value per ASC Topic 718 | Other = total comp less salary, bonus, and stock</div>', unsafe_allow_html=True)
 
-            # ---- LEAGUE TABLES (toggle) ----
-            if st.session_state.get('show_league', False):
+                # ---- EXECUTIVE SELECTOR ----
+                if expandable_execs:
+                    exec_labels = [f"{POSITION_DISPLAY.get(rw['position'], rw['position'])} \u2014 {rw['first_name']} {rw['last_name']}" for _, rw in expandable_execs]
+                    sel_c1, sel_c2 = st.columns([1, 2])
+                    with sel_c1:
+                        selected_exec_idx = st.selectbox("Executive Benchmarking", range(-1, len(exec_labels)), format_func=lambda i: "Select executive..." if i == -1 else exec_labels[i], key="exec_detail_select", label_visibility="visible")
+
+                    if selected_exec_idx >= 0:
+                        idx, er = expandable_execs[selected_exec_idx]
+                        pos = er['position']; pd2 = POSITION_DISPLAY.get(pos, pos); ip = detect_partial(er, df)
+                        narrow_peers = auto_peers[auto_peers['position']==pos]
+                        n_narrow = len(narrow_peers[narrow_peers['total_comp'].notna()])
+                        widened = False; widen_desc = ""; peers = narrow_peers
+                        if n_narrow >= MIN_PEERS:
+                            peers = narrow_peers
+                        elif is_proxy_mode:
+                            pt_pos_peers = pt_peers[pt_peers['position']==pos]
+                            n_pt = len(pt_pos_peers[pt_pos_peers['total_comp'].notna()])
+                            if n_pt >= MIN_PEERS:
+                                peers = pt_pos_peers; widened = True
+                                widen_desc = f"Widened to <strong>{n_pt} {pd2}s across {pt_pos_peers['ticker'].nunique()} {pt3} companies</strong>."
+                            else:
+                                wide_ps_3, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                                all_pos_peers = wide_ps_3[wide_ps_3['position']==pos]
+                                n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
+                                if n_all >= MIN_PEERS:
+                                    peers = all_pos_peers; widened = True
+                                    widen_desc = f"Widened to <strong>{n_all} {pd2}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong>."
+                                else: peers = narrow_peers
+                        else:
+                            wide_ps_c, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                            all_pos_peers = wide_ps_c[wide_ps_c['position']==pos]
+                            n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
+                            if n_all >= MIN_PEERS:
+                                peers = all_pos_peers; widened = True
+                                widen_desc = f"Widened to <strong>{n_all} {pd2}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong>."
+                            else: peers = narrow_peers
+                        n_pos = len(peers[peers['total_comp'].notna()])
+                        if widened and widen_desc:
+                            st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 {widen_desc}</div>', unsafe_allow_html=True)
+
+                        # Percentile cards
+                        cols = st.columns(5)
+                        for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
+                            v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
+                            with cols[i]: st.markdown(render_pct_card(v, p, l, med=med, n=n, is_partial=ip), unsafe_allow_html=True)
+                        with cols[4]:
+                            _oc_sal = float(er.get('base_salary') or 0) if pd.notna(er.get('base_salary')) else 0
+                            _oc_bon = float(er.get('cash_bonus_incentive') or 0) if pd.notna(er.get('cash_bonus_incentive')) else 0
+                            _oc_stk = float(er.get('stock_based_comp') or 0) if pd.notna(er.get('stock_based_comp')) else 0
+                            _oc_tot = float(er.get('total_comp') or 0) if pd.notna(er.get('total_comp')) else 0
+                            _oc_val = max(0, _oc_tot - _oc_sal - _oc_bon - _oc_stk)
+                            st.markdown(f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid #64748b;"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">All Other Comp \u00B2</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(_oc_val)}</div><div style="font-size:0.58rem;color:#94a3b8;margin-top:6px;">Perquisites, retirement, tax gross-ups, etc.</div></div>', unsafe_allow_html=True)
+
+                        # Comp Mix + Peer Comparison
+                        mix_col, peer_col = st.columns(2)
+                        with mix_col:
+                            sal_v = float(er.get('base_salary') or 0) if pd.notna(er.get('base_salary')) else 0
+                            bon_v = float(er.get('cash_bonus_incentive') or 0) if pd.notna(er.get('cash_bonus_incentive')) else 0
+                            stk_v = float(er.get('stock_based_comp') or 0) if pd.notna(er.get('stock_based_comp')) else 0
+                            tot_v = float(er.get('total_comp') or 0) if pd.notna(er.get('total_comp')) else 0
+                            oth_v = max(0, tot_v - sal_v - bon_v - stk_v)
+                            mix_html = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:16px;"><div style="font-size:0.75rem;font-weight:700;color:#1b2a3d;letter-spacing:0.5px;margin-bottom:12px;">{pd2} COMPENSATION MIX</div>'
+                            for label, val, color in [("Base Salary", sal_v, "#1b2a3d"), ("Cash Bonus", bon_v, "#1a73a7"), ("Stock Awards", stk_v, "#5b8c3e"), ("Other", oth_v, "#8a8577")]:
+                                pct = round(val / tot_v * 100) if tot_v > 0 else 0
+                                mix_html += f'<div style="display:flex;align-items:center;margin-bottom:6px;"><span style="width:75px;font-size:0.73rem;color:#6a6358;">{label}</span><div style="flex:1;height:14px;background:#f5f4f0;border-radius:3px;overflow:hidden;margin:0 8px;"><div style="width:{pct}%;height:100%;border-radius:3px;background:{color};"></div></div><span style="width:32px;text-align:right;font-size:0.73rem;font-weight:600;">{pct}%</span><span style="width:65px;text-align:right;font-size:0.73rem;color:#8a8577;">{fmt_dollars(val)}</span></div>'
+                            at_risk = round((bon_v + stk_v) / tot_v * 100) if tot_v > 0 else 0
+                            eq_mix = round(stk_v / tot_v * 100) if tot_v > 0 else 0
+                            mix_html += f'<div style="margin-top:10px;padding:8px 10px;background:#f5f4f0;border-radius:6px;font-size:0.73rem;color:#6a6358;"><strong>At-Risk:</strong> {at_risk}% | <strong>Equity Mix:</strong> {eq_mix}%</div></div>'
+                            components.html(mix_html, height=220, scrolling=False)
+                        with peer_col:
+                            peer_pos_data = peers[peers['total_comp'].notna()].copy()
+                            if not peer_pos_data.empty:
+                                chart_data = [{'ticker': stk3, 'total': float(er['total_comp'] or 0)}]
+                                for _, pr in peer_pos_data.iterrows():
+                                    chart_data.append({'ticker': pr['ticker'], 'total': float(pr['total_comp'] or 0)})
+                                chart_data.sort(key=lambda x: x['total'], reverse=True)
+                                max_val = max(d['total'] for d in chart_data) if chart_data else 1
+                                bar_html = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:16px;"><div style="font-size:0.75rem;font-weight:700;color:#1b2a3d;letter-spacing:0.5px;margin-bottom:12px;">{pd2} COMP vs PEER {pd2}s</div>'
+                                for d in chart_data:
+                                    pct = d['total'] / max_val * 100 if max_val > 0 else 0
+                                    is_subject = d['ticker'] == stk3
+                                    fw = '700' if is_subject else '400'; fc = '#1b2a3d' if is_subject else '#8a8577'
+                                    bg = 'linear-gradient(90deg, #1b2a3d, #2d5a7b)' if is_subject else '#c8d8e4'
+                                    bar_html += f'<div style="display:flex;align-items:center;margin-bottom:4px;"><span style="width:40px;font-size:0.7rem;font-weight:{fw};color:{fc};">{d["ticker"]}</span><div style="flex:1;height:16px;background:#f5f4f0;border-radius:3px;overflow:hidden;"><div style="width:{pct:.0f}%;height:100%;border-radius:3px;background:{bg};"></div></div><span style="width:65px;text-align:right;font-size:0.7rem;font-weight:{fw};">{fmt_dollars(d["total"])}</span></div>'
+                                med_val = peers['total_comp'].median()
+                                bar_html += f'<div style="margin-top:8px;font-size:0.68rem;color:#8a8577;">Peer median: {fmt_dollars(med_val)} | n={n_pos}</div></div>'
+                                components.html(bar_html, height=max(180, len(chart_data) * 22 + 80), scrolling=False)
+
+                        # Per-exec buttons
+                        nk = f"cv_n_{stk3}_{er['position']}_{er['last_name']}_{selected_exec_idx}"
+                        if nk not in st.session_state: st.session_state[nk] = None
+                        pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
+                        peer_key = f"show_peers_{stk3}_{pos}_{selected_exec_idx}"
+                        eb1, eb2, eb_spacer = st.columns([2, 2, 5])
+                        with eb1:
+                            if st.button(f"Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True, type="secondary"):
+                                with st.spinner("Generating..."):
+                                    _wide_df = None
+                                    if widened: _wide_df, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
+                                    st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=_wide_df)
+                                    st.session_state[f"fp_{nk}"] = cur_fp0
+                        with eb2:
+                            if st.button(f"View {pos_btn_label} Peers", key=f"cv_peer_{pos}_{selected_exec_idx}", use_container_width=True, type="secondary"):
+                                st.session_state[peer_key] = not st.session_state.get(peer_key, False)
+                        if st.session_state[nk]:
+                            if st.session_state.get(f"fp_{nk}") != cur_fp0:
+                                st.markdown(STALE_WARNING, unsafe_allow_html=True)
+                            st.markdown(f'<div class="ai-narrative"><div class="ai-label">\U0001F4CA {pos_btn_label} Compensation Analysis</div>{st.session_state[nk]}</div>', unsafe_allow_html=True)
+                            if st.button(f"\u2715 Close {pos_btn_label} Analysis", key=f"cv_close_{nk}"):
+                                st.session_state[nk] = None; st.rerun()
+                        if st.session_state.get(peer_key, False):
+                            render_peer_table(er, peers if widened else peers_only, pos)
+
+                # ---- ACTION BUTTONS ----
                 st.markdown("---")
-                st.markdown("#### League Tables")
+                btn_c1, btn_c2, btn_spacer = st.columns([2, 1.5, 4.5])
+                with btn_c1:
+                    if st.button("\U0001F4CB Generate Analysis", key="cv_lookup_rpt", use_container_width=True):
+                        with st.spinner("\u23F3 Report generating \u2014 pulling CD&A, earnings, and stock data..."):
+                            st.session_state['lk_rpt'] = gen_full(cd3, peers_only, ret_data, excluded_tks=custom_removed, added_tks=custom_added, all_df=df, peer_mode=st.session_state.get('peer_mode', 'proxy'))
+                            st.session_state['lk_tk'] = stk3
+                            st.session_state['fp_lk_rpt'] = cur_fp0
+                            st.session_state.pop('lk_addendum', None)
+                            st.session_state.pop('lk_user_context', None)
+                with btn_c2:
+                    proxy_url = lookup_proxy_url(cn3, FY_YEAR, cik=cd3['cik'].iloc[0] if 'cik' in cd3.columns else None)
+                    if proxy_url:
+                        st.link_button("\U0001F4C4 View Proxy", proxy_url, use_container_width=True)
+                    else:
+                        st.button("\U0001F4C4 View Proxy", key="cv_proxy_btn", disabled=True, use_container_width=True, help="Not found on SEC EDGAR")
+
+                # ---- FULL ANALYSIS REPORT ----
+                if st.session_state.get('lk_rpt') and st.session_state.get('lk_tk') == stk3:
+                    rt = st.session_state['lk_rpt']
+                    if st.session_state.get('fp_lk_rpt') != cur_fp0:
+                        st.markdown(STALE_WARNING, unsafe_allow_html=True)
+                    st.markdown('<div class="ai-narrative">', unsafe_allow_html=True)
+                    st.markdown(f'<div class="ai-label">\U0001F4CA Executive Compensation Analysis \u2014 {cn3}</div>', unsafe_allow_html=True)
+                    parts = rt.split('[SECTION:')
+                    i = 0; peer_tks_ctx = peer_tks
+                    while i < len(parts):
+                        part = parts[i]
+                        if not part.strip(): i += 1; continue
+                        sep_idx = part.find(']')
+                        if sep_idx == -1 or i == 0:
+                            st.markdown(part.strip(), unsafe_allow_html=True); i += 1; continue
+                        text = part[:sep_idx].strip(); content = part[sep_idx+1:].strip()
+                        if text == 'POSITIONING':
+                            if content: st.markdown(content, unsafe_allow_html=True)
+                            try:
+                                fig_pos = chart_exec_positioning(cd3, peers_only, all_df=df)
+                                st.plotly_chart(fig_pos, use_container_width=True, key="rpt_pos_chart")
+                            except Exception: pass
+                        elif text == 'MIX':
+                            if content: st.markdown(content, unsafe_allow_html=True)
+                            try:
+                                fig_mix = chart_comp_mix(cd3, peers_only, pt3, all_df=df)
+                                st.plotly_chart(fig_mix, use_container_width=True, key="rpt_mix_chart")
+                            except Exception: pass
+                        elif text == 'RETURNS':
+                            if content: st.markdown(content, unsafe_allow_html=True)
+                            try:
+                                ch1, ch2 = st.columns(2)
+                                with ch1:
+                                    fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks_ctx, pt3)
+                                    st.plotly_chart(fig_ret, use_container_width=True, key="rpt_ret_chart")
+                                with ch2:
+                                    fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
+                                    st.plotly_chart(fig_pfp, use_container_width=True, key="rpt_pfp_chart")
+                            except Exception: pass
+                        elif text == 'WATCH':
+                            if content: st.markdown(content, unsafe_allow_html=True)
+                        elif text == 'SOURCES':
+                            if content: st.markdown(f'<div style="margin-top:1.5rem;padding:1rem;background:#f8f6f3;border:1px solid #e2e0db;border-radius:8px;font-size:0.8rem;color:#64748b;">{content}</div>', unsafe_allow_html=True)
+                        i += 1
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    if st.session_state.get('lk_user_context'):
+                        st.markdown(f'<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:0.5rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.5rem 0;">\U0001F504 Regenerated with additional context.</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="margin-top:1rem;padding:1rem 1.2rem;background:#fffbeb;border:1px solid #d4a017;border-left:4px solid #b8860b;border-radius:8px;"><div style="font-size:0.9rem;font-weight:700;color:#92400e;margin-bottom:0.4rem;">\U0001F4AC Refine this analysis with additional context</div><div style="font-size:0.8rem;color:#475569;">Add exec accomplishments, transactions, recruiting context, etc.</div></div>', unsafe_allow_html=True)
+                    user_context = st.text_area("Additional context", placeholder="e.g., 'The CEO led a $2B acquisition'", label_visibility="collapsed", key="user_analysis_context", height=100)
+                    ctx_col1, ctx_col2 = st.columns([1, 4])
+                    with ctx_col1:
+                        if st.button("\U0001F504 Regenerate", key="cv_gen_addendum", use_container_width=True, disabled=not user_context):
+                            with st.spinner("Regenerating..."):
+                                regen_prompt = f"You are a senior compensation consultant. Regenerate analysis for {cn3} ({stk3}) with user context.\n\nORIGINAL:\n{rt}\n\nUSER CONTEXT:\n{user_context}\n\nKeep [SECTION:] markers. Use same data. Add disclosure footnote.\n\n{AI_TONE}"
+                                try:
+                                    cl = get_client()
+                                    if cl:
+                                        resp = cl.messages.create(model="claude-sonnet-4-20250514", max_tokens=2500, messages=[{"role":"user","content":regen_prompt}])
+                                        st.session_state['lk_rpt'] = clean_ai(resp.content[0].text)
+                                        st.session_state['lk_user_context'] = user_context
+                                        st.rerun()
+                                except Exception as e: st.error(f"Error: {e}")
+                    cl0, dl0 = st.columns([1,4])
+                    with cl0:
+                        if st.button("\u2715 Close Report", key="cv_close_lk_rpt"):
+                            del st.session_state['lk_rpt']; st.session_state.pop('lk_addendum', None); st.session_state.pop('lk_user_context', None); st.rerun()
+                    with dl0:
+                        try:
+                            pdf = make_pdf(cn3, stk3, rt, cd3, ret_data, peers_only)
+                            st.download_button("\U0001F4E5 Download PDF", data=pdf, file_name=f"Velarion_{stk3}_Analysis.pdf", mime="application/pdf", key="cv_lk_pdf")
+                        except Exception: pass
+
+            # ═══════════════════════════════════════════════════════
+            #  SUB-TAB 2: PEERS (Proxy peer list + League Tables)
+            # ═══════════════════════════════════════════════════════
+            with sub_peers:
+                co_peers_display, proxy_tks_display, _ = _build_proxy_peer_data(stk3, peer_groups_df, df)
+                if not co_peers_display.empty:
+                    in_univ = co_peers_display[co_peers_display['in_universe'] == True]
+                    st.markdown(f"##### Proxy-Disclosed Peer Group ({len(in_univ)} of {len(co_peers_display)} in database)")
+                    st.markdown(f'<div style="font-size:0.78rem;color:#475569;margin-bottom:0.5rem;">From {cn3}\'s FY{co_peers_display["fiscal_year"].iloc[0]} DEF 14A proxy filing.</div>', unsafe_allow_html=True)
+                    peer_html_rows = []
+                    for _, pr in co_peers_display.sort_values('peer_name_as_disclosed').iterrows():
+                        tk_display = f" ({pr['peer_ticker']})" if pd.notna(pr.get('peer_ticker')) and pr['peer_ticker'] else ""
+                        if pr.get('in_universe'):
+                            badge = '\u2705'
+                        else:
+                            reason = pr.get('not_in_reason', '')
+                            badge = f'\u274C <span style="color:#94a3b8;font-size:0.72rem;">{reason}</span>' if reason else '\u274C'
+                        peer_html_rows.append(f'<div style="display:flex;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid #f0ece4;font-size:0.82rem;"><span style="flex:1;">{pr["peer_name_as_disclosed"]}{tk_display}</span><span>{badge}</span></div>')
+                    st.markdown(''.join(peer_html_rows), unsafe_allow_html=True)
+
+                # League Tables
+                st.markdown("---")
+                st.markdown("##### League Tables")
                 lt_pos_col, lt_spacer = st.columns([1, 3])
                 with lt_pos_col:
                     lpos = st.selectbox("Position", FILTER_POSITIONS, format_func=lambda x: POSITION_FILTER_LABEL.get(x,x), key="cv_lt_pos")
+                pos_label = POSITION_FILTER_LABEL.get(lpos, lpos)
+                if lpos in ('ALL',):
+                    filt = peers_only[peers_only['total_comp'].notna()]
+                else:
+                    filt = peers_only[(peers_only['position']==lpos) & (peers_only['total_comp'].notna())]
                 hl_tk = stk3
-                ldf = filt[(filt['position']==lpos) & (filt['comp_source']!='external_manager')].copy()
-                if not ldf.empty:
-                    ldf = ldf.sort_values('total_comp', ascending=False).reset_index(drop=True)
-                    ldf['_rank'] = range(1, len(ldf)+1)
-                    pos_label = POSITION_FILTER_LABEL.get(lpos, lpos)
-                    lprop_label = "Proxy Peer Group" if st.session_state.get('peer_mode') == 'proxy' else "Custom Peer Group"
-                    st.markdown(f"##### {lprop_label} \u2014 {pos_label} Rankings (FY{FY_YEAR})")
-                    if hl_tk and hl_tk in ldf['ticker'].values:
-                        hl_row = ldf[ldf['ticker']==hl_tk].iloc[0]; hl_rank = ldf[ldf['ticker']==hl_tk]['_rank'].iloc[0]
-                        hl_pct = percentile_rank(hl_row['total_comp'], ldf['total_comp'])
-                        hl_partial = detect_partial(hl_row, df)
-                        hl_badge = ' <span class="partial-year">PARTIAL YEAR</span>' if hl_partial else ''
-                        st.markdown(f'<div class="hl-row"><strong>\U0001F3AF {hl_row["company_name"]} ({hl_tk})</strong> \u2014 {hl_row["first_name"]} {hl_row["last_name"]} | #{hl_rank} of {len(ldf)} | {ordinal(hl_pct)} pctl | Total: <strong>{fmt_dollars(hl_row["total_comp"])}</strong>{hl_badge}</div>', unsafe_allow_html=True)
+                if lpos != 'ALL':
+                    hl_row = cd3[cd3['position']==lpos]
+                    if not hl_row.empty:
+                        filt = pd.concat([hl_row, filt]).drop_duplicates(subset=['ticker','position'], keep='first')
+                else:
+                    filt = pd.concat([cd3, filt]).drop_duplicates(subset=['ticker','position'], keep='first')
+                if not filt.empty:
+                    ldf = filt.sort_values('total_comp', ascending=False).head(50)
                     lshow = pd.DataFrame()
-                    lshow['Rank'] = ldf['_rank'].values; lshow['Ticker'] = ldf['ticker'].values
+                    lshow['Ticker'] = ldf['ticker'].values
                     lshow['Company'] = ldf['company_name'].values
-                    lshow['Executive'] = ldf.apply(lambda r: f"{r['first_name']} {r['last_name']} ^" if detect_partial(r, df) else f"{r['first_name']} {r['last_name']}", axis=1).values
+                    if lpos == 'ALL':
+                        lshow['Position'] = ldf['position'].apply(lambda x: POSITION_DISPLAY.get(x, x)).values
+                    lshow['Executive'] = (ldf['first_name'] + ' ' + ldf['last_name']).values
                     lshow['Salary'] = ldf['base_salary'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                     lshow['Cash Bonus'] = ldf['cash_bonus_incentive'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                     lshow['Non-Cash Equity \u00B9'] = ldf['stock_based_comp'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
                     lshow['Total Comp'] = ldf['total_comp'].apply(lambda x: f"${x:,.0f}" if pd.notna(x) and x>0 else "\u2014").values
-                    lshow['Mkt Cap'] = ldf['market_cap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "\u2014").values
-                    is_combined_lt = filt['property_type'].dropna().nunique() > 1
-                    if is_combined_lt:
-                        lshow['Prop Type'] = ldf['property_type'].values
                     lshow[f'1-Yr (FY{RETURNS_YEAR})'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_1y'))).values
                     lshow['3-Yr'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_3y'))).values
-                    lshow[f'YTD {RETURNS_YEAR+1}'] = ldf['ticker'].apply(lambda t: fmt_return(ret_data.get(t,{}).get('return_ytd'))).values
                     if hl_tk and hl_tk in lshow['Ticker'].values:
                         hl_mask = lshow['Ticker'] == hl_tk
                         lshow = pd.concat([lshow[hl_mask], lshow[~hl_mask]]).reset_index(drop=True)
@@ -3404,176 +3495,47 @@ if sel3 and sel3 != PLACEHOLDER:
                         st.dataframe(styled, use_container_width=True, hide_index=True, height=400)
                     else:
                         st.dataframe(lshow, use_container_width=True, hide_index=True, height=400)
-                    ret_1y_vals = pd.Series([ret_data.get(t,{}).get('return_1y') for t in ldf['ticker']], dtype=float).dropna()
-                    ret_3y_vals = pd.Series([ret_data.get(t,{}).get('return_3y') for t in ldf['ticker']], dtype=float).dropna()
-                    hl_comp_row = None
-                    if hl_tk and hl_tk in ldf['ticker'].values:
-                        hr = ldf[ldf['ticker']==hl_tk].iloc[0]
-                        hl_label = f"{hr['company_name']} ({hl_tk})"
-                        hl_comp_row = {'': hl_label}
-                        for col, label in [('base_salary','Salary'),('cash_bonus_incentive','Cash Bonus'),('stock_based_comp','Non-Cash Equity'),('total_comp','Total Comp'),('market_cap','Market Cap')]:
-                            v = hr[col]
-                            hl_comp_row[label] = f"${v/1e9:.2f}B" if col == 'market_cap' and pd.notna(v) else (fmt_dollars(v) if pd.notna(v) and v > 0 else "\u2014")
-                        hl_comp_row['1-Yr Return'] = fmt_return(ret_data.get(hl_tk,{}).get('return_1y'))
-                        hl_comp_row['3-Yr Return'] = fmt_return(ret_data.get(hl_tk,{}).get('return_3y'))
-                    st.markdown(f"##### {pos_label} Compensation Statistics ({len(ldf)} executives)")
-                    comp_cols = [('base_salary','Salary'),('cash_bonus_incentive','Cash Bonus'),('stock_based_comp','Non-Cash Equity'),('total_comp','Total Comp'),('market_cap','Market Cap')]
+                    # Peer stats (excl subject)
+                    peer_ldf = ldf[ldf['ticker'] != stk3]
+                    st.markdown(f"##### {pos_label} Statistics ({len(peer_ldf)} peers, excl. {stk3})")
+                    comp_cols = [('base_salary','Salary'),('cash_bonus_incentive','Cash Bonus'),('stock_based_comp','Non-Cash Equity'),('total_comp','Total Comp')]
                     mean_row = {'': 'Mean'}; med_row = {'': 'Median'}
                     for col, label in comp_cols:
-                        vals = ldf[col].dropna()
-                        if col != 'market_cap': vals = vals[vals > 0]
-                        if col == 'market_cap':
-                            mean_row[label] = f"${vals.mean()/1e9:.2f}B" if not vals.empty else "\u2014"
-                            med_row[label] = f"${vals.median()/1e9:.2f}B" if not vals.empty else "\u2014"
-                        else:
-                            mean_row[label] = fmt_dollars(vals.mean()) if not vals.empty else "\u2014"
-                            med_row[label] = fmt_dollars(vals.median()) if not vals.empty else "\u2014"
-                    mean_row['1-Yr Return'] = fmt_return(ret_1y_vals.mean()) if not ret_1y_vals.empty else "\u2014"
-                    med_row['1-Yr Return'] = fmt_return(ret_1y_vals.median()) if not ret_1y_vals.empty else "\u2014"
-                    mean_row['3-Yr Return'] = fmt_return(ret_3y_vals.mean()) if not ret_3y_vals.empty else "\u2014"
-                    med_row['3-Yr Return'] = fmt_return(ret_3y_vals.median()) if not ret_3y_vals.empty else "\u2014"
-                    summary_rows = [hl_comp_row, mean_row, med_row] if hl_comp_row else [mean_row, med_row]
-                    summary_df = pd.DataFrame(summary_rows)
-                    if hl_comp_row:
-                        styled_summary = summary_df.style.apply(lambda x: ['background-color: #eff6ff; font-weight: 600;' if x.name == 0 else '' for _ in x], axis=1)
-                        st.dataframe(styled_summary, use_container_width=True, hide_index=True)
-                    else:
-                        st.dataframe(summary_df, use_container_width=True, hide_index=True)
-                    st.markdown(f'<div class="footnote">\u00B9 Grant date fair value per ASC Topic 718. | ^ = Estimated partial-year hire</div>', unsafe_allow_html=True)
+                        vals = peer_ldf[col].dropna(); vals = vals[vals > 0]
+                        mean_row[label] = fmt_dollars(vals.mean()) if not vals.empty else "\u2014"
+                        med_row[label] = fmt_dollars(vals.median()) if not vals.empty else "\u2014"
+                    summary_df = pd.DataFrame([med_row, mean_row])
+                    st.dataframe(summary_df, use_container_width=True, hide_index=True)
                 else:
-                    st.info(f"No {POSITION_FILTER_LABEL.get(lpos,lpos)} data for the current peer group.")
+                    st.info(f"No {pos_label} data for the current peer group.")
 
-            # ===============================================================
-            #  INDIVIDUAL EXEC BENCHMARKING (compact selector)
-            # ===============================================================
-            st.markdown('<div style="margin-top:-0.5rem;"></div>', unsafe_allow_html=True)
-
-            expandable_execs = [(idx, rw) for idx, (_, rw) in enumerate(sorted_execs.iterrows())
-                                if rw['position'] in EXPANDABLE_POSITIONS
-                                and rw['comp_source'] != 'external_manager'
-                                and 'former' not in str(rw.get('title', '')).lower()]
-
-            if expandable_execs:
-                exec_labels = [f"{POSITION_DISPLAY.get(rw['position'], rw['position'])} \u2014 {rw['first_name']} {rw['last_name']}" for _, rw in expandable_execs]
-                # Compact selector with constrained width
-                st.markdown("""<style>
-                    div[data-testid="stSelectbox"][aria-label="exec_bench_sel"] {max-width: 320px !important;}
-                    div[data-testid="stSelectbox"][aria-label="exec_bench_sel"] > div {font-size: 0.85rem !important;}
-                </style>""", unsafe_allow_html=True)
-                sel_c1, sel_c2 = st.columns([1, 2])
-                with sel_c1:
-                    selected_exec_idx = st.selectbox("Executive Benchmarking", range(-1, len(exec_labels)), format_func=lambda i: "Select executive..." if i == -1 else exec_labels[i], key="exec_detail_select", label_visibility="visible")
-                
-                if selected_exec_idx >= 0:
-                    idx, er = expandable_execs[selected_exec_idx]
-                    pos = er['position']; pd2 = POSITION_DISPLAY.get(pos, pos); ip = detect_partial(er, df)
-
-                    # Widening cascade
-                    narrow_peers = auto_peers[auto_peers['position']==pos]
-                    n_narrow = len(narrow_peers[narrow_peers['total_comp'].notna()])
-                    widened = False; widen_desc = ""; peers = narrow_peers
-                    if n_narrow >= MIN_PEERS:
-                        peers = narrow_peers
-                    elif is_proxy_mode:
-                        pt_pos_peers = pt_peers[pt_peers['position']==pos]
-                        n_pt = len(pt_pos_peers[pt_pos_peers['total_comp'].notna()])
-                        if n_pt >= MIN_PEERS:
-                            peers = pt_pos_peers; widened = True
-                            widen_desc = f"Widened to <strong>{n_pt} {pd2}s across {pt_pos_peers['ticker'].nunique()} {pt3} companies</strong>."
-                        else:
-                            wide_ps_3, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
-                            all_pos_peers = wide_ps_3[wide_ps_3['position']==pos]
-                            n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
-                            if n_all >= MIN_PEERS:
-                                peers = all_pos_peers; widened = True
-                                widen_desc = f"Widened to <strong>{n_all} {pd2}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong>."
-                            else: peers = narrow_peers
-                    else:
-                        wide_ps_c, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
-                        all_pos_peers = wide_ps_c[wide_ps_c['position']==pos]
-                        n_all = len(all_pos_peers[all_pos_peers['total_comp'].notna()])
-                        if n_all >= MIN_PEERS:
-                            peers = all_pos_peers; widened = True
-                            widen_desc = f"Widened to <strong>{n_all} {pd2}s across {all_pos_peers['ticker'].nunique()} similarly-sized companies</strong>."
-                        else: peers = narrow_peers
-                    n_pos = len(peers[peers['total_comp'].notna()])
-                    if widened and widen_desc:
-                        st.markdown(f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.8rem;font-size:0.78rem;color:#92400e;margin:0.3rem 0;">\U0001F504 {widen_desc}</div>', unsafe_allow_html=True)
-
-                    # Percentile cards
-                    cols = st.columns(5)
-                    for i, (f, l) in enumerate([('base_salary','Base Salary'),('cash_bonus_incentive','Cash Bonus/Incentive'),('stock_based_comp','Non-Cash Equity \u00B9'),('total_comp','Total Compensation')]):
-                        v = er[f]; p = percentile_rank(v, peers[f]); med = peers[f].median(); n = len(peers[f].dropna())
-                        with cols[i]: st.markdown(render_pct_card(v, p, l, med=med, n=n, is_partial=ip), unsafe_allow_html=True)
-                    with cols[4]:
-                        _oc_sal = float(er.get('base_salary') or 0) if pd.notna(er.get('base_salary')) else 0
-                        _oc_bon = float(er.get('cash_bonus_incentive') or 0) if pd.notna(er.get('cash_bonus_incentive')) else 0
-                        _oc_stk = float(er.get('stock_based_comp') or 0) if pd.notna(er.get('stock_based_comp')) else 0
-                        _oc_tot = float(er.get('total_comp') or 0) if pd.notna(er.get('total_comp')) else 0
-                        _oc_val = max(0, _oc_tot - _oc_sal - _oc_bon - _oc_stk)
-                        st.markdown(f'<div style="padding:0.7rem;background:#f8fafc;border-radius:8px;border-left:3px solid #64748b;"><div style="font-size:0.68rem;text-transform:uppercase;color:#64748b;">All Other Comp \u00B2</div><div style="font-size:1.05rem;font-weight:700;color:#0f172a;">{fmt_dollars(_oc_val)}</div><div style="font-size:0.58rem;color:#94a3b8;margin-top:6px;">Perquisites, retirement, tax gross-ups, etc.</div></div>', unsafe_allow_html=True)
-
-                    # Comp Mix + Peer Comparison side by side
-                    mix_col, peer_col = st.columns(2)
-                    with mix_col:
-                        sal_v = float(er.get('base_salary') or 0) if pd.notna(er.get('base_salary')) else 0
-                        bon_v = float(er.get('cash_bonus_incentive') or 0) if pd.notna(er.get('cash_bonus_incentive')) else 0
-                        stk_v = float(er.get('stock_based_comp') or 0) if pd.notna(er.get('stock_based_comp')) else 0
-                        tot_v = float(er.get('total_comp') or 0) if pd.notna(er.get('total_comp')) else 0
-                        oth_v = max(0, tot_v - sal_v - bon_v - stk_v)
-                        mix_html = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:16px;"><div style="font-size:0.75rem;font-weight:700;color:#1b2a3d;letter-spacing:0.5px;margin-bottom:12px;">{pd2} COMPENSATION MIX</div>'
-                        for label, val, color in [("Base Salary", sal_v, "#1b2a3d"), ("Cash Bonus", bon_v, "#1a73a7"), ("Stock Awards", stk_v, "#5b8c3e"), ("Other", oth_v, "#8a8577")]:
-                            pct = round(val / tot_v * 100) if tot_v > 0 else 0
-                            mix_html += f'<div style="display:flex;align-items:center;margin-bottom:6px;"><span style="width:75px;font-size:0.73rem;color:#6a6358;">{label}</span><div style="flex:1;height:14px;background:#f5f4f0;border-radius:3px;overflow:hidden;margin:0 8px;"><div style="width:{pct}%;height:100%;border-radius:3px;background:{color};"></div></div><span style="width:32px;text-align:right;font-size:0.73rem;font-weight:600;">{pct}%</span><span style="width:65px;text-align:right;font-size:0.73rem;color:#8a8577;">{fmt_dollars(val)}</span></div>'
-                        at_risk = round((bon_v + stk_v) / tot_v * 100) if tot_v > 0 else 0
-                        eq_mix = round(stk_v / tot_v * 100) if tot_v > 0 else 0
-                        mix_html += f'<div style="margin-top:10px;padding:8px 10px;background:#f5f4f0;border-radius:6px;font-size:0.73rem;color:#6a6358;"><strong>At-Risk:</strong> {at_risk}% | <strong>Equity Mix:</strong> {eq_mix}%</div></div>'
-                        components.html(mix_html, height=220, scrolling=False)
-
-                    with peer_col:
-                        peer_pos_data = peers[peers['total_comp'].notna()].copy()
-                        if not peer_pos_data.empty:
-                            chart_data = [{'ticker': stk3, 'total': float(er['total_comp'] or 0)}]
-                            for _, pr in peer_pos_data.iterrows():
-                                chart_data.append({'ticker': pr['ticker'], 'total': float(pr['total_comp'] or 0)})
-                            chart_data.sort(key=lambda x: x['total'], reverse=True)
-                            max_val = max(d['total'] for d in chart_data) if chart_data else 1
-                            bar_html = f'<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:16px;"><div style="font-size:0.75rem;font-weight:700;color:#1b2a3d;letter-spacing:0.5px;margin-bottom:12px;">{pd2} COMP vs PEER {pd2}s</div>'
-                            for d in chart_data:
-                                pct = d['total'] / max_val * 100 if max_val > 0 else 0
-                                is_subject = d['ticker'] == stk3
-                                fw = '700' if is_subject else '400'
-                                fc = '#1b2a3d' if is_subject else '#8a8577'
-                                bg = 'linear-gradient(90deg, #1b2a3d, #2d5a7b)' if is_subject else '#c8d8e4'
-                                bar_html += f'<div style="display:flex;align-items:center;margin-bottom:4px;"><span style="width:40px;font-size:0.7rem;font-weight:{fw};color:{fc};">{d["ticker"]}</span><div style="flex:1;height:16px;background:#f5f4f0;border-radius:3px;overflow:hidden;"><div style="width:{pct:.0f}%;height:100%;border-radius:3px;background:{bg};"></div></div><span style="width:65px;text-align:right;font-size:0.7rem;font-weight:{fw};">{fmt_dollars(d["total"])}</span></div>'
-                            med_val = peers['total_comp'].median()
-                            bar_html += f'<div style="margin-top:8px;font-size:0.68rem;color:#8a8577;">Peer median: {fmt_dollars(med_val)} | n={n_pos}</div></div>'
-                            components.html(bar_html, height=max(180, len(chart_data) * 22 + 80), scrolling=False)
-
-                    # Per-exec buttons
-                    nk = f"cv_n_{stk3}_{er['position']}_{er['last_name']}_{selected_exec_idx}"
-                    if nk not in st.session_state: st.session_state[nk] = None
-                    pos_btn_label = pd2 if pd2 else er['first_name'] + ' ' + er['last_name']
-                    peer_key = f"show_peers_{stk3}_{pos}_{selected_exec_idx}"
-                    eb1, eb2, eb_spacer = st.columns([2, 2, 5])
-                    with eb1:
-                        if st.button(f"Generate {pos_btn_label} Analysis", key=f"cv_b_{nk}", use_container_width=True, type="secondary"):
-                            with st.spinner("Generating..."):
-                                _wide_df = None
-                                if widened: _wide_df, _, _ = build_mcap_wide_peers(df, stk3, cd3, pos, MIN_PEERS)
-                                st.session_state[nk] = gen_exec(er, peers_only, df, ret_data, peers_only, widened=widened, wide_peers_df=_wide_df)
-                                st.session_state[f"fp_{nk}"] = cur_fp0
-                    with eb2:
-                        if st.button(f"View {pos_btn_label} Peers", key=f"cv_peer_{pos}_{selected_exec_idx}", use_container_width=True, type="secondary"):
-                            st.session_state[peer_key] = not st.session_state.get(peer_key, False)
-                    if st.session_state[nk]:
-                        if st.session_state.get(f"fp_{nk}") != cur_fp0:
-                            st.markdown(STALE_WARNING, unsafe_allow_html=True)
-                        st.markdown(f'<div class="ai-narrative"><div class="ai-label">\U0001F4CA {pos_btn_label} Compensation Analysis</div>{st.session_state[nk]}</div>', unsafe_allow_html=True)
-                        if st.button(f"\u2715 Close {pos_btn_label} Analysis", key=f"cv_close_{nk}"):
-                            st.session_state[nk] = None; st.rerun()
-                    if st.session_state.get(peer_key, False):
-                        render_peer_table(er, peers if widened else peers_only, pos)
+            # ═══════════════════════════════════════════════════════
+            #  SUB-TAB 3: PAY-FOR-PERFORMANCE
+            # ═══════════════════════════════════════════════════════
+            with sub_pfp:
+                st.markdown(f'<div style="font-size:0.82rem;color:#475569;margin-bottom:0.5rem;">TSR performance, compensation alignment, and say-on-pay results for {cn3}.</div>', unsafe_allow_html=True)
+                try:
+                    ch1, ch2 = st.columns(2)
+                    with ch1:
+                        fig_ret = chart_returns_comparison(stk3, ret_data, peer_tks, pt3)
+                        st.plotly_chart(fig_ret, use_container_width=True, key="pfp_ret_chart")
+                    with ch2:
+                        fig_pfp = chart_pay_performance(cd3, peers_only, ret_data, pt3)
+                        st.plotly_chart(fig_pfp, use_container_width=True, key="pfp_pfp_chart")
+                except Exception: pass
+                sop_val = cd3['say_on_pay_pct'].iloc[0] if 'say_on_pay_pct' in cd3.columns and pd.notna(cd3['say_on_pay_pct'].iloc[0]) else None
+                if sop_val:
+                    sop_color = '#2d7d46' if sop_val >= 70 else '#dc2626'
+                    st.markdown(f'''<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;padding:1rem 1.5rem;margin-top:0.5rem;">
+                        <div style="font-size:0.85rem;font-weight:600;color:#1b2a3d;margin-bottom:0.5rem;">Say-on-Pay Results</div>
+                        <div style="display:flex;gap:1.5rem;align-items:center;">
+                            <div><div style="font-size:2rem;font-weight:800;color:{sop_color};">{sop_val:.1f}%</div><div style="font-size:0.72rem;color:#8a8577;">FY{FY_YEAR} Approval</div></div>
+                            <div style="flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;"><div style="width:{sop_val}%;height:100%;background:linear-gradient(90deg, {sop_color}, #4ade80);border-radius:5px;"></div></div>
+                            <div style="font-size:0.72rem;color:#8a8577;text-align:right;">ISS threshold: 70%</div>
+                        </div>
+                    </div>''', unsafe_allow_html=True)
+                if st.button("\U0001F4CB Generate Pay-for-Performance Summary", key="cv_pfp_gen"):
+                    st.info("Pay-for-Performance analysis generation coming soon.")
 
             st.markdown(f'<div class="footnote">\u00B9 Non-cash equity = grant date fair value per ASC Topic 718. \u00B2 All Other Comp includes perquisites, retirement, tax gross-ups, etc.</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="source-note">Returns: Yahoo Finance, 1-Yr and 3-Yr through Dec 31, {RETURNS_YEAR} | YTD {RETURNS_YEAR+1} through current</div>', unsafe_allow_html=True)
