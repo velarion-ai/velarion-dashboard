@@ -3217,38 +3217,38 @@ if sel3 and sel3 != PLACEHOLDER:
                 pos_bg = '#1b2a3d' if pos == 'CEO' else '#1a73a7' if pos == 'CFO' else '#7b5ea7' if pos == 'CIO' else '#2d7d46' if pos == 'PRESIDENT' else '#f5f4f0'
                 pos_color = '#fff' if pos in ('CEO','CFO','CIO','PRESIDENT') else '#5a5549'
                 arrow_html = '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:3px;background:#f5f4f0;color:#8a8577;font-size:7px;border:1px solid #e4e0d8;">&#9654;</span>' if is_expandable else ''
-                neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:8px 6px 8px 14px;">{arrow_html}</td><td style="padding:8px 10px;font-weight:500;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:8px 10px;"><span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:8px 10px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
+                neo_rows_html += f'<tr style="border-bottom:1px solid #f0ece4;"><td style="padding:6px 4px 6px 10px;">{arrow_html}</td><td style="padding:6px 8px;font-weight:500;">{rw["first_name"]} {rw["last_name"]}{badges_html}</td><td style="padding:6px 8px;"><span style="font-size:0.72rem;padding:2px 8px;border-radius:10px;background:{pos_bg};color:{pos_color};font-weight:600;">{pd2}</span></td><td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(sal) if sal > 0 else chr(8212)}</td><td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(bonus) if bonus > 0 else chr(8212)}</td><td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;">{fmt_dollars(stock) if stock > 0 else chr(8212)}</td><td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;color:#8a8577;">{fmt_dollars(other) if other > 0 else chr(8212)}</td><td style="padding:6px 8px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{fmt_dollars(total) if total > 0 else chr(8212)}</td></tr>'
 
             neo_html = f'''<div style="background:#fff;border-radius:8px;border:1px solid #e4e0d8;overflow:hidden;margin-bottom:0.5rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(90deg, rgba(27,42,61,0.03), rgba(27,42,61,0.01));border-bottom:1px solid #e4e0d8;">
-                <span style="font-size:0.85rem;font-weight:600;color:#1b2a3d;">Named Executive Officers</span>
-                <span style="font-size:0.78rem;color:#8a8577;display:flex;align-items:center;gap:6px;">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:#1b2a3d;color:#fff;font-size:7px;">&#9654;</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:linear-gradient(90deg, rgba(27,42,61,0.03), rgba(27,42,61,0.01));border-bottom:1px solid #e4e0d8;">
+                <span style="font-size:0.9rem;font-weight:600;color:#1b2a3d;">Named Executive Officers</span>
+                <span style="font-size:0.75rem;color:#8a8577;display:flex;align-items:center;gap:5px;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:3px;background:#1b2a3d;color:#fff;font-size:6px;">&#9654;</span>
                     Select executive below to expand detail
                 </span>
             </div>
-            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
             <thead><tr style="background:#f5f4f0;border-bottom:2px solid #e4e0d8;">
-                <th style="padding:8px 6px 8px 14px;width:28px;"></th>
-                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
-                <th style="padding:8px 10px;text-align:left;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Position</th>
-                <th style="padding:8px 10px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Salary</th>
-                <th style="padding:8px 10px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Cash Bonus</th>
-                <th style="padding:8px 10px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Stock Awards</th>
-                <th style="padding:8px 10px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Other</th>
-                <th style="padding:8px 10px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Total Comp</th>
+                <th style="padding:6px 4px 6px 10px;width:24px;"></th>
+                <th style="padding:6px 8px;text-align:left;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Executive</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Position</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Salary</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Cash Bonus</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Stock Awards</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Other</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:600;color:#5a5549;font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Total Comp</th>
             </tr></thead>
             <tbody>{neo_rows_html}</tbody>
             <tfoot><tr style="border-top:2px solid #d4d0c8;background:#f5f4f0;">
-                <td colspan="3" style="padding:8px 10px 8px 14px;font-weight:700;color:#5a5549;">Total NEO Compensation</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;">{fmt_dollars(tot_sal)}</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;">{fmt_dollars(tot_bonus)}</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;">{fmt_dollars(tot_stock)}</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:600;color:#8a8577;">{fmt_dollars(tot_other)}</td>
-                <td style="padding:8px 10px;text-align:right;font-weight:800;">{fmt_dollars(tot_total)}</td>
+                <td colspan="3" style="padding:6px 8px 6px 10px;font-weight:700;color:#5a5549;font-size:0.88rem;">Total NEO Compensation</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:600;">{fmt_dollars(tot_sal)}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:600;">{fmt_dollars(tot_bonus)}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:600;">{fmt_dollars(tot_stock)}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:600;color:#8a8577;">{fmt_dollars(tot_other)}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:800;">{fmt_dollars(tot_total)}</td>
             </tr></tfoot></table></div>'''
             n_rows = len([1 for _, r in sorted_execs.iterrows() if 'former' not in str(r.get('title','')).lower()])
-            components.html(neo_html, height=max(200, 60 + n_rows * 42 + 50), scrolling=False)
+            components.html(neo_html, height=max(180, 56 + n_rows * 38 + 44), scrolling=False)
             st.markdown(f'<div class="footnote">Stock Awards = grant date fair value per ASC Topic 718 | Other = total comp less salary, bonus, and stock</div>', unsafe_allow_html=True)
 
             # ===============================================================
@@ -3434,11 +3434,9 @@ if sel3 and sel3 != PLACEHOLDER:
                     st.info(f"No {POSITION_FILTER_LABEL.get(lpos,lpos)} data for the current peer group.")
 
             # ===============================================================
-            #  INDIVIDUAL EXEC BENCHMARKING (selector-based)
+            #  INDIVIDUAL EXEC BENCHMARKING (compact selector)
             # ===============================================================
-            st.markdown("---")
-            st.markdown("#### Executive Benchmarking")
-            st.markdown('<div style="font-size:0.82rem;color:#8a8577;margin-bottom:1rem;">Select an executive to view percentile positioning, compensation mix, and peer comparison.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top:-0.5rem;"></div>', unsafe_allow_html=True)
 
             expandable_execs = [(idx, rw) for idx, (_, rw) in enumerate(sorted_execs.iterrows())
                                 if rw['position'] in EXPANDABLE_POSITIONS
@@ -3447,7 +3445,14 @@ if sel3 and sel3 != PLACEHOLDER:
 
             if expandable_execs:
                 exec_labels = [f"{POSITION_DISPLAY.get(rw['position'], rw['position'])} \u2014 {rw['first_name']} {rw['last_name']}" for _, rw in expandable_execs]
-                selected_exec_idx = st.selectbox("Select Executive", range(-1, len(exec_labels)), format_func=lambda i: "Select an executive..." if i == -1 else exec_labels[i], key="exec_detail_select")
+                # Compact selector with constrained width
+                st.markdown("""<style>
+                    div[data-testid="stSelectbox"][aria-label="exec_bench_sel"] {max-width: 320px !important;}
+                    div[data-testid="stSelectbox"][aria-label="exec_bench_sel"] > div {font-size: 0.85rem !important;}
+                </style>""", unsafe_allow_html=True)
+                sel_c1, sel_c2 = st.columns([1, 2])
+                with sel_c1:
+                    selected_exec_idx = st.selectbox("Executive Benchmarking", range(-1, len(exec_labels)), format_func=lambda i: "Select executive..." if i == -1 else exec_labels[i], key="exec_detail_select", label_visibility="visible")
                 
                 if selected_exec_idx >= 0:
                     idx, er = expandable_execs[selected_exec_idx]
